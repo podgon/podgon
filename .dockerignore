@@ -1,0 +1,10 @@
+.git
+.github
+**/build
+**/.gradle
+**/.kotlin
+**/.idea
+mobile
+docs
+*.md
+!server/**/*.md

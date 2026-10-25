@@ -1,0 +1,41 @@
+# Локальная среда разработки: backend + PostgreSQL + Mailpit (перехват писем).
+services:
+  db:
+    image: postgres:18
+    environment:
+      POSTGRES_DB: podgon
+      POSTGRES_USER: podgon
+      POSTGRES_PASSWORD: ${PODGON_DB_PASSWORD:-podgon_dev}
+      LANG: C.UTF-8
+    ports:
+      - "127.0.0.1:5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U podgon -d podgon"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  mailpit:
+    image: axllent/mailpit
+    ports:
+      - "127.0.0.1:8025:8025"   # веб-интерфейс
+      - "127.0.0.1:1025:1025"   # SMTP
+
+  backend:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      PODGON_DB_URL: jdbc:postgresql://db:5432/podgon
+      PODGON_DB_USER: podgon
+      PODGON_DB_PASSWORD: ${PODGON_DB_PASSWORD:-podgon_dev}
+    ports:
+      - "127.0.0.1:8080:8080"
+
+volumes:
+  pgdata:

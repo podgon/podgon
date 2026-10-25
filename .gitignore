@@ -22,3 +22,30 @@
 # virtual machine crash logs, see http://www.java.com/en/download/help/error_hotspot.xml
 hs_err_pid*
 replay_pid*
+
+# --- Podgon ---
+# macOS / IDE
+.DS_Store
+.idea/
+*.iml
+.vscode/
+
+# Gradle / Kotlin
+.gradle/
+build/
+!gradle/wrapper/gradle-wrapper.jar
+.kotlin/
+
+# Android
+local.properties
+*.apk
+*.aab
+*.keystore
+*.jks
+
+# Секреты и локальная конфигурация (никогда не коммитить)
+.env
+.env.*
+!.env.example
+*.pem
+secrets/

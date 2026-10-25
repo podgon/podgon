@@ -3,8 +3,8 @@
 ## Стек
 | Область | Выбор | Примечание |
 |---|---|---|
-| Язык / JVM | Kotlin (актуальная стабильная) на JVM 21 (LTS) | корутины, sealed-классы; плагины kotlin-spring, kotlin-jpa |
-| Фреймворк | Spring Boot 3.x | Web, Validation, Security, Data JPA, Actuator |
+| Язык / JVM | Kotlin (актуальная стабильная) на JDK 25 (LTS) | корутины, sealed-классы; плагины kotlin-spring, kotlin-jpa |
+| Фреймворк | Spring Boot 4.x | Web, Validation, Security, Data JPA, Actuator |
 | Сборка | Gradle (Kotlin DSL) | Maven — допустимая альтернатива |
 | Доступ к БД | Spring Data JPA (Hibernate) + нативные/JdbcClient запросы для поиска и фильтров | Все запросы параметризованы |
 | Миграции | Flyway | |

@@ -14,7 +14,7 @@
 | Пагинация | Paging KMP (androidx.paging), keyset по cursor |
 | Платформенное | deep links (App Links / Universal Links), push (FCM, позже), открытие почтового клиента |
 | Тесты | kotlin.test, Turbine, MockK/Mokkery, Ktor MockEngine, Compose UI Test |
-| Качество | ktlint/Detekt, Android Lint, R8 |
+| Качество | ktlint (Detekt — после стабильного релиза 2.0), Android Lint, R8 |
 | Сборка | Gradle (Kotlin DSL), version catalog, convention plugins |
 
 Выбор библиотек на KMP-аналоги (Koin, Ktor, Room KMP/SQLDelight) вместо Hilt/Retrofit — сознательное следствие решения о KMP. Перед началом этапа 3 проверяем актуальные стабильные версии.

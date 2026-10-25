@@ -1,16 +1,33 @@
-## Hi there 👋
+# Podgon
 
-<!--
-**podgon/podgon** is a ✨ _special_ ✨ repository because its `README.md` (this file) appears on your GitHub profile.
+Мобильное приложение для обмена рекомендациями (отзывами) внутри закрытых групп: книги, фильмы, рестораны, мастера, сервисы — от людей, которым вы доверяете.
 
-Here are some ideas to get you started:
+Статус: этап проектирования завершён, идёт подготовка репозитория (этап 0 плана).
 
-- 🔭 I’m currently working on ...
-- 🌱 I’m currently learning ...
-- 👯 I’m looking to collaborate on ...
-- 🤔 I’m looking for help with ...
-- 💬 Ask me about ...
-- 📫 How to reach me: ...
-- 😄 Pronouns: ...
-- ⚡ Fun fact: ...
--->
+## Документация
+| Документ | О чём |
+|---|---|
+| [description.md](description.md) | Исходное описание проекта |
+| [architecture.md](architecture.md) | Архитектура, решения (ADR), безопасность, развёртывание |
+| [plan.md](plan.md) | План реализации по этапам с критериями готовности |
+| [server.md](server.md) | Серверная часть |
+| [client.md](client.md) | Мобильный клиент |
+| [db.md](db.md) | База данных |
+| [docs/branching.md](docs/branching.md) | Ветвление, MR, настройка защиты веток |
+| [docs/adr/](docs/adr/README.md) | Индекс и шаблон ADR |
+
+## Структура репозитория
+| Каталог | Назначение |
+|---|---|
+| `api/` | Контракт OpenAPI (`openapi.yaml`) — источник правды для клиента и сервера |
+| `shared-contract/` | Общий KMP-модуль: модели, правила валидации, коды ошибок |
+| `server/` | Backend (Kotlin, Spring Boot) |
+| `mobile/` | KMP-клиент (Android, позже iOS) |
+| `deploy/` | Dockerfile, docker-compose, конфигурация развёртывания |
+| `docs/` | ADR и вспомогательные документы |
+
+## Ветки
+`main` (production), `stable` (production-ready), `develop` (разработка). В `main` и `stable` — только через MR с ревью человека. Подробнее — [docs/branching.md](docs/branching.md).
+
+## Лицензия
+См. [LICENSE](LICENSE).

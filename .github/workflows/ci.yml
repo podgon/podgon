@@ -1,0 +1,54 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [develop, stable, main]
+  push:
+    branches: [develop]
+
+permissions:
+  contents: read
+
+jobs:
+  repo-checks:
+    name: Проверки репозитория
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Файлы в UTF-8 без BOM и без CRLF
+        run: |
+          bad=0
+          while IFS= read -r f; do
+            if head -c3 "$f" | grep -q $'\xEF\xBB\xBF'; then echo "BOM: $f"; bad=1; fi
+            if grep -q $'\r' "$f"; then echo "CRLF: $f"; bad=1; fi
+          done < <(git ls-files '*.md' '*.yml' '*.yaml' '*.kt' '*.kts' '*.sql' '*.json')
+          exit $bad
+
+      - name: Нет секретов в репозитории
+        run: |
+          if git ls-files | grep -E '(^|/)(\.env|.*\.pem|.*\.jks|.*\.keystore)$' | grep -v '\.env\.example$'; then
+            echo "Найдены файлы, похожие на секреты"; exit 1
+          fi
+
+  server:
+    name: Сервер (сборка и тесты)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: server
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '25'
+      - uses: gradle/actions/setup-gradle@v4
+      # Интеграционные тесты используют Testcontainers (Docker на раннере есть)
+      - name: Сборка и тесты
+        run: ./gradlew --no-daemon build
+
+  # Следующие задания включаются по мере появления кода:
+  # mobile:  этап 3 — сборка KMP/Android, ktlint, unit-тесты
+  # contract: этап 2 — валидация openapi.yaml, проверка обратной совместимости (oasdiff)
+  # docker:  этап 1 — сборка образа backend
