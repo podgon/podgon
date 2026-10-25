@@ -7,12 +7,12 @@
 ## Документация
 | Документ | О чём |
 |---|---|
-| [description.md](description.md) | Исходное описание проекта |
-| [architecture.md](architecture.md) | Архитектура, решения (ADR), безопасность, развёртывание |
-| [plan.md](plan.md) | План реализации по этапам с критериями готовности |
-| [server.md](server.md) | Серверная часть |
-| [client.md](client.md) | Мобильный клиент |
-| [db.md](db.md) | База данных |
+| [description.md](docs/description.md) | Исходное описание проекта |
+| [architecture.md](docs/architecture.md) | Архитектура, решения (ADR), безопасность, развёртывание |
+| [plan.md](docs/plan.md) | План реализации по этапам с критериями готовности |
+| [server.md](docs/server.md) | Серверная часть |
+| [client.md](docs/client.md) | Мобильный клиент |
+| [db.md](docs/db.md) | База данных |
 | [docs/branching.md](docs/branching.md) | Ветвление, MR, настройка защиты веток |
 | [docs/adr/](docs/adr/README.md) | Индекс и шаблон ADR |
 

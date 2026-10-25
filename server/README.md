@@ -1,6 +1,6 @@
 # server
 
-Backend: Kotlin на JDK 25, Spring Boot 4.1.x, модульный монолит, пакет `app.podgon` (см. [server.md](../server.md)).
+Backend: Kotlin на JDK 25, Spring Boot 4.1.x, модульный монолит, пакет `app.podgon` (см. [server.md](../docs/server.md)).
 
 ## Запуск локально
 Нужны JDK 25 и PostgreSQL 18 с расширениями `citext` и `pg_trgm` (contrib).
