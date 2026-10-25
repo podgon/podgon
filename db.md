@@ -17,7 +17,7 @@ users ──< memberships >── groups ──< categories (self: parent_id)
           │                                  │
           └──< review_groups (review, group, category) ┘
 groups ──< invitations
-users ──< refresh_tokens, email_codes, reports
+users ──< refresh_tokens, reports;  email_codes (по email, без FK)
 category_templates (self: parent_id)  — базовый набор
 ```
 
@@ -31,13 +31,11 @@ category_templates (self: parent_id)  — базовый набор
 | username | citext | not null, unique, `CHECK (username ~ '^[a-z0-9_.]{3,30}$')` |
 | display_name | varchar(60) | |
 | bio | varchar(120) | |
-| password_hash | varchar(255) | Argon2id (строка в PHC-формате с солью) |
-| email_confirmed_at | timestamptz | null = не подтверждён |
-| status | varchar(16) | `PENDING`, `ACTIVE`, `BLOCKED`, `DELETED` |
-| failed_login_count, locked_until | int, timestamptz | защита от перебора |
+| status | varchar(16) | `ACTIVE`, `BLOCKED`, `DELETED`, `SYSTEM` (один служебный пользователь «Удалённый пользователь», фиксированный `id`, создаётся миграцией) |
+| locale | varchar(5) | `ru` или `en` |
 | created_at, updated_at, deleted_at | timestamptz | мягкое удаление |
 
-При удалении: `email` заменяется на `deleted+<id>@invalid` (освобождение адреса), `username` на `deleted_<id>`, `display_name`, `bio`, `password_hash` очищаются.
+При удалении: `email` заменяется на `deleted+<id>@invalid` (освобождение адреса), `username` на `deleted_<id>`, `display_name`, `bio` очищаются.
 
 Роль «администратор группы» хранится не в users, а в членстве (роль зависит от группы). Глобальной роли в описании нет; если понадобится глобальный администратор системы (модерация) — отдельное поле `system_role`.
 
@@ -66,7 +64,7 @@ category_templates (self: parent_id)  — базовый набор
 `id`, `group_id`, `created_by`, `email citext null` (адресное приглашение), `token_hash` (уникальный; токен выдаётся один раз), `expires_at`, `max_uses`, `used_count`, `revoked_at`, `created_at`.
 
 ### category_templates (базовый набор)
-`id`, `parent_id → category_templates`, `name`, `description`, `sort_order`. Заполняется seed-миграцией (например: Книги, Фильмы, Рестораны, Путешествия → Страны, Услуги…). Базовый набор редактируется только миграциями/администратором системы.
+`id`, `parent_id → category_templates`, `sort_order`; названия и описания — в `category_template_translations(template_id, locale, name, description)` (`ru`, `en`). При копировании в группу берётся язык создателя группы; дальше названия — пользовательский текст группы. Заполняется seed-миграцией (например: Книги, Фильмы, Рестораны, Путешествия → Страны, Услуги…). Базовый набор редактируется только миграциями/администратором системы.
 
 ### categories
 | Поле | Тип | Примечание |
@@ -111,7 +109,8 @@ category_templates (self: parent_id)  — базовый набор
 
 ### Служебные таблицы
 - `refresh_tokens(id, user_id, family_id, token_hash unique, device_info, expires_at, rotated_at, revoked_at, created_at)` — ротация и обнаружение повторного использования.
-- `email_codes(id, user_id, purpose [CONFIRM_EMAIL|RESET_PASSWORD], code_hash, expires_at, attempts, consumed_at)`.
+- `email_codes(id, email citext, code_hmac, expires_at, attempts, last_sent_at, consumed_at, ip)` — одноразовые коды входа; пароля в системе нет. Записи удаляются по расписанию. Индекс `(email, created_at desc)`.
+- `registrationToken` не хранится: это подписанный короткоживущий JWT.
 - `mail_outbox(id, to_address, template, payload jsonb, status, attempts, next_attempt_at, created_at)`.
 - `reports(id, reporter_id, target_type, target_id, reason, status, created_at)`; `user_blocks(blocker_id, blocked_id)` (этап 9).
 - `flyway_schema_history` — Flyway.
@@ -124,17 +123,17 @@ category_templates (self: parent_id)  — базовый набор
 - Видимость: каждый запрос чтения содержит условие `review_groups.group_id IN (группы пользователя)`; для поиска по «всем моим группам» — подзапрос по `memberships`.
 
 ## Правила шаринга при вступлении (реализация)
-Одна транзакция: `INSERT INTO review_groups (...) SELECT ... FROM reviews r JOIN review_groups src ... WHERE r.author_id = :user AND <условия>`. Вариативность (все / категории / подкатегории / теги / кроме...) строится в приложении из структуры правила; правило не хранится (разовое действие — открытый вопрос №5). Категория в новой группе подбирается по `template_id`; если соответствия нет — пользователь выбирает категорию вручную/отзыв попадает в «Без категории» (специальная системная категория каждой группы; на согласование).
+Одна транзакция: `INSERT INTO review_groups (...) SELECT ... FROM reviews r JOIN review_groups src ... WHERE r.author_id = :user AND <условия>`. Вариативность (все / категории / подкатегории / теги / кроме...) строится в приложении из структуры правила; правило не хранится (разовое действие — открытый вопрос №5). Категория в новой группе подбирается по `template_id`. Записи, для которых соответствия нет (категория удалена в новой группе или создана вручную и шаблонной связи не имеет), в автоматический перенос не попадают: приложение возвращает их список (предпросмотр), и пользователь для каждой выбирает — назначить категорию вручную или не переносить. Выбранные назначения передаются в тот же запрос вступления, поэтому всё применяется одной транзакцией. Системной категории «Без категории» нет.
 
 ## Целостность и каскады
 | Событие | Результат |
 |---|---|
 | Удаление категории | Удаляются `review_groups` в категории и потомках (после подтверждения); `reviews` остаются |
-| Удаление группы | Каскад: роли, членства, категории, приглашения, публикации |
+| Удаление группы | Каскад: роли, членства, категории, приглашения, публикации. Отзывы только этой группы по выбору администратора: возвращаются в личные либо удаляются (с подтверждением); отзывы, опубликованные и в других группах, остаются |
 | Выход из группы | Удаление членства; по флагу — публикации автора в группе |
 | Удаление отзыва | Каскад по `review_groups`, `review_tags` |
-| Удаление аккаунта | Мягко: анонимизация `users`, удаление токенов, членств; судьба отзывов — открытый вопрос №1 |
-Висячие `reviews` без публикаций допустимы (личные), чистятся по решению открытого вопроса №2.
+| Удаление аккаунта | Мягко: анонимизация `users`, удаление токенов, членств; отзывы с публикациями по умолчанию переводятся на системного пользователя (`author_id`), личные без публикаций удаляются; если пользователь выбрал «удалить все мои отзывы» — удаляются все его отзывы вместе с публикациями и тегами |
+Отзывы без публикаций допустимы (личные, видны только автору).
 
 ## Безопасность БД
 - Приложение подключается ролью `podgon_app` (DML на схему, без DDL); миграции — ролью `podgon_migrator`.
