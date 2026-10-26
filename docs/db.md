@@ -40,7 +40,7 @@ category_templates (self: parent_id)  — базовый набор
 Роль «администратор группы» хранится не в users, а в членстве (роль зависит от группы). Глобальной роли в описании нет; если понадобится глобальный администратор системы (модерация) — отдельное поле `system_role`.
 
 ### groups
-`id`, `name varchar(100) not null`, `description`, `created_by uuid → users`, `created_at`, `deleted_at`.
+`id`, `name varchar(100) not null`, `description varchar(500)`, `created_by uuid → users`, `created_at`, `updated_at`. Удаление группы физическое (каскад); мягкое удаление не используется (этап 4).
 
 ### group_roles
 | Поле | Тип | Примечание |
@@ -58,10 +58,10 @@ category_templates (self: parent_id)  — базовый набор
 ### memberships (сводная «пользователи ↔ группы»)
 `group_id`, `user_id`, `role_id → group_roles`, `joined_at`; PK `(group_id, user_id)`; индекс по `user_id`.
 Консистентность «роль принадлежит той же группе»: составной FK `(role_id, group_id) → group_roles (id, group_id)` (в `group_roles` уникальный `(id, group_id)`).
-Инвариант «≥ 1 админ в группе» — проверяется в сервисе под блокировкой; страховка в БД — constraint trigger, откладываемый до конца транзакции.
+Инвариант «≥ 1 админ в группе» — проверяется в сервисе под блокировкой строки группы; страховка в БД — constraint trigger, откладываемый до конца транзакции (на `memberships` при изменении и удалении и на `group_roles` при смене `is_admin`; пустую группу и удаляемую целиком триггер пропускает). Системные роли ограничены CHECK: ADMIN всегда с правами админа, MEMBER без них, пользовательская роль не может занять эти коды.
 
 ### invitations
-`id`, `group_id`, `created_by`, `email citext null` (адресное приглашение), `token_hash` (уникальный; токен выдаётся один раз), `expires_at`, `max_uses`, `used_count`, `revoked_at`, `created_at`.
+`id`, `group_id`, `created_by`, `email citext null` (адресное приглашение), `token_hash` (SHA-256, уникальный; токен выдаётся один раз), `expires_at`, `max_uses` (1–100), `used_count` (`CHECK used_count <= max_uses`), `revoked_at`, `created_at`.
 
 ### category_templates (базовый набор)
 `id`, `parent_id → category_templates`, `sort_order`; названия и описания — в `category_template_translations(template_id, locale, name, description)` (`ru`, `en`). При копировании в группу берётся язык создателя группы; дальше названия — пользовательский текст группы. Заполняется seed-миграцией (например: Книги, Фильмы, Рестораны, Путешествия → Страны, Услуги…). Базовый набор редактируется только миграциями/администратором системы.

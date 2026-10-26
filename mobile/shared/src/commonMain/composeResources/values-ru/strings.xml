@@ -41,4 +41,70 @@
     <string name="error_email_taken">Аккаунт с таким email уже существует.</string>
     <string name="error_registration_expired">Сеанс регистрации истёк. Начните заново.</string>
     <string name="error_blocked">Ваш аккаунт заблокирован.</string>
+
+    <string name="action_retry">Повторить</string>
+    <string name="action_cancel">Отмена</string>
+    <string name="action_close">Закрыть</string>
+    <string name="action_save">Сохранить</string>
+    <string name="action_create">Создать</string>
+    <string name="action_delete">Удалить</string>
+    <string name="action_remove">Удалить из группы</string>
+    <string name="action_profile">Профиль</string>
+    <string name="action_create_group">Создать группу</string>
+    <string name="action_join_group">Вступить по коду</string>
+    <string name="action_check_code">Проверить код</string>
+    <string name="action_join">Вступить</string>
+    <string name="action_leave_group">Выйти из группы</string>
+    <string name="action_delete_group">Удалить группу</string>
+    <string name="action_change_role">Сменить роль</string>
+    <string name="action_revoke_invite">Отозвать</string>
+
+    <string name="groups_title">Группы</string>
+    <string name="groups_empty">Вы пока не состоите ни в одной группе. Создайте свою или вступите по коду приглашения.</string>
+    <string name="group_member_count">Участников: %1$d</string>
+    <string name="create_group_title">Новая группа</string>
+    <string name="group_name_label">Название группы</string>
+    <string name="group_description_label">Описание (необязательно)</string>
+    <string name="join_title">Вступить в группу</string>
+    <string name="join_hint">Введите код приглашения, полученный от администратора группы.</string>
+    <string name="join_code_label">Код приглашения</string>
+    <string name="join_preview_title">Вас приглашают в «%1$s»</string>
+    <string name="join_invited_by">пригласил(а) %1$s</string>
+    <string name="group_members">Участники</string>
+    <string name="group_roles">Роли</string>
+    <string name="group_invitations">Приглашения</string>
+    <string name="remove_member_confirm">Удалить %1$s из группы?</string>
+    <string name="leave_group_confirm_title">Выйти из группы?</string>
+    <string name="leave_group_confirm_text">Вы потеряете доступ к группе. Чтобы вернуться, понадобится новое приглашение.</string>
+    <string name="delete_group_confirm_title">Удалить группу?</string>
+    <string name="delete_group_confirm_text">Группа, её участники, роли и приглашения будут удалены безвозвратно. Это нельзя отменить.</string>
+
+    <string name="roles_title">Роли</string>
+    <string name="role_new_title">Новая роль</string>
+    <string name="role_edit_title">Изменить</string>
+    <string name="role_title_label">Название роли</string>
+    <string name="role_description_label">Описание (необязательно)</string>
+    <string name="role_admin_label">Права администратора</string>
+    <string name="role_builtin">встроенная</string>
+    <string name="role_admin_title">Администратор</string>
+    <string name="role_member_title">Участник</string>
+
+    <string name="invitations_title">Приглашения</string>
+    <string name="invite_new_title">Новое приглашение</string>
+    <string name="invite_email_label">Email (необязательно — код придёт письмом)</string>
+    <string name="invite_max_uses_label">Сколько человек могут вступить</string>
+    <string name="invite_created_title">Приглашение создано</string>
+    <string name="invite_created_hint">Скопируйте код сейчас — он показывается один раз.</string>
+    <string name="invite_for">Для: %1$s</string>
+    <string name="invite_status_active">Действует</string>
+    <string name="invite_status_revoked">Отозвано</string>
+    <string name="invite_status_inactive">Истекло или использовано</string>
+    <string name="invite_uses">использовано %1$d из %2$d</string>
+
+    <string name="error_last_admin">В группе должен остаться хотя бы один администратор. Сначала назначьте другого или удалите группу.</string>
+    <string name="error_invalid_invitation">Приглашение неверно, просрочено, исчерпано или предназначено для другого email.</string>
+    <string name="error_already_member">Вы уже состоите в этой группе.</string>
+    <string name="error_limit">Достигнут лимит.</string>
+    <string name="error_forbidden">Недостаточно прав для этого действия.</string>
+    <string name="error_not_found">Не найдено. Возможно, это уже удалено.</string>
 </resources>

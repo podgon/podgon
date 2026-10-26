@@ -41,4 +41,70 @@
     <string name="error_email_taken">An account with this email already exists.</string>
     <string name="error_registration_expired">Registration session expired. Start again.</string>
     <string name="error_blocked">Your account is blocked.</string>
+
+    <string name="action_retry">Retry</string>
+    <string name="action_cancel">Cancel</string>
+    <string name="action_close">Close</string>
+    <string name="action_save">Save</string>
+    <string name="action_create">Create</string>
+    <string name="action_delete">Delete</string>
+    <string name="action_remove">Remove</string>
+    <string name="action_profile">Profile</string>
+    <string name="action_create_group">Create group</string>
+    <string name="action_join_group">Join by code</string>
+    <string name="action_check_code">Check code</string>
+    <string name="action_join">Join</string>
+    <string name="action_leave_group">Leave group</string>
+    <string name="action_delete_group">Delete group</string>
+    <string name="action_change_role">Change role</string>
+    <string name="action_revoke_invite">Revoke</string>
+
+    <string name="groups_title">Groups</string>
+    <string name="groups_empty">You are not in any group yet. Create one or join by an invitation code.</string>
+    <string name="group_member_count">Members: %1$d</string>
+    <string name="create_group_title">New group</string>
+    <string name="group_name_label">Group name</string>
+    <string name="group_description_label">Description (optional)</string>
+    <string name="join_title">Join a group</string>
+    <string name="join_hint">Enter the invitation code you received from a group administrator.</string>
+    <string name="join_code_label">Invitation code</string>
+    <string name="join_preview_title">You are invited to “%1$s”</string>
+    <string name="join_invited_by">invited by %1$s</string>
+    <string name="group_members">Members</string>
+    <string name="group_roles">Roles</string>
+    <string name="group_invitations">Invitations</string>
+    <string name="remove_member_confirm">Remove %1$s from the group?</string>
+    <string name="leave_group_confirm_title">Leave the group?</string>
+    <string name="leave_group_confirm_text">You will lose access to this group. To come back you will need a new invitation.</string>
+    <string name="delete_group_confirm_title">Delete the group?</string>
+    <string name="delete_group_confirm_text">The group, its members, roles and invitations will be deleted permanently. This cannot be undone.</string>
+
+    <string name="roles_title">Roles</string>
+    <string name="role_new_title">New role</string>
+    <string name="role_edit_title">Edit</string>
+    <string name="role_title_label">Role name</string>
+    <string name="role_description_label">Description (optional)</string>
+    <string name="role_admin_label">Administrator rights</string>
+    <string name="role_builtin">built-in</string>
+    <string name="role_admin_title">Administrator</string>
+    <string name="role_member_title">Member</string>
+
+    <string name="invitations_title">Invitations</string>
+    <string name="invite_new_title">New invitation</string>
+    <string name="invite_email_label">Email (optional — the code will be emailed)</string>
+    <string name="invite_max_uses_label">How many people can join</string>
+    <string name="invite_created_title">Invitation created</string>
+    <string name="invite_created_hint">Copy the code now — it is shown only once.</string>
+    <string name="invite_for">For: %1$s</string>
+    <string name="invite_status_active">Active</string>
+    <string name="invite_status_revoked">Revoked</string>
+    <string name="invite_status_inactive">Expired or used up</string>
+    <string name="invite_uses">used %1$d of %2$d</string>
+
+    <string name="error_last_admin">The group must keep at least one administrator. Assign another one first or delete the group.</string>
+    <string name="error_invalid_invitation">The invitation is invalid, expired, used up or meant for another email.</string>
+    <string name="error_already_member">You are already a member of this group.</string>
+    <string name="error_limit">The limit has been reached.</string>
+    <string name="error_forbidden">You do not have permission to do this.</string>
+    <string name="error_not_found">Not found. It may have been deleted.</string>
 </resources>

@@ -19,6 +19,12 @@ import app.podgon.mobile.designsystem.PodgonTheme
 import app.podgon.mobile.feature.auth.ui.CodeScreen
 import app.podgon.mobile.feature.auth.ui.EmailScreen
 import app.podgon.mobile.feature.auth.ui.RegisterScreen
+import app.podgon.mobile.feature.groups.CreateGroupScreen
+import app.podgon.mobile.feature.groups.GroupScreen
+import app.podgon.mobile.feature.groups.GroupsScreen
+import app.podgon.mobile.feature.groups.InvitationsScreen
+import app.podgon.mobile.feature.groups.JoinGroupScreen
+import app.podgon.mobile.feature.groups.RolesScreen
 import app.podgon.mobile.feature.profile.ProfileScreen
 import kotlinx.serialization.Serializable
 import org.koin.compose.koinInject
@@ -40,6 +46,30 @@ private data class RegisterRoute(
 
 @Serializable
 private data object ProfileRoute
+
+@Serializable
+private data object GroupsRoute
+
+@Serializable
+private data object CreateGroupRoute
+
+@Serializable
+private data object JoinGroupRoute
+
+@Serializable
+private data class GroupRoute(
+    val groupId: String,
+)
+
+@Serializable
+private data class RolesRoute(
+    val groupId: String,
+)
+
+@Serializable
+private data class InvitationsRoute(
+    val groupId: String,
+)
 
 /** Корневой экран: по состоянию сессии показывает вход или основное содержимое. */
 @Composable
@@ -81,7 +111,47 @@ private fun SignedOutNavigation() {
 @Composable
 private fun SignedInNavigation() {
     val nav = rememberNavController()
-    NavHost(nav, startDestination = ProfileRoute) {
+    NavHost(nav, startDestination = GroupsRoute) {
+        composable<GroupsRoute> {
+            GroupsScreen(
+                koinViewModel(),
+                onCreate = { nav.navigate(CreateGroupRoute) },
+                onJoin = { nav.navigate(JoinGroupRoute) },
+                onOpen = { nav.navigate(GroupRoute(it)) },
+                onProfile = { nav.navigate(ProfileRoute) },
+            )
+        }
         composable<ProfileRoute> { ProfileScreen(koinViewModel()) }
+        composable<CreateGroupRoute> {
+            CreateGroupScreen(koinViewModel(), onCreated = { nav.openGroup(it, replacing = CreateGroupRoute) })
+        }
+        composable<JoinGroupRoute> {
+            JoinGroupScreen(koinViewModel(), onJoined = { nav.openGroup(it, replacing = JoinGroupRoute) })
+        }
+        composable<GroupRoute> { entry ->
+            val route = entry.toRoute<GroupRoute>()
+            GroupScreen(
+                koinViewModel(parameters = { parametersOf(route.groupId) }),
+                onRoles = { nav.navigate(RolesRoute(route.groupId)) },
+                onInvitations = { nav.navigate(InvitationsRoute(route.groupId)) },
+                onClosed = { nav.popBackStack(GroupsRoute, inclusive = false) },
+            )
+        }
+        composable<RolesRoute> { entry ->
+            val route = entry.toRoute<RolesRoute>()
+            RolesScreen(koinViewModel(parameters = { parametersOf(route.groupId) }))
+        }
+        composable<InvitationsRoute> { entry ->
+            val route = entry.toRoute<InvitationsRoute>()
+            InvitationsScreen(koinViewModel(parameters = { parametersOf(route.groupId) }))
+        }
     }
+}
+
+/** Открывает группу, убирая из стека экран создания/вступления: «назад» ведёт к списку групп. */
+private fun androidx.navigation.NavController.openGroup(
+    groupId: String,
+    replacing: Any,
+) {
+    navigate(GroupRoute(groupId)) { popUpTo(replacing) { inclusive = true } }
 }
