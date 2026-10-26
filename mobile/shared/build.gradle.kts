@@ -16,6 +16,8 @@ kotlin {
         compileSdk = 37
         minSdk = 26
         withHostTest {}
+        // Без этого ресурсы Compose (строки ru/en) не попадают в APK и приложение падает при старте
+        androidResources { enable = true }
     }
 
     sourceSets {
