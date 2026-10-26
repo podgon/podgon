@@ -7,6 +7,7 @@ import app.podgon.mobile.resources.error_already_member
 import app.podgon.mobile.resources.error_blocked
 import app.podgon.mobile.resources.error_captcha
 import app.podgon.mobile.resources.error_category_cycle
+import app.podgon.mobile.resources.error_category_foreign_reviews
 import app.podgon.mobile.resources.error_category_name_taken
 import app.podgon.mobile.resources.error_category_too_deep
 import app.podgon.mobile.resources.error_email_taken
@@ -45,6 +46,7 @@ fun AppError.message(): String =
                 ErrorCode.CATEGORY_NAME_TAKEN -> stringResource(Res.string.error_category_name_taken)
                 ErrorCode.CATEGORY_CYCLE -> stringResource(Res.string.error_category_cycle)
                 ErrorCode.CATEGORY_TOO_DEEP -> stringResource(Res.string.error_category_too_deep)
+                ErrorCode.CATEGORY_HAS_FOREIGN_REVIEWS -> stringResource(Res.string.error_category_foreign_reviews)
                 ErrorCode.FORBIDDEN -> stringResource(Res.string.error_forbidden)
                 ErrorCode.NOT_FOUND -> stringResource(Res.string.error_not_found)
                 else -> stringResource(Res.string.error_unknown)

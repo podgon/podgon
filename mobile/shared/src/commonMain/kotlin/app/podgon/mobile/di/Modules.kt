@@ -4,6 +4,7 @@ import app.podgon.mobile.core.auth.SessionManager
 import app.podgon.mobile.core.network.AuthApi
 import app.podgon.mobile.core.network.GroupsApi
 import app.podgon.mobile.core.network.MeApi
+import app.podgon.mobile.core.network.ReviewsApi
 import app.podgon.mobile.core.network.createAuthorizedClient
 import app.podgon.mobile.core.network.createPublicClient
 import app.podgon.mobile.feature.auth.data.AuthRepository
@@ -19,6 +20,9 @@ import app.podgon.mobile.feature.groups.InvitationsViewModel
 import app.podgon.mobile.feature.groups.JoinGroupViewModel
 import app.podgon.mobile.feature.groups.RolesViewModel
 import app.podgon.mobile.feature.profile.ProfileViewModel
+import app.podgon.mobile.feature.reviews.FeedViewModel
+import app.podgon.mobile.feature.reviews.ReviewFormViewModel
+import app.podgon.mobile.feature.reviews.ReviewViewModel
 import io.ktor.client.HttpClient
 import org.koin.core.module.dsl.viewModel
 import org.koin.core.qualifier.named
@@ -39,6 +43,7 @@ val appModule =
         single { AuthApi(get(PUBLIC_CLIENT)) }
         single { MeApi(get(AUTHORIZED_CLIENT)) }
         single { GroupsApi(get(AUTHORIZED_CLIENT)) }
+        single { ReviewsApi(get(AUTHORIZED_CLIENT)) }
         // Виджет SmartCaptcha подключается на этапе 9; пока токена нет
         single { CaptchaProvider { null } }
         single { AuthRepository(get(), get(), get(), get()) }
@@ -52,6 +57,11 @@ val appModule =
         viewModel { JoinGroupViewModel(get()) }
         viewModel { (groupId: String) -> GroupViewModel(groupId, get(), get()) }
         viewModel { (groupId: String) -> CategoriesViewModel(groupId, get()) }
+        viewModel { (groupId: String?) -> FeedViewModel(groupId, get()) }
+        viewModel { (reviewId: String) -> ReviewViewModel(reviewId, get(), get(), get()) }
+        viewModel { (reviewId: String?, presetGroupId: String?) ->
+            ReviewFormViewModel(reviewId, presetGroupId, get(), get())
+        }
         viewModel { (groupId: String) -> RolesViewModel(groupId, get()) }
         viewModel { (groupId: String) -> InvitationsViewModel(groupId, get()) }
     }

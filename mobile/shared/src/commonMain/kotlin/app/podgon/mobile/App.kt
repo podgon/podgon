@@ -27,6 +27,9 @@ import app.podgon.mobile.feature.groups.InvitationsScreen
 import app.podgon.mobile.feature.groups.JoinGroupScreen
 import app.podgon.mobile.feature.groups.RolesScreen
 import app.podgon.mobile.feature.profile.ProfileScreen
+import app.podgon.mobile.feature.reviews.FeedScreen
+import app.podgon.mobile.feature.reviews.ReviewFormScreen
+import app.podgon.mobile.feature.reviews.ReviewScreen
 import kotlinx.serialization.Serializable
 import org.koin.compose.koinInject
 import org.koin.compose.viewmodel.koinViewModel
@@ -71,6 +74,24 @@ private data class RolesRoute(
 private data class CategoriesRoute(
     val groupId: String,
     val canEdit: Boolean,
+)
+
+/** Лента группы; `groupId == null` — мои рекомендации. */
+@Serializable
+private data class FeedRoute(
+    val groupId: String?,
+)
+
+@Serializable
+private data class ReviewRoute(
+    val reviewId: String,
+)
+
+/** Форма рекомендации: `reviewId == null` — создание, `presetGroupId` — группа, отмеченная заранее. */
+@Serializable
+private data class ReviewFormRoute(
+    val reviewId: String?,
+    val presetGroupId: String?,
 )
 
 @Serializable
@@ -126,6 +147,7 @@ private fun SignedInNavigation() {
                 onJoin = { nav.navigate(JoinGroupRoute) },
                 onOpen = { nav.navigate(GroupRoute(it)) },
                 onProfile = { nav.navigate(ProfileRoute) },
+                onMyReviews = { nav.navigate(FeedRoute(null)) },
             )
         }
         composable<ProfileRoute> { ProfileScreen(koinViewModel()) }
@@ -139,10 +161,39 @@ private fun SignedInNavigation() {
             val route = entry.toRoute<GroupRoute>()
             GroupScreen(
                 koinViewModel(parameters = { parametersOf(route.groupId) }),
+                onReviews = { nav.navigate(FeedRoute(route.groupId)) },
                 onCategories = { canEdit -> nav.navigate(CategoriesRoute(route.groupId, canEdit)) },
                 onRoles = { nav.navigate(RolesRoute(route.groupId)) },
                 onInvitations = { nav.navigate(InvitationsRoute(route.groupId)) },
                 onClosed = { nav.popBackStack(GroupsRoute, inclusive = false) },
+            )
+        }
+        composable<FeedRoute> { entry ->
+            val route = entry.toRoute<FeedRoute>()
+            FeedScreen(
+                koinViewModel(parameters = { parametersOf(route.groupId) }),
+                myOwn = route.groupId == null,
+                onOpen = { nav.navigate(ReviewRoute(it)) },
+                onNew = { nav.navigate(ReviewFormRoute(null, route.groupId)) },
+            )
+        }
+        composable<ReviewRoute> { entry ->
+            val route = entry.toRoute<ReviewRoute>()
+            ReviewScreen(
+                koinViewModel(parameters = { parametersOf(route.reviewId) }),
+                onEdit = { nav.navigate(ReviewFormRoute(it, null)) },
+                onClosed = { nav.popBackStack() },
+            )
+        }
+        composable<ReviewFormRoute> { entry ->
+            val route = entry.toRoute<ReviewFormRoute>()
+            ReviewFormScreen(
+                koinViewModel(parameters = { parametersOf(route.reviewId, route.presetGroupId) }),
+                editing = route.reviewId != null,
+                onSaved = { id ->
+                    // «назад» из карточки ведёт к списку, а не к форме
+                    nav.navigate(ReviewRoute(id)) { popUpTo(entry.destination.id) { inclusive = true } }
+                },
             )
         }
         composable<CategoriesRoute> { entry ->

@@ -7,6 +7,7 @@ import app.podgon.mobile.core.network.ApiConfig
 import app.podgon.mobile.core.network.AuthApi
 import app.podgon.mobile.core.network.GroupsApi
 import app.podgon.mobile.core.network.MeApi
+import app.podgon.mobile.core.network.ReviewsApi
 import app.podgon.mobile.core.network.createPublicClient
 import app.podgon.mobile.feature.auth.data.AuthRepository
 import io.ktor.client.engine.mock.MockEngine
@@ -92,6 +93,7 @@ class GroupsFixture(
     private val client = createPublicClient(engine, TestConfig)
     val api = GroupsApi(client)
     val me = MeApi(client)
+    val reviews = ReviewsApi(client)
 
     /**
      * Строки вида `GET /api/v1/groups` в порядке поступления. MockEngine отвечает на своём потоке,

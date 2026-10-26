@@ -67,6 +67,7 @@ import app.podgon.mobile.resources.group_invitations
 import app.podgon.mobile.resources.group_member_count
 import app.podgon.mobile.resources.group_members
 import app.podgon.mobile.resources.group_name_label
+import app.podgon.mobile.resources.group_reviews
 import app.podgon.mobile.resources.group_roles
 import app.podgon.mobile.resources.groups_empty
 import app.podgon.mobile.resources.groups_title
@@ -89,6 +90,7 @@ import app.podgon.mobile.resources.join_preview_title
 import app.podgon.mobile.resources.join_title
 import app.podgon.mobile.resources.leave_group_confirm_text
 import app.podgon.mobile.resources.leave_group_confirm_title
+import app.podgon.mobile.resources.my_reviews
 import app.podgon.mobile.resources.remove_member_confirm
 import app.podgon.mobile.resources.role_admin_label
 import app.podgon.mobile.resources.role_admin_title
@@ -118,6 +120,7 @@ fun GroupsScreen(
     onJoin: () -> Unit,
     onOpen: (groupId: String) -> Unit,
     onProfile: () -> Unit,
+    onMyReviews: () -> Unit,
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     // при возврате с экрана группы (вышли, удалили, переименовали) список обновляется
@@ -137,6 +140,9 @@ fun GroupsScreen(
             }
             OutlinedButton(onClick = onJoin, modifier = Modifier.fillMaxWidth()) {
                 Text(stringResource(Res.string.action_join_group))
+            }
+            OutlinedButton(onClick = onMyReviews, modifier = Modifier.fillMaxWidth()) {
+                Text(stringResource(Res.string.my_reviews))
             }
             state.error?.let { RetryError(it, viewModel::load) }
             if (state.loading && state.groups.isEmpty()) CircularProgressIndicator()
@@ -292,6 +298,7 @@ fun JoinGroupScreen(
 @Composable
 fun GroupScreen(
     viewModel: GroupViewModel,
+    onReviews: () -> Unit,
     onCategories: (canEdit: Boolean) -> Unit,
     onRoles: () -> Unit,
     onInvitations: () -> Unit,
@@ -320,6 +327,9 @@ fun GroupScreen(
             }
             state.error?.let { RetryError(it, viewModel::load) }
             if (group != null) {
+                Button(onClick = onReviews, modifier = Modifier.fillMaxWidth()) {
+                    Text(stringResource(Res.string.group_reviews))
+                }
                 OutlinedButton(onClick = { onCategories(state.isAdmin) }, modifier = Modifier.fillMaxWidth()) {
                     Text(stringResource(Res.string.group_categories))
                 }
