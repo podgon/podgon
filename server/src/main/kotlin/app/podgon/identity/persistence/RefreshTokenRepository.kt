@@ -150,6 +150,30 @@ class RefreshTokenRepository(
                 )
             }.list()
 
+    /**
+     * Сессия действует: у неё есть живой (не обменянный, не отозванный, не просроченный) токен,
+     * а пользователь активен. Проверяется на каждом запросе с access-токеном.
+     */
+    fun isSessionActive(
+        userId: UUID,
+        familyId: UUID,
+        now: Instant,
+    ): Boolean =
+        jdbc
+            .sql(
+                """
+                select exists (
+                    select 1 from refresh_tokens t join users u on u.id = t.user_id
+                    where t.family_id = :family and t.user_id = :user and u.status = 'ACTIVE'
+                      and t.revoked_at is null and t.rotated_at is null and t.expires_at > :now
+                )
+                """.trimIndent(),
+            ).param("family", familyId)
+            .param("user", userId)
+            .param("now", now.toSql())
+            .query(Boolean::class.java)
+            .single()
+
     fun deleteExpiredBefore(before: Instant): Int =
         jdbc.sql("delete from refresh_tokens where expires_at < :before").param("before", before.toSql()).update()
 }

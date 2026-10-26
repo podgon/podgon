@@ -90,6 +90,15 @@ class SessionService(
             )
         }
 
+    /**
+     * Действует ли сессия access-токена. Отзыв сессии, блокировка и удаление аккаунта
+     * вступают в силу сразу, а не по истечении access-токена (замечание R3 ревью).
+     */
+    fun isActive(
+        userId: UUID,
+        sessionId: UUID,
+    ): Boolean = tokens.isSessionActive(userId, sessionId, clock.instant())
+
     /** Отзыв сессии пользователем; чужая или несуществующая сессия → 404. */
     fun revoke(
         userId: UUID,

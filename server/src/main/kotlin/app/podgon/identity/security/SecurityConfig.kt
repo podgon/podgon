@@ -1,33 +1,52 @@
 package app.podgon.identity.security
 
-import app.podgon.common.problem
+import app.podgon.common.writeProblem
 import app.podgon.contract.ErrorCode
+import app.podgon.identity.domain.SessionService
 import app.podgon.identity.domain.TokenService
 import jakarta.servlet.http.HttpServletRequest
 import jakarta.servlet.http.HttpServletResponse
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 import org.springframework.http.HttpStatus
-import org.springframework.http.MediaType
 import org.springframework.security.config.annotation.web.builders.HttpSecurity
 import org.springframework.security.config.http.SessionCreationPolicy
+import org.springframework.security.oauth2.jwt.BadJwtException
 import org.springframework.security.oauth2.jwt.JwtDecoder
+import org.springframework.security.oauth2.server.resource.web.authentication.BearerTokenAuthenticationFilter
 import org.springframework.security.web.AuthenticationEntryPoint
 import org.springframework.security.web.SecurityFilterChain
 import org.springframework.security.web.access.AccessDeniedHandler
 import tools.jackson.databind.json.JsonMapper
+import java.util.UUID
 
 /** Stateless-защита API: access JWT в `Authorization: Bearer`, CSRF и cookie-сессий нет. */
 @Configuration(proxyBeanMethods = false)
 class SecurityConfig {
+    /** Подпись и срок проверяет декодер токенов; затем — что сессия не отозвана и пользователь активен. */
     @Bean
-    fun jwtDecoder(tokens: TokenService): JwtDecoder = tokens.accessJwtDecoder()
+    fun jwtDecoder(
+        tokens: TokenService,
+        sessions: SessionService,
+    ): JwtDecoder {
+        val signed = tokens.accessJwtDecoder()
+        return JwtDecoder { token ->
+            val jwt = signed.decode(token)
+            val userId = runCatching { UUID.fromString(jwt.subject) }.getOrNull()
+            val sessionId = runCatching { UUID.fromString(jwt.getClaimAsString("sid")) }.getOrNull()
+            if (userId == null || sessionId == null || !sessions.isActive(userId, sessionId)) {
+                throw BadJwtException("Сессия завершена")
+            }
+            jwt
+        }
+    }
 
     @Bean
     fun securityFilterChain(
         http: HttpSecurity,
         jwtDecoder: JwtDecoder,
         json: JsonMapper,
+        limiter: UserRateLimiter,
     ): SecurityFilterChain {
         val entryPoint = problemEntryPoint(json)
         val denied = problemAccessDenied(json)
@@ -53,30 +72,18 @@ class SecurityConfig {
                     .accessDeniedHandler(denied)
             }.exceptionHandling {
                 it.authenticationEntryPoint(entryPoint).accessDeniedHandler(denied)
-            }
+            }.addFilterAfter(UserRateLimitFilter(limiter, json), BearerTokenAuthenticationFilter::class.java)
         return http.build()
     }
 
     private fun problemEntryPoint(json: JsonMapper) =
         AuthenticationEntryPoint { _: HttpServletRequest, response: HttpServletResponse, _ ->
             response.setHeader("WWW-Authenticate", "Bearer")
-            write(json, response, HttpStatus.UNAUTHORIZED, ErrorCode.UNAUTHORIZED)
+            response.writeProblem(json, HttpStatus.UNAUTHORIZED, ErrorCode.UNAUTHORIZED)
         }
 
     private fun problemAccessDenied(json: JsonMapper) =
         AccessDeniedHandler { _: HttpServletRequest, response: HttpServletResponse, _ ->
-            write(json, response, HttpStatus.FORBIDDEN, ErrorCode.FORBIDDEN)
+            response.writeProblem(json, HttpStatus.FORBIDDEN, ErrorCode.FORBIDDEN)
         }
-
-    private fun write(
-        json: JsonMapper,
-        response: HttpServletResponse,
-        status: HttpStatus,
-        code: ErrorCode,
-    ) {
-        response.status = status.value()
-        response.contentType = MediaType.APPLICATION_PROBLEM_JSON_VALUE
-        response.characterEncoding = "UTF-8"
-        json.writeValue(response.outputStream, problem(status, code))
-    }
 }

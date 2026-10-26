@@ -81,6 +81,14 @@ class ProfileAndSessionsTest : IntegrationTest() {
 
         assertEquals(204, deleteSession(access, other["id"].asString()).response.status)
         assertEquals(1, sessions(access).size())
+        // access-токен завершённой сессии перестаёт действовать сразу
+        assertEquals(
+            401,
+            mockMvc
+                .get("/api/v1/me") { header("Authorization", "Bearer ${tablet["accessToken"].asString()}") }
+                .andReturn()
+                .response.status,
+        )
         assertEquals(
             401,
             post("/auth/refresh", mapOf("refreshToken" to tablet["refreshToken"].asString())).response.status,

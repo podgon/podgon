@@ -9,7 +9,7 @@ import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 
 @Configuration(proxyBeanMethods = false)
-@EnableConfigurationProperties(AuthProperties::class)
+@EnableConfigurationProperties(AuthProperties::class, RequestLimitProperties::class)
 class IdentityConfig {
     @Bean
     fun captchaVerifier(props: AuthProperties): CaptchaVerifier =

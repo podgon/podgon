@@ -11,3 +11,7 @@ podgon:
       t0: dGVzdC1qd3Qta2V5LW9sZC0wMTIzNDU2Nzg5YWJjZGVmLXBhZGRpbmc=
     captcha:
       mode: disabled
+  # Нагрузочные тесты шлют сотни запросов при остановленных часах; лимиты проверяет RequestLimitsTest
+  request-limits:
+    per-user-per-minute: 100000
+    search-per-user-per-minute: 100000

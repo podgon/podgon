@@ -43,8 +43,14 @@ podgon:
 
 server:
   port: ${PODGON_PORT:8080}
-  # За обратным прокси (Selectel) задать PODGON_FORWARD_HEADERS=native, иначе лимиты по IP видят адрес прокси
-  forward-headers-strategy: ${PODGON_FORWARD_HEADERS:none}
+  # IP клиента для лимитов берётся из X-Forwarded-For, только если запрос пришёл от доверенного прокси
+  # (регулярное выражение PODGON_TRUSTED_PROXIES; по умолчанию — только loopback). Из цепочки берётся
+  # самый правый адрес, не являющийся доверенным прокси, поэтому подставленные клиентом значения не помогают.
+  # Порт backend не публикуется наружу: доступ только через прокси (docs/architecture.md, раздел 7).
+  forward-headers-strategy: ${PODGON_FORWARD_HEADERS:native}
+  tomcat:
+    remoteip:
+      internal-proxies: ${PODGON_TRUSTED_PROXIES:127\.0\.0\.1|0:0:0:0:0:0:0:1}
   shutdown: graceful
   servlet:
     encoding:

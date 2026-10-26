@@ -177,9 +177,9 @@ class InvitationsTest : GroupsTestBase() {
         val id = createGroup(owner)["id"].asString()
         val token = invite(owner, id)
         jdbc.sql("update users set status = 'BLOCKED' where username = 'inv_blocked8'").update()
+        // токен заблокированного перестаёт действовать сразу (R3); проверка в InvitationService — вторая линия
         val r = accept(blocked, token)
-        assertEquals(403, status(r))
-        assertEquals("USER_BLOCKED", code(r))
+        assertEquals(401, status(r))
         assertEquals(1, members(owner, id).size())
     }
 

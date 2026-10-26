@@ -1,10 +1,15 @@
 openapi: 3.0.3
 info:
   title: Podgon API
-  version: 0.7.0
+  version: 0.8.0
   description: |
     Контракт API Podgon (contract-first, ADR-005). Этап 2: вход по одноразовому коду, регистрация,
     токены, профиль и сессии устройств. Этап 4: группы, участники, роли, приглашения. Этап 5: категории групп. Этап 6: рекомендации, публикации в группы, лента. Этап 7: поиск и фильтры.
+
+    Этап 8.1: клиент передаёт `X-Client-Platform` (`android`, `ios`) и `X-Client-Version` (номер сборки);
+    устаревшая сборка получает 426 `UPGRADE_REQUIRED` на любой запрос. Авторизованные запросы ограничены
+    по частоте на пользователя (429 `RATE_LIMITED` + `Retry-After`); отозванная сессия и заблокированный
+    пользователь получают 401 сразу.
 
     Ошибки — `application/problem+json` (RFC 9457) с машинным полем `code` (см. `ErrorCode`
     в shared-contract); текст для пользователя формирует клиент.
@@ -42,6 +47,7 @@ paths:
         '202': { description: Код отправлен (или запрос принят без отправки) }
         '400': { $ref: '#/components/responses/Problem' }
         '429': { $ref: '#/components/responses/RateLimited' }
+        '426': { $ref: '#/components/responses/UpgradeRequired' }
 
   /auth/otp/verify:
     post:
@@ -64,6 +70,7 @@ paths:
               schema: { $ref: '#/components/schemas/OtpVerifyResponse' }
         '400': { $ref: '#/components/responses/Problem' }
         '403': { $ref: '#/components/responses/Problem' }
+        '426': { $ref: '#/components/responses/UpgradeRequired' }
 
   /auth/register:
     post:
@@ -84,6 +91,8 @@ paths:
         '400': { $ref: '#/components/responses/Problem' }
         '401': { $ref: '#/components/responses/Problem' }
         '409': { $ref: '#/components/responses/Problem' }
+        '429': { $ref: '#/components/responses/RateLimited' }
+        '426': { $ref: '#/components/responses/UpgradeRequired' }
 
   /auth/refresh:
     post:
@@ -104,6 +113,8 @@ paths:
               schema: { $ref: '#/components/schemas/TokenPair' }
         '400': { $ref: '#/components/responses/Problem' }
         '401': { $ref: '#/components/responses/Problem' }
+        '429': { $ref: '#/components/responses/RateLimited' }
+        '426': { $ref: '#/components/responses/UpgradeRequired' }
 
   /auth/logout:
     post:
@@ -119,6 +130,7 @@ paths:
       responses:
         '204': { description: Сессия завершена }
         '400': { $ref: '#/components/responses/Problem' }
+        '426': { $ref: '#/components/responses/UpgradeRequired' }
 
   /me:
     get:
@@ -133,6 +145,8 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/UserProfile' }
         '401': { $ref: '#/components/responses/Problem' }
+        '429': { $ref: '#/components/responses/RateLimited' }
+        '426': { $ref: '#/components/responses/UpgradeRequired' }
     patch:
       tags: [me]
       operationId: updateMe
@@ -153,6 +167,8 @@ paths:
         '400': { $ref: '#/components/responses/Problem' }
         '401': { $ref: '#/components/responses/Problem' }
         '409': { $ref: '#/components/responses/Problem' }
+        '429': { $ref: '#/components/responses/RateLimited' }
+        '426': { $ref: '#/components/responses/UpgradeRequired' }
 
   /me/sessions:
     get:
@@ -169,6 +185,8 @@ paths:
                 type: array
                 items: { $ref: '#/components/schemas/SessionInfo' }
         '401': { $ref: '#/components/responses/Problem' }
+        '429': { $ref: '#/components/responses/RateLimited' }
+        '426': { $ref: '#/components/responses/UpgradeRequired' }
 
   /me/sessions/{id}:
     delete:
@@ -185,6 +203,8 @@ paths:
         '204': { description: Сессия завершена }
         '401': { $ref: '#/components/responses/Problem' }
         '404': { $ref: '#/components/responses/Problem' }
+        '429': { $ref: '#/components/responses/RateLimited' }
+        '426': { $ref: '#/components/responses/UpgradeRequired' }
 
   /groups:
     post:
@@ -206,6 +226,8 @@ paths:
         '400': { $ref: '#/components/responses/Problem' }
         '401': { $ref: '#/components/responses/Problem' }
         '409': { $ref: '#/components/responses/Problem' }
+        '429': { $ref: '#/components/responses/RateLimited' }
+        '426': { $ref: '#/components/responses/UpgradeRequired' }
     get:
       tags: [groups]
       operationId: listGroups
@@ -220,6 +242,8 @@ paths:
                 type: array
                 items: { $ref: '#/components/schemas/GroupSummary' }
         '401': { $ref: '#/components/responses/Problem' }
+        '429': { $ref: '#/components/responses/RateLimited' }
+        '426': { $ref: '#/components/responses/UpgradeRequired' }
 
   /groups/{groupId}:
     parameters:
@@ -238,6 +262,8 @@ paths:
               schema: { $ref: '#/components/schemas/GroupSummary' }
         '401': { $ref: '#/components/responses/Problem' }
         '404': { $ref: '#/components/responses/Problem' }
+        '429': { $ref: '#/components/responses/RateLimited' }
+        '426': { $ref: '#/components/responses/UpgradeRequired' }
     patch:
       tags: [groups]
       operationId: updateGroup
@@ -258,6 +284,8 @@ paths:
         '401': { $ref: '#/components/responses/Problem' }
         '403': { $ref: '#/components/responses/Problem' }
         '404': { $ref: '#/components/responses/Problem' }
+        '429': { $ref: '#/components/responses/RateLimited' }
+        '426': { $ref: '#/components/responses/UpgradeRequired' }
     delete:
       tags: [groups]
       operationId: deleteGroup
@@ -280,6 +308,8 @@ paths:
         '401': { $ref: '#/components/responses/Problem' }
         '403': { $ref: '#/components/responses/Problem' }
         '404': { $ref: '#/components/responses/Problem' }
+        '429': { $ref: '#/components/responses/RateLimited' }
+        '426': { $ref: '#/components/responses/UpgradeRequired' }
 
   /groups/{groupId}/leave:
     parameters:
@@ -301,6 +331,8 @@ paths:
         '401': { $ref: '#/components/responses/Problem' }
         '404': { $ref: '#/components/responses/Problem' }
         '409': { $ref: '#/components/responses/Problem' }
+        '429': { $ref: '#/components/responses/RateLimited' }
+        '426': { $ref: '#/components/responses/UpgradeRequired' }
 
   /groups/{groupId}/delete-impact:
     parameters:
@@ -319,6 +351,8 @@ paths:
         '401': { $ref: '#/components/responses/Problem' }
         '403': { $ref: '#/components/responses/Problem' }
         '404': { $ref: '#/components/responses/Problem' }
+        '429': { $ref: '#/components/responses/RateLimited' }
+        '426': { $ref: '#/components/responses/UpgradeRequired' }
 
   /groups/{groupId}/leave-impact:
     parameters:
@@ -336,6 +370,8 @@ paths:
               schema: { $ref: '#/components/schemas/LeaveImpact' }
         '401': { $ref: '#/components/responses/Problem' }
         '404': { $ref: '#/components/responses/Problem' }
+        '429': { $ref: '#/components/responses/RateLimited' }
+        '426': { $ref: '#/components/responses/UpgradeRequired' }
 
   /me/delete-impact:
     get:
@@ -350,6 +386,8 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/AccountDeleteImpact' }
         '401': { $ref: '#/components/responses/Problem' }
+        '429': { $ref: '#/components/responses/RateLimited' }
+        '426': { $ref: '#/components/responses/UpgradeRequired' }
 
   /me/deletion/code:
     post:
@@ -362,6 +400,7 @@ paths:
         '204': { description: Код поставлен в очередь на отправку }
         '401': { $ref: '#/components/responses/Problem' }
         '429': { $ref: '#/components/responses/Problem' }
+        '426': { $ref: '#/components/responses/UpgradeRequired' }
 
   /me/deletion:
     post:
@@ -384,6 +423,8 @@ paths:
         '400': { $ref: '#/components/responses/Problem' }
         '401': { $ref: '#/components/responses/Problem' }
         '409': { $ref: '#/components/responses/Problem' }
+        '429': { $ref: '#/components/responses/RateLimited' }
+        '426': { $ref: '#/components/responses/UpgradeRequired' }
 
   /groups/{groupId}/members:
     parameters:
@@ -403,6 +444,8 @@ paths:
                 items: { $ref: '#/components/schemas/MemberInfo' }
         '401': { $ref: '#/components/responses/Problem' }
         '404': { $ref: '#/components/responses/Problem' }
+        '429': { $ref: '#/components/responses/RateLimited' }
+        '426': { $ref: '#/components/responses/UpgradeRequired' }
 
   /groups/{groupId}/members/{userId}:
     parameters:
@@ -420,6 +463,8 @@ paths:
         '403': { $ref: '#/components/responses/Problem' }
         '404': { $ref: '#/components/responses/Problem' }
         '409': { $ref: '#/components/responses/Problem' }
+        '429': { $ref: '#/components/responses/RateLimited' }
+        '426': { $ref: '#/components/responses/UpgradeRequired' }
 
   /groups/{groupId}/members/{userId}/role:
     parameters:
@@ -447,6 +492,8 @@ paths:
         '403': { $ref: '#/components/responses/Problem' }
         '404': { $ref: '#/components/responses/Problem' }
         '409': { $ref: '#/components/responses/Problem' }
+        '429': { $ref: '#/components/responses/RateLimited' }
+        '426': { $ref: '#/components/responses/UpgradeRequired' }
 
   /groups/{groupId}/roles:
     parameters:
@@ -466,6 +513,8 @@ paths:
                 items: { $ref: '#/components/schemas/RoleInfo' }
         '401': { $ref: '#/components/responses/Problem' }
         '404': { $ref: '#/components/responses/Problem' }
+        '429': { $ref: '#/components/responses/RateLimited' }
+        '426': { $ref: '#/components/responses/UpgradeRequired' }
     post:
       tags: [groups]
       operationId: createRole
@@ -487,6 +536,8 @@ paths:
         '403': { $ref: '#/components/responses/Problem' }
         '404': { $ref: '#/components/responses/Problem' }
         '409': { $ref: '#/components/responses/Problem' }
+        '429': { $ref: '#/components/responses/RateLimited' }
+        '426': { $ref: '#/components/responses/UpgradeRequired' }
 
   /groups/{groupId}/roles/{roleId}:
     parameters:
@@ -514,6 +565,8 @@ paths:
         '403': { $ref: '#/components/responses/Problem' }
         '404': { $ref: '#/components/responses/Problem' }
         '409': { $ref: '#/components/responses/Problem' }
+        '429': { $ref: '#/components/responses/RateLimited' }
+        '426': { $ref: '#/components/responses/UpgradeRequired' }
     delete:
       tags: [groups]
       operationId: deleteRole
@@ -526,6 +579,8 @@ paths:
         '403': { $ref: '#/components/responses/Problem' }
         '404': { $ref: '#/components/responses/Problem' }
         '409': { $ref: '#/components/responses/Problem' }
+        '429': { $ref: '#/components/responses/RateLimited' }
+        '426': { $ref: '#/components/responses/UpgradeRequired' }
 
   /groups/{groupId}/categories:
     parameters:
@@ -545,6 +600,8 @@ paths:
                 items: { $ref: '#/components/schemas/CategoryInfo' }
         '401': { $ref: '#/components/responses/Problem' }
         '404': { $ref: '#/components/responses/Problem' }
+        '429': { $ref: '#/components/responses/RateLimited' }
+        '426': { $ref: '#/components/responses/UpgradeRequired' }
     post:
       tags: [categories]
       operationId: createCategory
@@ -567,6 +624,8 @@ paths:
         '403': { $ref: '#/components/responses/Problem' }
         '404': { $ref: '#/components/responses/Problem' }
         '409': { $ref: '#/components/responses/Problem' }
+        '429': { $ref: '#/components/responses/RateLimited' }
+        '426': { $ref: '#/components/responses/UpgradeRequired' }
 
   /groups/{groupId}/categories/{categoryId}:
     parameters:
@@ -593,6 +652,8 @@ paths:
         '403': { $ref: '#/components/responses/Problem' }
         '404': { $ref: '#/components/responses/Problem' }
         '409': { $ref: '#/components/responses/Problem' }
+        '429': { $ref: '#/components/responses/RateLimited' }
+        '426': { $ref: '#/components/responses/UpgradeRequired' }
     delete:
       tags: [categories]
       operationId: deleteCategory
@@ -612,6 +673,8 @@ paths:
         '403': { $ref: '#/components/responses/Problem' }
         '404': { $ref: '#/components/responses/Problem' }
         '409': { $ref: '#/components/responses/Problem' }
+        '429': { $ref: '#/components/responses/RateLimited' }
+        '426': { $ref: '#/components/responses/UpgradeRequired' }
 
   /groups/{groupId}/categories/{categoryId}/parent:
     parameters:
@@ -639,6 +702,8 @@ paths:
         '403': { $ref: '#/components/responses/Problem' }
         '404': { $ref: '#/components/responses/Problem' }
         '409': { $ref: '#/components/responses/Problem' }
+        '429': { $ref: '#/components/responses/RateLimited' }
+        '426': { $ref: '#/components/responses/UpgradeRequired' }
 
   /groups/{groupId}/categories/{categoryId}/delete-impact:
     parameters:
@@ -658,6 +723,8 @@ paths:
         '401': { $ref: '#/components/responses/Problem' }
         '403': { $ref: '#/components/responses/Problem' }
         '404': { $ref: '#/components/responses/Problem' }
+        '429': { $ref: '#/components/responses/RateLimited' }
+        '426': { $ref: '#/components/responses/UpgradeRequired' }
 
   /reviews:
     post:
@@ -683,6 +750,8 @@ paths:
         '401': { $ref: '#/components/responses/Problem' }
         '404': { $ref: '#/components/responses/Problem' }
         '409': { $ref: '#/components/responses/Problem' }
+        '429': { $ref: '#/components/responses/RateLimited' }
+        '426': { $ref: '#/components/responses/UpgradeRequired' }
     get:
       tags: [reviews]
       operationId: searchReviews
@@ -717,6 +786,8 @@ paths:
         '400': { $ref: '#/components/responses/Problem' }
         '401': { $ref: '#/components/responses/Problem' }
         '404': { $ref: '#/components/responses/Problem' }
+        '429': { $ref: '#/components/responses/RateLimited' }
+        '426': { $ref: '#/components/responses/UpgradeRequired' }
 
   /reviews/{reviewId}:
     parameters:
@@ -735,6 +806,8 @@ paths:
               schema: { $ref: '#/components/schemas/ReviewDetails' }
         '401': { $ref: '#/components/responses/Problem' }
         '404': { $ref: '#/components/responses/Problem' }
+        '429': { $ref: '#/components/responses/RateLimited' }
+        '426': { $ref: '#/components/responses/UpgradeRequired' }
     patch:
       tags: [reviews]
       operationId: updateReview
@@ -756,6 +829,8 @@ paths:
         '401': { $ref: '#/components/responses/Problem' }
         '403': { $ref: '#/components/responses/Problem' }
         '404': { $ref: '#/components/responses/Problem' }
+        '429': { $ref: '#/components/responses/RateLimited' }
+        '426': { $ref: '#/components/responses/UpgradeRequired' }
     delete:
       tags: [reviews]
       operationId: deleteReview
@@ -766,6 +841,8 @@ paths:
         '401': { $ref: '#/components/responses/Problem' }
         '403': { $ref: '#/components/responses/Problem' }
         '404': { $ref: '#/components/responses/Problem' }
+        '429': { $ref: '#/components/responses/RateLimited' }
+        '426': { $ref: '#/components/responses/UpgradeRequired' }
 
   /reviews/{reviewId}/groups:
     parameters:
@@ -793,6 +870,8 @@ paths:
         '401': { $ref: '#/components/responses/Problem' }
         '403': { $ref: '#/components/responses/Problem' }
         '404': { $ref: '#/components/responses/Problem' }
+        '429': { $ref: '#/components/responses/RateLimited' }
+        '426': { $ref: '#/components/responses/UpgradeRequired' }
 
   /groups/{groupId}/tags:
     parameters:
@@ -817,6 +896,8 @@ paths:
                 items: { $ref: '#/components/schemas/TagCount' }
         '401': { $ref: '#/components/responses/Problem' }
         '404': { $ref: '#/components/responses/Problem' }
+        '429': { $ref: '#/components/responses/RateLimited' }
+        '426': { $ref: '#/components/responses/UpgradeRequired' }
 
   /me/reviews:
     get:
@@ -835,6 +916,8 @@ paths:
               schema: { $ref: '#/components/schemas/ReviewPage' }
         '400': { $ref: '#/components/responses/Problem' }
         '401': { $ref: '#/components/responses/Problem' }
+        '429': { $ref: '#/components/responses/RateLimited' }
+        '426': { $ref: '#/components/responses/UpgradeRequired' }
 
   /groups/{groupId}/reviews:
     parameters:
@@ -864,6 +947,8 @@ paths:
         '400': { $ref: '#/components/responses/Problem' }
         '401': { $ref: '#/components/responses/Problem' }
         '404': { $ref: '#/components/responses/Problem' }
+        '429': { $ref: '#/components/responses/RateLimited' }
+        '426': { $ref: '#/components/responses/UpgradeRequired' }
 
   /groups/{groupId}/invitations:
     parameters:
@@ -893,6 +978,7 @@ paths:
         '404': { $ref: '#/components/responses/Problem' }
         '409': { $ref: '#/components/responses/Problem' }
         '429': { $ref: '#/components/responses/RateLimited' }
+        '426': { $ref: '#/components/responses/UpgradeRequired' }
     get:
       tags: [invitations]
       operationId: listInvitations
@@ -909,6 +995,8 @@ paths:
         '401': { $ref: '#/components/responses/Problem' }
         '403': { $ref: '#/components/responses/Problem' }
         '404': { $ref: '#/components/responses/Problem' }
+        '429': { $ref: '#/components/responses/RateLimited' }
+        '426': { $ref: '#/components/responses/UpgradeRequired' }
 
   /groups/{groupId}/invitations/{invitationId}:
     parameters:
@@ -928,6 +1016,8 @@ paths:
         '401': { $ref: '#/components/responses/Problem' }
         '403': { $ref: '#/components/responses/Problem' }
         '404': { $ref: '#/components/responses/Problem' }
+        '429': { $ref: '#/components/responses/RateLimited' }
+        '426': { $ref: '#/components/responses/UpgradeRequired' }
 
   /invitations/preview:
     post:
@@ -949,6 +1039,8 @@ paths:
               schema: { $ref: '#/components/schemas/InvitationPreview' }
         '400': { $ref: '#/components/responses/Problem' }
         '401': { $ref: '#/components/responses/Problem' }
+        '429': { $ref: '#/components/responses/RateLimited' }
+        '426': { $ref: '#/components/responses/UpgradeRequired' }
 
   /invitations/share-preview:
     post:
@@ -970,6 +1062,8 @@ paths:
               schema: { $ref: '#/components/schemas/SharePreview' }
         '400': { $ref: '#/components/responses/Problem' }
         '401': { $ref: '#/components/responses/Problem' }
+        '429': { $ref: '#/components/responses/RateLimited' }
+        '426': { $ref: '#/components/responses/UpgradeRequired' }
 
   /invitations/accept:
     post:
@@ -995,6 +1089,8 @@ paths:
         '401': { $ref: '#/components/responses/Problem' }
         '403': { $ref: '#/components/responses/Problem' }
         '409': { $ref: '#/components/responses/Problem' }
+        '429': { $ref: '#/components/responses/RateLimited' }
+        '426': { $ref: '#/components/responses/UpgradeRequired' }
 
 components:
   securitySchemes:
@@ -1079,6 +1175,11 @@ components:
       content:
         application/problem+json:
           schema: { $ref: '#/components/schemas/Problem' }
+    UpgradeRequired:
+      description: Версия приложения устарела (заголовки `X-Client-Platform` и `X-Client-Version` ниже минимальной), нужно обновить приложение
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/Problem' }
     RateLimited:
       description: Слишком частые запросы
       headers:
@@ -1123,6 +1224,7 @@ components:
             - CATEGORY_CYCLE
             - CATEGORY_TOO_DEEP
             - CATEGORY_HAS_FOREIGN_REVIEWS
+            - UPGRADE_REQUIRED
             - INTERNAL_ERROR
         errors:
           type: array

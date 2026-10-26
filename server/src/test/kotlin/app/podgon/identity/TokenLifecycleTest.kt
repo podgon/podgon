@@ -128,6 +128,25 @@ class TokenLifecycleTest : IntegrationTest() {
     }
 
     @Test
+    fun `access-токен перестаёт действовать сразу после выхода и блокировки`() {
+        val loggedOut = registerUser("t11@example.com", "instant_logout")
+        post("/auth/logout", mapOf("refreshToken" to loggedOut["refreshToken"].asString()))
+        assertEquals(401, me(loggedOut["accessToken"].asString()).response.status)
+
+        val blocked = registerUser("t12@example.com", "instant_block")["accessToken"].asString()
+        assertEquals(200, me(blocked).response.status)
+        jdbc.sql("update users set status = 'BLOCKED' where email = 't12@example.com'").update()
+        assertEquals(401, me(blocked).response.status)
+    }
+
+    @Test
+    fun `после обновления пары прежний access-токен действует до истечения`() {
+        val first = registerUser("t13@example.com", "rotated_access")
+        refresh(first["refreshToken"].asString())
+        assertEquals(200, me(first["accessToken"].asString()).response.status)
+    }
+
+    @Test
     fun `refresh хранится только как хэш`() {
         val tokens = registerUser("t9@example.com", "hashed")
         val raw = tokens["refreshToken"].asString()
