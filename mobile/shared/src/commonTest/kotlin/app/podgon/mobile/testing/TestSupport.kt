@@ -162,4 +162,6 @@ class FakeCachedResponseDao : CachedResponseDao {
     override suspend fun clear() {
         entries.clear()
     }
+
+    override suspend fun keys(prefix: String): List<String> = entries.keys.filter { it.startsWith(prefix) }
 }

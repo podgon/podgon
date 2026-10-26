@@ -45,6 +45,7 @@ class ReviewsRepository(
                 Result.success(Cached(page, fromCache = false))
             },
             onFailure = {
+                if (scope is FeedScope.Group && result.lostAccess()) forgetGroup(scope.groupId)
                 val cached =
                     if (cacheable &&
                         result.appError() == AppError.Network
@@ -79,6 +80,7 @@ class ReviewsRepository(
                 Result.success(Cached(it, fromCache = false))
             },
             onFailure = {
+                if (result.lostAccess()) cache.remove(key)
                 val cached = if (result.appError() == AppError.Network) cache.read<ReviewDetails>(key) else null
                 if (cached != null) Result.success(Cached(cached, fromCache = true)) else Result.failure(it)
             },
@@ -91,14 +93,35 @@ class ReviewsRepository(
         return result
     }
 
+    /**
+     * Убирает из кэша ленты и фильтры групп, в которых пользователь больше не состоит (замечание R14 ревью):
+     * после исключения из группы её данные не должны показываться без сети. Вызывается после загрузки списка групп.
+     */
+    suspend fun retainGroups(groupIds: Set<String>) {
+        listOf(FEED_PREFIX, FILTER_PREFIX).forEach { prefix ->
+            cache.keys(prefix).filter { it.removePrefix(prefix) !in groupIds }.forEach { cache.remove(it) }
+        }
+    }
+
+    private suspend fun forgetGroup(groupId: String) {
+        cache.remove(FEED_PREFIX + groupId)
+        cache.remove(filterKey(groupId))
+    }
+
+    /** Сервер ответил «нет доступа» (не участник → 404, нет прав → 403): сохранённое больше не показываем. */
+    private fun Result<*>.lostAccess(): Boolean = (appError() as? AppError.Api)?.status in setOf(403, 404)
+
     private fun feedKey(scope: FeedScope) =
         when (scope) {
-            is FeedScope.Group -> "feed:${scope.groupId}"
+            is FeedScope.Group -> FEED_PREFIX + scope.groupId
             FeedScope.Mine -> "mine"
             FeedScope.AllGroups -> "all"
         }
 
-    private fun filterKey(groupId: String) = "filter:$groupId"
+    private fun filterKey(groupId: String) = FILTER_PREFIX + groupId
 
     private fun reviewKey(reviewId: String) = "review:$reviewId"
 }
+
+private const val FEED_PREFIX = "feed:"
+private const val FILTER_PREFIX = "filter:"

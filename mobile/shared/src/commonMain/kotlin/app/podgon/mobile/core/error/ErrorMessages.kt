@@ -21,6 +21,7 @@ import app.podgon.mobile.resources.error_not_found
 import app.podgon.mobile.resources.error_rate_limited
 import app.podgon.mobile.resources.error_registration_expired
 import app.podgon.mobile.resources.error_unknown
+import app.podgon.mobile.resources.error_upgrade_required
 import app.podgon.mobile.resources.error_username_taken
 import org.jetbrains.compose.resources.stringResource
 
@@ -49,6 +50,7 @@ fun AppError.message(): String =
                 ErrorCode.CATEGORY_HAS_FOREIGN_REVIEWS -> stringResource(Res.string.error_category_foreign_reviews)
                 ErrorCode.FORBIDDEN -> stringResource(Res.string.error_forbidden)
                 ErrorCode.NOT_FOUND -> stringResource(Res.string.error_not_found)
+                ErrorCode.UPGRADE_REQUIRED -> stringResource(Res.string.error_upgrade_required)
                 else -> stringResource(Res.string.error_unknown)
             }
     }

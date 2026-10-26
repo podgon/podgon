@@ -15,6 +15,9 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.toRoute
 import app.podgon.mobile.core.auth.AuthState
 import app.podgon.mobile.core.auth.SessionManager
+import app.podgon.mobile.core.network.ApiConfig
+import app.podgon.mobile.core.network.UpdateGate
+import app.podgon.mobile.core.network.UpdateRequiredScreen
 import app.podgon.mobile.designsystem.PodgonTheme
 import app.podgon.mobile.feature.auth.ui.CodeScreen
 import app.podgon.mobile.feature.auth.ui.EmailScreen
@@ -106,13 +109,15 @@ private data class InvitationsRoute(
 fun App() {
     val session = koinInject<SessionManager>()
     val state by session.state.collectAsStateWithLifecycle()
+    val updateRequired by koinInject<UpdateGate>().required.collectAsStateWithLifecycle()
     LaunchedEffect(session) { session.restore() }
     PodgonTheme {
-        when (state) {
-            AuthState.Loading ->
+        when {
+            updateRequired -> UpdateRequiredScreen(koinInject<ApiConfig>().updateUrl)
+            state == AuthState.Loading ->
                 Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
-            AuthState.SignedOut -> SignedOutNavigation()
-            AuthState.SignedIn -> SignedInNavigation()
+            state == AuthState.SignedOut -> SignedOutNavigation()
+            else -> SignedInNavigation()
         }
     }
 }

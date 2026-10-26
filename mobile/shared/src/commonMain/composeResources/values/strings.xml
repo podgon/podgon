@@ -32,6 +32,10 @@
     <string name="field_too_long">Too long</string>
     <string name="field_invalid">Invalid value</string>
 
+    <string name="error_upgrade_required">This version of the app is no longer supported. Please update it.</string>
+    <string name="update_title">Update required</string>
+    <string name="update_text">This version of Podgon is out of date and no longer works with the server. Install the latest version to continue.</string>
+    <string name="update_action">Update</string>
     <string name="error_network">No connection to the server. Check your internet and try again.</string>
     <string name="error_unknown">Something went wrong. Please try again later.</string>
     <string name="error_invalid_code">The code is wrong or has expired. Request a new one.</string>

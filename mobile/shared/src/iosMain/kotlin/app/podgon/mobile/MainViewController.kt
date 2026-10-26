@@ -10,12 +10,20 @@ import platform.UIKit.UIViewController
 
 private var koinStarted = false
 
-/** Точка входа для iosApp (этап 11): запускает Koin один раз и возвращает корневой экран Compose. */
-fun mainViewController(apiBaseUrl: String): UIViewController {
+/**
+ * Точка входа для iosApp (этап 11): запускает Koin один раз и возвращает корневой экран Compose.
+ * [appVersion] — номер сборки (CFBundleVersion) для проверки минимальной версии на сервере.
+ */
+fun mainViewController(
+    apiBaseUrl: String,
+    fallbackBaseUrls: List<String> = emptyList(),
+    appVersion: Int = 0,
+    updateUrl: String = "",
+): UIViewController {
     if (!koinStarted) {
         startKoin {
             modules(
-                module { single { ApiConfig(apiBaseUrl) } },
+                module { single { ApiConfig(apiBaseUrl, fallbackBaseUrls, "ios", appVersion, updateUrl) } },
                 iosPlatformModule,
                 appModule,
             )

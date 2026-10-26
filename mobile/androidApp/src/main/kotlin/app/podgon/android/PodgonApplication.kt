@@ -14,7 +14,22 @@ class PodgonApplication : Application() {
         startKoin {
             androidContext(this@PodgonApplication)
             modules(
-                module { single { ApiConfig(BuildConfig.API_BASE_URL) } },
+                module {
+                    single {
+                        ApiConfig(
+                            baseUrl = BuildConfig.API_BASE_URL,
+                            fallbackBaseUrls =
+                                BuildConfig.API_FALLBACK_URLS
+                                    .split(
+                                        ',',
+                                    ).map(String::trim)
+                                    .filter(String::isNotEmpty),
+                            platform = "android",
+                            appVersion = BuildConfig.VERSION_CODE,
+                            updateUrl = BuildConfig.UPDATE_URL,
+                        )
+                    }
+                },
                 androidPlatformModule,
                 appModule,
             )

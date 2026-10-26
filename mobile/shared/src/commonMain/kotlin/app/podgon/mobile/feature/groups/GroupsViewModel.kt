@@ -18,9 +18,13 @@ data class GroupsState(
     val error: AppError? = null,
 )
 
-/** Список групп пользователя (главный экран). */
+/**
+ * Список групп пользователя (главный экран). [onLoaded] получает идентификаторы групп после успешной
+ * загрузки — по ним чистится кэш групп, из которых пользователь вышел или был исключён.
+ */
 class GroupsViewModel(
     private val api: GroupsApi,
+    private val onLoaded: suspend (Set<String>) -> Unit = {},
 ) : ViewModel() {
     private val _state = MutableStateFlow(GroupsState())
     val state: StateFlow<GroupsState> = _state.asStateFlow()
@@ -30,6 +34,7 @@ class GroupsViewModel(
         _state.update { it.copy(loading = true, error = null) }
         viewModelScope.launch {
             val result = api.list()
+            result.getOrNull()?.let { groups -> onLoaded(groups.map { it.id }.toSet()) }
             _state.update {
                 it.copy(
                     loading = false,

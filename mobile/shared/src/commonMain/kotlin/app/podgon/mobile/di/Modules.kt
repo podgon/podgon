@@ -3,10 +3,12 @@ package app.podgon.mobile.di
 import app.podgon.mobile.core.auth.SessionManager
 import app.podgon.mobile.core.cache.CacheDatabase
 import app.podgon.mobile.core.cache.ResponseCache
+import app.podgon.mobile.core.network.ApiEndpoints
 import app.podgon.mobile.core.network.AuthApi
 import app.podgon.mobile.core.network.GroupsApi
 import app.podgon.mobile.core.network.MeApi
 import app.podgon.mobile.core.network.ReviewsApi
+import app.podgon.mobile.core.network.UpdateGate
 import app.podgon.mobile.core.network.createAuthorizedClient
 import app.podgon.mobile.core.network.createPublicClient
 import app.podgon.mobile.feature.auth.data.AuthRepository
@@ -44,8 +46,12 @@ val appModule =
         single { ResponseCache(get<CacheDatabase>().responses()) }
         single { ReviewsRepository(get(), get()) }
         single { SessionManager(get()) { get<ResponseCache>().clear() } }
-        single<HttpClient>(PUBLIC_CLIENT) { createPublicClient(get(), get()) }
-        single<HttpClient>(AUTHORIZED_CLIENT) { createAuthorizedClient(get(), get(), get(), get(PUBLIC_CLIENT)) }
+        single { ApiEndpoints(get()) }
+        single { UpdateGate() }
+        single<HttpClient>(PUBLIC_CLIENT) { createPublicClient(get(), get(), get(), get()) }
+        single<HttpClient>(AUTHORIZED_CLIENT) {
+            createAuthorizedClient(get(), get(), get(), get(PUBLIC_CLIENT), get(), get())
+        }
         single { AuthApi(get(PUBLIC_CLIENT)) }
         single { MeApi(get(AUTHORIZED_CLIENT)) }
         single { GroupsApi(get(AUTHORIZED_CLIENT)) }
@@ -58,7 +64,10 @@ val appModule =
         viewModel { (email: String) -> CodeViewModel(email, get()) }
         viewModel { (registrationToken: String) -> RegisterViewModel(registrationToken, get()) }
         viewModel { ProfileViewModel(get(), get()) }
-        viewModel { GroupsViewModel(get()) }
+        viewModel {
+            val reviews = get<ReviewsRepository>()
+            GroupsViewModel(get()) { reviews.retainGroups(it) }
+        }
         viewModel { CreateGroupViewModel(get()) }
         viewModel { JoinGroupViewModel(get()) }
         viewModel { (groupId: String) -> GroupViewModel(groupId, get(), get()) }

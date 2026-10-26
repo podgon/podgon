@@ -31,5 +31,7 @@ class ResponseCache(
 
     suspend fun clear() = dao.clear()
 
+    suspend fun keys(prefix: String): List<String> = dao.keys(prefix)
+
     fun timestamp(): Long = now()
 }

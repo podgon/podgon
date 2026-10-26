@@ -32,6 +32,9 @@ interface CachedResponseDao {
 
     @Query("delete from cached_response")
     suspend fun clear()
+
+    @Query("select `key` from cached_response where `key` like :prefix || '%'")
+    suspend fun keys(prefix: String): List<String>
 }
 
 /** Локальный кэш для чтения без сети: первые страницы лент и открытые карточки. */

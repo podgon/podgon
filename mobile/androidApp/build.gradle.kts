@@ -14,6 +14,20 @@ android {
         targetSdk = 36
         versionCode = 1
         versionName = "0.3.0"
+        // Запасные адреса API через запятую (ADR-010, R2): -Ppodgon.apiFallbackUrls=https://a,https://b
+        buildConfigField(
+            "String",
+            "API_FALLBACK_URLS",
+            "\"${providers.gradleProperty("podgon.apiFallbackUrls").getOrElse("")}\"",
+        )
+        // Куда вести с экрана обязательного обновления (R1)
+        buildConfigField(
+            "String",
+            "UPDATE_URL",
+            "\"${providers.gradleProperty(
+                "podgon.updateUrl",
+            ).getOrElse("https://play.google.com/store/apps/details?id=app.podgon")}\"",
+        )
     }
 
     buildFeatures {

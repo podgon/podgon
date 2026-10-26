@@ -32,6 +32,10 @@
     <string name="field_too_long">Слишком длинно</string>
     <string name="field_invalid">Недопустимое значение</string>
 
+    <string name="error_upgrade_required">Эта версия приложения больше не поддерживается. Обновите приложение.</string>
+    <string name="update_title">Нужно обновление</string>
+    <string name="update_text">Эта версия Podgon устарела и больше не работает с сервером. Установите последнюю версию, чтобы продолжить.</string>
+    <string name="update_action">Обновить</string>
     <string name="error_network">Нет связи с сервером. Проверьте интернет и повторите.</string>
     <string name="error_unknown">Что-то пошло не так. Попробуйте позже.</string>
     <string name="error_invalid_code">Код неверный или просрочен. Запросите новый.</string>
