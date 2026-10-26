@@ -36,4 +36,6 @@ data class MoveCategoryRequest(
 data class CategoryDeleteImpact(
     val subcategories: Int,
     val publications: Int,
+    /** Из них опубликованных другими участниками: если их больше нуля, удалить категорию нельзя. */
+    val foreignPublications: Int,
 )

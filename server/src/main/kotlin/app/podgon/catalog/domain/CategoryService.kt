@@ -14,6 +14,7 @@ import app.podgon.contract.MoveCategoryRequest
 import app.podgon.contract.UpdateCategoryRequest
 import app.podgon.contract.Validation
 import app.podgon.groups.GroupAccess
+import app.podgon.reviews.ReviewPublications
 import org.springframework.http.HttpStatus
 import org.springframework.stereotype.Service
 import org.springframework.transaction.support.TransactionTemplate
@@ -37,6 +38,7 @@ private fun String.toUuidOrNull(): UUID? = runCatching { UUID.fromString(this) }
 class CategoryService(
     private val categories: CategoryRepository,
     private val access: GroupAccess,
+    private val publications: ReviewPublications,
     private val props: CatalogProperties,
     private val clock: Clock,
     private val tx: TransactionTemplate,
@@ -143,7 +145,7 @@ class CategoryService(
         categoryId: UUID,
     ): CategoryDeleteImpact {
         access.requireAdmin(userId, groupId)
-        return impact(groupId, categoryId)
+        return impact(groupId, categoryId, userId)
     }
 
     /** Удаляет категорию с поддеревом; если оно не пусто, нужно явное подтверждение. */
@@ -156,7 +158,8 @@ class CategoryService(
         access.requireAdmin(userId, groupId)
         tx.executeWithoutResult {
             categories.lockGroup(groupId)
-            val impact = impact(groupId, categoryId)
+            val impact = impact(groupId, categoryId, userId)
+            if (impact.foreignPublications > 0) throw conflict(ErrorCode.CATEGORY_HAS_FOREIGN_REVIEWS)
             if (!confirm && (impact.subcategories > 0 || impact.publications > 0)) {
                 throw ApiException(ErrorCode.CONFIRMATION_REQUIRED, HttpStatus.BAD_REQUEST)
             }
@@ -167,10 +170,15 @@ class CategoryService(
     private fun impact(
         groupId: UUID,
         categoryId: UUID,
+        userId: UUID,
     ): CategoryDeleteImpact {
         categories.find(groupId, categoryId) ?: throw notFound()
-        // Публикации рекомендаций появятся на этапе 6 (review_groups): тогда считаются здесь же.
-        return CategoryDeleteImpact(subcategories = categories.subtree(groupId, categoryId).size - 1, publications = 0)
+        val ids = categories.subtree(groupId, categoryId).map { it.id }
+        return CategoryDeleteImpact(
+            subcategories = ids.size - 1,
+            publications = publications.count(groupId, ids),
+            foreignPublications = publications.countByOthers(groupId, ids, userId),
+        )
     }
 
     private fun validate(

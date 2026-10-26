@@ -151,6 +151,14 @@ class GroupRepository(
             .optional()
             .orElse(null)
 
+    fun groupIdsOf(userId: UUID): Set<UUID> =
+        jdbc
+            .sql("select group_id from memberships where user_id = :user")
+            .param("user", userId)
+            .query { rs, _ -> rs.getObject("group_id", UUID::class.java) }
+            .list()
+            .toSet()
+
     /** Группа без привязки к участнику (для предпросмотра приглашения). */
     fun groupInfo(groupId: UUID): GroupRow? =
         jdbc

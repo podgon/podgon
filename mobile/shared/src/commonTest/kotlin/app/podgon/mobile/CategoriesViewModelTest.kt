@@ -131,7 +131,7 @@ class CategoriesViewModelTest {
                         request.method == HttpMethod.Delete -> json("", HttpStatusCode.NoContent)
                         request.url.encodedPath.endsWith(
                             "/delete-impact",
-                        ) -> json("""{"subcategories":1,"publications":0}""")
+                        ) -> json("""{"subcategories":1,"publications":0,"foreignPublications":0}""")
                         else -> json(listJson)
                     }
                 }

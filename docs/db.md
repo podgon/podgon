@@ -104,7 +104,7 @@ category_templates (self: parent_id)  — базовый набор
 Недостаток выбранного варианта — при публикации нужно указывать категорию для каждой группы; смягчается подстановкой по `template_id`.
 
 ### tags и review_tags
-`tags(id, name citext unique)` — имя без `#`, `CHECK (name ~ '^[[:alnum:]_-]{1,30}$')` (юникод-буквы допустимы); `review_tags(review_id, tag_id)` PK обоих, индекс `(tag_id, review_id)`.
+`tags(id bigint identity, name citext unique)` — имя без `#`; в БД `CHECK (char_length(name) between 1 and 30)`, а формат (буквы и цифры Unicode, `_`, `-`) проверяет приложение (`Validation.tag`): класс `[[:alnum:]]` зависит от локали БД; `review_tags(review_id, tag_id)` PK обоих, индекс `(tag_id, review_id)`.
 Теги группы = `DISTINCT` теги публикаций группы (запрос по индексам). При необходимости — материализованная таблица `group_tags` со счётчиками.
 
 ### Служебные таблицы

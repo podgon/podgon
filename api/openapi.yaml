@@ -1,10 +1,10 @@
 openapi: 3.0.3
 info:
   title: Podgon API
-  version: 0.4.0
+  version: 0.5.0
   description: |
     Контракт API Podgon (contract-first, ADR-005). Этап 2: вход по одноразовому коду, регистрация,
-    токены, профиль и сессии устройств. Этап 4: группы, участники, роли, приглашения. Этап 5: категории групп.
+    токены, профиль и сессии устройств. Этап 4: группы, участники, роли, приглашения. Этап 5: категории групп. Этап 6: рекомендации, публикации в группы, лента.
 
     Ошибки — `application/problem+json` (RFC 9457) с машинным полем `code` (см. `ErrorCode`
     в shared-contract); текст для пользователя формирует клиент.
@@ -19,6 +19,8 @@ tags:
     description: Группы, участники, роли
   - name: categories
     description: Категории группы (иерархия)
+  - name: reviews
+    description: Рекомендации, публикации в группы, ленты
   - name: invitations
     description: Приглашения в группы
 
@@ -514,6 +516,7 @@ paths:
         '401': { $ref: '#/components/responses/Problem' }
         '403': { $ref: '#/components/responses/Problem' }
         '404': { $ref: '#/components/responses/Problem' }
+        '409': { $ref: '#/components/responses/Problem' }
 
   /groups/{groupId}/categories/{categoryId}/parent:
     parameters:
@@ -559,6 +562,147 @@ paths:
               schema: { $ref: '#/components/schemas/CategoryDeleteImpact' }
         '401': { $ref: '#/components/responses/Problem' }
         '403': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+
+  /reviews:
+    post:
+      tags: [reviews]
+      operationId: createReview
+      summary: Создать рекомендацию (при необходимости сразу опубликовать в группы)
+      description: |
+        Публиковать можно только в группы, где пользователь состоит (иначе 404), в категории этой группы
+        (иначе 400 `VALIDATION_FAILED`, поле `publications`). 409 `LIMIT_EXCEEDED` — достигнут лимит.
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CreateReviewRequest' }
+      responses:
+        '201':
+          description: Рекомендация создана
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ReviewDetails' }
+        '400': { $ref: '#/components/responses/Problem' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+        '409': { $ref: '#/components/responses/Problem' }
+
+  /reviews/{reviewId}:
+    parameters:
+      - $ref: '#/components/parameters/ReviewId'
+    get:
+      tags: [reviews]
+      operationId: getReview
+      summary: Рекомендация
+      description: Видна автору и участникам групп, где она опубликована; иначе 404.
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200':
+          description: Рекомендация
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ReviewDetails' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+    patch:
+      tags: [reviews]
+      operationId: updateReview
+      summary: Изменить рекомендацию (автор)
+      description: Чужую рекомендацию менять нельзя (для не автора она 404, если не видна, иначе 403).
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/UpdateReviewRequest' }
+      responses:
+        '200':
+          description: Обновлённая рекомендация
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ReviewDetails' }
+        '400': { $ref: '#/components/responses/Problem' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+    delete:
+      tags: [reviews]
+      operationId: deleteReview
+      summary: Удалить рекомендацию вместе со всеми публикациями (автор)
+      security: [{ bearerAuth: [] }]
+      responses:
+        '204': { description: Рекомендация удалена }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+
+  /reviews/{reviewId}/groups:
+    parameters:
+      - $ref: '#/components/parameters/ReviewId'
+    put:
+      tags: [reviews]
+      operationId: setReviewPublications
+      summary: Задать набор публикаций (автор)
+      description: |
+        Заменяет набор целиком: отсутствующие публикации снимаются, у сохранённых время публикации не меняется.
+        Пустой набор делает рекомендацию личной.
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/SetPublicationsRequest' }
+      responses:
+        '200':
+          description: Рекомендация с новым набором публикаций
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ReviewDetails' }
+        '400': { $ref: '#/components/responses/Problem' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+
+  /me/reviews:
+    get:
+      tags: [reviews]
+      operationId: listMyReviews
+      summary: Мои рекомендации (новые сверху)
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: '#/components/parameters/Cursor'
+        - $ref: '#/components/parameters/Limit'
+      responses:
+        '200':
+          description: Страница рекомендаций
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ReviewPage' }
+        '400': { $ref: '#/components/responses/Problem' }
+        '401': { $ref: '#/components/responses/Problem' }
+
+  /groups/{groupId}/reviews:
+    parameters:
+      - $ref: '#/components/parameters/GroupId'
+    get:
+      tags: [reviews]
+      operationId: listGroupReviews
+      summary: Лента группы (новые публикации сверху)
+      description: Только для участников (иначе 404). Пагинация keyset по `(sharedAt, id)`.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: '#/components/parameters/Cursor'
+        - $ref: '#/components/parameters/Limit'
+      responses:
+        '200':
+          description: Страница ленты
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ReviewPage' }
+        '400': { $ref: '#/components/responses/Problem' }
+        '401': { $ref: '#/components/responses/Problem' }
         '404': { $ref: '#/components/responses/Problem' }
 
   /groups/{groupId}/invitations:
@@ -691,6 +835,20 @@ components:
       in: path
       required: true
       schema: { type: string, format: uuid }
+    ReviewId:
+      name: reviewId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    Cursor:
+      name: cursor
+      in: query
+      description: Непрозрачный курсор из `nextCursor` предыдущей страницы.
+      schema: { type: string, maxLength: 200 }
+    Limit:
+      name: limit
+      in: query
+      schema: { type: integer, minimum: 1, maximum: 50, default: 20 }
     RoleId:
       name: roleId
       in: path
@@ -746,6 +904,7 @@ components:
             - CATEGORY_NAME_TAKEN
             - CATEGORY_CYCLE
             - CATEGORY_TOO_DEEP
+            - CATEGORY_HAS_FOREIGN_REVIEWS
             - INTERNAL_ERROR
         errors:
           type: array
@@ -942,10 +1101,116 @@ components:
 
     CategoryDeleteImpact:
       type: object
-      required: [subcategories, publications]
+      required: [subcategories, publications, foreignPublications]
       properties:
         subcategories: { type: integer }
         publications: { type: integer }
+        foreignPublications:
+          type: integer
+          description: Из публикаций — чужие; если больше нуля, удалить категорию нельзя (409 `CATEGORY_HAS_FOREIGN_REVIEWS`).
+
+    ReviewAuthor:
+      type: object
+      required: [id, username, displayName]
+      properties:
+        id: { type: string, format: uuid }
+        username: { type: string }
+        displayName: { type: string }
+
+    PublicationInfo:
+      type: object
+      required: [groupId, categoryId, sharedAt]
+      properties:
+        groupId: { type: string, format: uuid }
+        categoryId: { type: string, format: uuid }
+        sharedAt: { type: string, format: date-time }
+
+    PublicationRequest:
+      type: object
+      required: [groupId, categoryId]
+      properties:
+        groupId: { type: string, format: uuid }
+        categoryId: { type: string, format: uuid }
+
+    ReviewDetails:
+      type: object
+      required: [id, title, description, rating, tags, author, createdAt, updatedAt, publications]
+      properties:
+        id: { type: string, format: uuid }
+        title: { type: string }
+        description: { type: string }
+        rating: { type: integer, minimum: 1, maximum: 10 }
+        tags:
+          type: array
+          items: { type: string }
+        author: { $ref: '#/components/schemas/ReviewAuthor' }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+        publications:
+          type: array
+          description: Автору — все публикации, остальным — только в их группах.
+          items: { $ref: '#/components/schemas/PublicationInfo' }
+
+    CreateReviewRequest:
+      type: object
+      required: [title, rating]
+      properties:
+        title: { type: string, maxLength: 200 }
+        description: { type: string, maxLength: 5000 }
+        rating: { type: integer, minimum: 1, maximum: 10 }
+        tags:
+          type: array
+          maxItems: 10
+          description: Без `#`; регистр не учитывается, повторы убираются.
+          items: { type: string, maxLength: 31 }
+        publications:
+          type: array
+          items: { $ref: '#/components/schemas/PublicationRequest' }
+
+    UpdateReviewRequest:
+      type: object
+      properties:
+        title: { type: string, maxLength: 200, nullable: true }
+        description: { type: string, maxLength: 5000, nullable: true }
+        rating: { type: integer, minimum: 1, maximum: 10, nullable: true }
+        tags:
+          type: array
+          nullable: true
+          maxItems: 10
+          items: { type: string, maxLength: 31 }
+
+    SetPublicationsRequest:
+      type: object
+      required: [publications]
+      properties:
+        publications:
+          type: array
+          items: { $ref: '#/components/schemas/PublicationRequest' }
+
+    ReviewCard:
+      type: object
+      required: [id, title, excerpt, rating, tags, author, createdAt]
+      properties:
+        id: { type: string, format: uuid }
+        title: { type: string }
+        excerpt: { type: string, maxLength: 200 }
+        rating: { type: integer }
+        tags:
+          type: array
+          items: { type: string }
+        author: { $ref: '#/components/schemas/ReviewAuthor' }
+        createdAt: { type: string, format: date-time }
+        categoryId: { type: string, format: uuid, nullable: true }
+        sharedAt: { type: string, format: date-time, nullable: true }
+
+    ReviewPage:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items: { $ref: '#/components/schemas/ReviewCard' }
+        nextCursor: { type: string, nullable: true }
 
     CreateInvitationRequest:
       type: object

@@ -71,8 +71,7 @@ app.podgon
 Рекомендации:
 - `POST /reviews`, `GET/PATCH/DELETE /reviews/{id}`, `GET /me/reviews`
 - `PUT /reviews/{id}/groups` (набор публикаций: группа + категория)
-- `GET /groups/{id}/reviews?categoryIds=&tags=&authorId=&q=&cursor=&limit=`
-- `GET /reviews?groupIds=...` — по нескольким своим группам
+- `GET /groups/{id}/reviews?cursor=&limit=` — лента группы (keyset по `(sharedAt, id)`, непрозрачный курсор), `GET /me/reviews?cursor=&limit=` — мои. Реализовано на этапе 6 (контракт 0.5.0); фильтры `categoryIds`, `tags`, `authorId`, `q` и `GET /reviews?groupIds=...` — этап 7
 - `GET /groups/{id}/tags`
 
 Модерация: `POST /reports`, `POST /users/{id}/block`.

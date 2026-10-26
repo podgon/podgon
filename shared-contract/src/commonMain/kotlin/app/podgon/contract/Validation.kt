@@ -29,6 +29,12 @@ object Validation {
     const val ROLE_DESCRIPTION_MAX = 255
     const val CATEGORY_NAME_MAX = 100
     const val CATEGORY_DESCRIPTION_MAX = 500
+    const val REVIEW_TITLE_MAX = 200
+    const val REVIEW_DESCRIPTION_MAX = 5000
+    const val RATING_MIN = 1
+    const val RATING_MAX = 10
+    const val TAGS_MAX = 10
+    const val TAG_MAX = 30
     const val INVITATION_MAX_USES = 100
     const val INVITATION_TTL_HOURS_DEFAULT = 168
     const val INVITATION_TTL_HOURS_MAX = 24 * 30
@@ -37,6 +43,7 @@ object Validation {
     const val RESERVED_USERNAME_PREFIX = "deleted_"
 
     private val emailRegex = Regex("^[^\\s@]+@[^\\s@.]+(\\.[^\\s@.]+)+$")
+    private val tagRegex = Regex("^[\\p{L}\\p{N}_-]+$")
     private val usernameRegex = Regex("^[A-Za-z0-9_.]+$")
 
     /** Приводит email к виду для хранения и сравнения: без пробелов по краям, в нижнем регистре. */
@@ -92,6 +99,36 @@ object Validation {
     fun categoryName(value: String): FieldErrorReason? = title(value, CATEGORY_NAME_MAX)
 
     fun categoryDescription(value: String): FieldErrorReason? = text(value, CATEGORY_DESCRIPTION_MAX)
+
+    fun reviewTitle(value: String): FieldErrorReason? = title(value, REVIEW_TITLE_MAX)
+
+    fun reviewDescription(value: String): FieldErrorReason? = text(value, REVIEW_DESCRIPTION_MAX)
+
+    fun rating(value: Int): FieldErrorReason? =
+        when {
+            value < RATING_MIN -> FieldErrorReason.TOO_SHORT
+            value > RATING_MAX -> FieldErrorReason.TOO_LONG
+            else -> null
+        }
+
+    /** Тег хранится без `#`, в нижнем регистре, без пробелов по краям. */
+    fun normalizeTag(value: String): String = value.trim().removePrefix("#").lowercase()
+
+    /** Проверяет уже нормализованный ([normalizeTag]) тег. */
+    fun tag(value: String): FieldErrorReason? =
+        when {
+            value.isEmpty() -> FieldErrorReason.REQUIRED
+            value.length > TAG_MAX -> FieldErrorReason.TOO_LONG
+            !tagRegex.matches(value) -> FieldErrorReason.INVALID_FORMAT
+            else -> null
+        }
+
+    /** Проверяет набор тегов (после нормализации и удаления повторов): число и каждый тег. */
+    fun tags(values: List<String>): FieldErrorReason? =
+        when {
+            values.size > TAGS_MAX -> FieldErrorReason.TOO_LONG
+            else -> values.firstNotNullOfOrNull { tag(it) }
+        }
 
     fun roleTitle(value: String): FieldErrorReason? = title(value, ROLE_TITLE_MAX)
 

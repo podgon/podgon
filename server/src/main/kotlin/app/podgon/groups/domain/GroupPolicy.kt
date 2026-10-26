@@ -42,6 +42,13 @@ class GroupPolicy(
         member(userId, groupId)
     }
 
+    override fun isMember(
+        userId: UUID,
+        groupId: UUID,
+    ): Boolean = groups.findForMember(groupId, userId) != null
+
+    override fun memberGroupIds(userId: UUID): Set<UUID> = groups.groupIdsOf(userId)
+
     override fun requireAdmin(
         userId: UUID,
         groupId: UUID,

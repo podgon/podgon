@@ -153,6 +153,7 @@ abstract class IntegrationTest {
     @BeforeEach
     fun cleanState() {
         jdbc.sql("delete from groups").update()
+        jdbc.sql("delete from reviews").update()
         jdbc.sql("delete from refresh_tokens").update()
         jdbc.sql("delete from email_codes").update()
         jdbc.sql("delete from mail_outbox").update()

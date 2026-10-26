@@ -16,4 +16,12 @@ interface GroupAccess {
         userId: UUID,
         groupId: UUID,
     )
+
+    fun isMember(
+        userId: UUID,
+        groupId: UUID,
+    ): Boolean
+
+    /** Все группы пользователя (для проверки видимости чужих рекомендаций). */
+    fun memberGroupIds(userId: UUID): Set<UUID>
 }
