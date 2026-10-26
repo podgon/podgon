@@ -45,6 +45,19 @@ jobs:
       - name: Сборка и тесты
         run: ./gradlew --no-daemon :server:build :shared-contract:check
 
+      # Логи заданий видны только авторизованным: причины падения выводим аннотациями (читаются публично)
+      - name: Причины падения тестов
+        if: failure()
+        run: |
+          python3 - <<'PY'
+          import glob, html, re
+          for f in glob.glob('server/build/test-results/test/*.xml'):
+              s = open(f, encoding='utf-8').read()
+              for m in re.finditer(r'<testcase name="([^"]*)"[^>]*>\s*<failure message="([^"]{0,400})', s):
+                  text = html.unescape(m.group(1) + ' :: ' + m.group(2)).replace('\n', ' ')
+                  print('::error title=Тест упал::' + text)
+          PY
+
   mobile:
     name: Клиент (сборка и тесты)
     runs-on: ubuntu-latest
