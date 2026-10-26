@@ -3,18 +3,17 @@
 ## Стек
 | Область | Выбор | Примечание |
 |---|---|---|
-| Язык / JVM | Kotlin (актуальная стабильная) на JDK 25 (LTS) | корутины, sealed-классы; плагины kotlin-spring, kotlin-jpa |
-| Фреймворк | Spring Boot 4.x | Web, Validation, Security, Data JPA, Actuator |
+| Язык / JVM | Kotlin 2.4 на JDK 25 (LTS) | sealed-классы; плагин kotlin-spring |
+| Фреймворк | Spring Boot 4.1 | Web MVC, Security (OAuth2 Resource Server для JWT), JDBC, Flyway, Mail, Actuator, Modulith |
 | Сборка | Gradle (Kotlin DSL) | Maven — допустимая альтернатива |
-| Доступ к БД | Spring Data JPA (Hibernate) + нативные/JdbcClient запросы для поиска и фильтров | Все запросы параметризованы |
+| Доступ к БД | `JdbcClient` с именованными параметрами, транзакции — `TransactionTemplate` | *Заменено решением этапа 1–2:* JPA/Hibernate не используются — запросы (поиск, рекурсивные CTE, блокировки) естественнее писать на SQL. Все запросы параметризованы |
 | Миграции | Flyway | |
 | Контракт | OpenAPI 3.0.3 (`api/openapi.yaml`, вручную), проверка запросов и ответов в тестах (swagger-request-validator) | contract-first; 3.0.3, а не 3.1 — валидатор 3.1 пока не поддерживает; клиент генерируется из yaml на этапе 3 |
-| Безопасность | Spring Security 6, JWT (Nimbus), одноразовые коды (HMAC-SHA256) | пароль не используется |
-| Rate limit | Bucket4j (на старте in-memory, Redis при масштабировании) | |
+| Безопасность | Spring Security (из Spring Boot 4), JWT (Nimbus), одноразовые коды (HMAC-SHA256) | пароль не используется |
+| Rate limit | Лимиты входа — счётчики в таблице `email_codes`; лимиты авторизованных запросов — фиксированное окно в памяти (`UserRateLimiter`, этап 8.1) | *Заменено:* Bucket4j не понадобился; при нескольких инстансах счётчики переезжают в Redis |
 | Почта | Spring Mail / API провайдера, outbox | |
-| Тесты | JUnit 5, MockK, Testcontainers, Spring Modulith tests, ArchUnit | |
+| Тесты | JUnit 5, Testcontainers (PostgreSQL 18), Spring Modulith tests, swagger-request-validator | MockK и ArchUnit пока не понадобились |
 | Общий код | модуль `shared-contract` (KMP): модели API, валидация, коды ошибок | общий с клиентом |
-| Тесты | см. выше; MockK вместо Mockito | |
 
 ## Модульная структура (пакеты)
 
@@ -29,15 +28,14 @@ app.podgon
 │   ├── security/      Spring Security, конфигурация JWT
 │   └── persistence/   репозитории (Spring JDBC)
 ├── groups/            группы, членство, роли, приглашения
-├── catalog/           категории (шаблон и категории групп)
-├── reviews/           рекомендации, теги, публикации в группы, правила шаринга
-├── search/            поиск и фильтры (читающая модель)
-├── moderation/        жалобы, блокировки
+├── reviews/           рекомендации, теги, публикации в группы, правила шаринга, поиск и фильтры,
+│                      категории (шаблон и категории групп; до этапа 8.1 — отдельный модуль catalog)
+├── moderation/        жалобы, блокировки (этап 9)
 └── mail/              очередь писем (MailQueue, MailSender в корне пакета), outbox и отправка в `mail.internal`
 ```
-Правила: модуль виден другим только через `api`; зависимости проверяются Spring Modulith/ArchUnit. Общение «событийное» там, где это уместно (например, `UserDeleted`, `MemberLeftGroup` → `reviews` снимает публикации).
+Правила: модуль виден другим только через классы в корне своего пакета (порты, события); зависимости проверяет Spring Modulith (`ModularityTests`) — только в коде, чтение чужих таблиц в SQL проверяется ревью. Межмодульные связи — синхронные события в транзакции инициатора (`GroupCreated`, `MemberJoined`, `MemberLeft`, `GroupDeleting`, `UserDeleting`; см. ADR-001).
 
-Слои внутри модуля: `web → service (use case) → domain/repository`. Контроллеры тонкие, бизнес-логика — в сервисах, права — в сервисах через явный `AccessPolicy`.
+Слои внутри модуля: `web → domain (сервисы) → persistence (репозитории на JdbcClient)`. Контроллеры тонкие, бизнес-логика — в сервисах, права проверяются в одном месте модуля групп (`GroupPolicy`, наружу — порт `GroupAccess`).
 
 ## Авторизация и права
 
@@ -56,6 +54,8 @@ app.podgon
 
 Пользователь:
 - `GET /me`, `PATCH /me` (username, displayName, bio, locale; отсутствующее поле не меняется), `GET /me/sessions`, `DELETE /me/sessions/{id}` — этап 2; `GET /me/delete-impact`, `POST /me/deletion/code` (код на почту), `POST /me/deletion` (`code`, `deleteReviews`) — этап 8
+
+Сквозное (этап 8.1, контракт 0.8.0): любой запрос API может получить 426 `UPGRADE_REQUIRED` (сборка клиента ниже минимальной), авторизованный — 429 `RATE_LIMITED` с `Retry-After`.
 
 Группы (реализовано на этапе 4; полный контракт — `api/openapi.yaml`):
 - `POST /groups` (201; создатель — ADMIN), `GET /groups` (мои), `GET/PATCH/DELETE /groups/{id}` (`DELETE` требует `?confirm=true`, иначе 400 `CONFIRMATION_REQUIRED`; `reviews=RETURN_TO_PERSONAL|DELETE` — судьба рекомендаций, опубликованных только в группе; `GET /groups/{id}/delete-impact`)
@@ -83,7 +83,8 @@ app.podgon
 - Ошибки — RFC 9457 `application/problem+json` с машинным кодом ошибки (для локализации на клиенте).
 - Пагинация — keyset (cursor), стабильная сортировка по `(created_at, id)`.
 - Валидация входных данных (Bean Validation) на сервере, независимо от клиента.
-- Идемпотентность создания через `Idempotency-Key` (опционально, этап 6).
+- Версия клиента: заголовки `X-Client-Platform` (`android`, `ios`) и `X-Client-Version` (номер сборки); минимальные версии — `PODGON_CLIENT_MINVERSION_ANDROID`/`_IOS`, ниже — 426 `UPGRADE_REQUIRED`. Запросы без заголовков пропускаются.
+- Идемпотентность создания через `Idempotency-Key` — не реализована (не понадобилась: клиент не повторяет изменяющие запросы сам).
 
 ## Ключевые сценарии и инварианты
 
@@ -94,14 +95,16 @@ app.podgon
 5. **Удаление категории:** разрешено, если пуста, либо все публикации в ней (и её потомках) принадлежат инициатору; иначе — отказ (в соответствии с описанием). Предупреждение: `delete-impact` возвращает число публикаций и подкатегорий; UI показывает подтверждение. Удаляются публикации в группе (не сами рекомендации в других группах).
 6. **Присоединение по приглашению:** валидация токена (хэш, TTL, лимит), добавление членства, применение правил шаринга (одной SQL-операцией `INSERT ... SELECT`), в одной транзакции. Подбор категории в новой группе — по `template_id`; записи без соответствия возвращаются в предпросмотре (`unmatched`), пользователь для каждой либо назначает категорию, либо отказывается от переноса; решения приходят в запросе вступления.
 7. **Выход из группы:** запрещён для единственного админа (пока не назначен другой или группа не удалена); по флагу — удаление публикаций автора в группе.
-8. **Удаление аккаунта:** soft delete + анонимизация, отзыв токенов, снятие членств (единственного админа удалить нельзя — сначала передать права или удалить группу), `DELETE /me?deleteReviews=true|false&confirm=true` (`GET /me/delete-impact` возвращает число отзывов, в том числе опубликованных в группах): при `false` отзывы с публикациями переводятся на системного пользователя, личные без публикаций удаляются; при `true` удаляются все отзывы пользователя; событие `UserDeleted`. Подтверждение — кодом из письма (повторный вход по OTP).
+8. **Удаление аккаунта:** soft delete + анонимизация, отзыв токенов, снятие членств (единственного админа удалить нельзя — сначала передать права или удалить группу), `POST /me/deletion/code` + `POST /me/deletion` (`code`, `deleteReviews`; `GET /me/delete-impact` возвращает число отзывов, в том числе опубликованных в группах): при `false` отзывы с публикациями переводятся на системного пользователя, личные без публикаций удаляются; при `true` удаляются все отзывы пользователя; событие `UserDeleted`. Подтверждение — кодом из письма (повторный вход по OTP).
 9. **Удаление группы:** `GET /groups/{id}/delete-impact` возвращает число отзывов, которые существуют только в этой группе; `DELETE /groups/{id}?reviews=RETURN_TO_PERSONAL|DELETE&confirm=true`. Отзывы, опубликованные и в других группах, не затрагиваются.
 10. **Локализация:** язык берётся из `Accept-Language`/`users.locale`; письма на `ru` и `en`; ошибки API содержат машинный код без языковой привязки.
 
 ## Безопасность (реализация)
 - Spring Security: stateless, CSRF отключён (нет cookie-сессий), CORS — не нужен для мобильного клиента (закрыт по умолчанию), заголовки безопасности.
 - Токены: refresh хранится хэшем, привязан к семейству и устройству, ротация, отзыв.
-- Rate limit: `/auth/*` — строго (по IP и по email); общий лимит на пользователя.
+- Rate limit: `/auth/*` — строго (по IP и по email, счётчики в БД); авторизованные запросы — общий лимит на пользователя в минуту и отдельный на поиск (`podgon.request-limits.*`, по умолчанию 300 и 60).
+- Проверка сессии на каждом запросе: подпись и срок access-токена, затем — что сессия (`sid`) не отозвана и пользователь `ACTIVE` (один запрос по индексу `refresh_tokens.family_id`).
+- IP клиента: `forward-headers-strategy: native`, доверенные прокси — `PODGON_TRUSTED_PROXIES` (по умолчанию только loopback); из `X-Forwarded-For` берётся самый правый недоверенный адрес.
 - Ограничения размера: тело запроса, длина полей (title ≤ 200, description ≤ 5000 — на согласование), число тегов ≤ 10, длина тега ≤ 30.
 - Логи без кодов, токенов и email в открытом виде (маскирование).
 - Секреты — из окружения; ключи JWT ротируются (`kid`).
@@ -111,21 +114,32 @@ app.podgon
 - Профили `local`, `test`, `prod`. Все настройки через `PODGON_*` переменные окружения.
 - `-Dfile.encoding=UTF-8`, `server.servlet.encoding.charset=UTF-8` (force), JDBC `UTF8`.
 - Dockerfile: multi-stage (JDK build → JRE runtime), non-root, `HEALTHCHECK`, graceful shutdown.
-- Stateless: нет локальных файлов/сессий; rate limit при нескольких инстансах переезжает в Redis.
+- Stateless: нет локальных файлов/сессий; счётчики лимитов авторизованных запросов (в памяти процесса) при нескольких инстансах переезжают в Redis.
+- Роли БД: приложение — `PODGON_DB_USER` (роль `podgon_app` без DDL), Flyway — `PODGON_DB_MIGRATOR_USER` (владелец схемы); скрипт роли — `deploy/db-init/app-role.sql`.
 - Планировщик (очистка просроченных кодов/приглашений/токенов): `@Scheduled` + ShedLock при нескольких инстансах.
 
 ## Тестирование
-- Unit: доменная логика, правила шаринга, парсер тегов.
-- Интеграционные: `@SpringBootTest` + Testcontainers (Postgres), проверка прав «чужая группа», миграции.
-- Контрактные: сгенерированный клиент/валидация ответов по OpenAPI.
-- Архитектурные: Modulith/ArchUnit.
+- Интеграционные (основной вид): `@SpringBootTest` + Testcontainers (Postgres), проверка прав «чужая группа», миграции, роли БД.
+- Контрактные: каждый запрос и ответ MockMvc сверяется с `api/openapi.yaml`; обратная совместимость — `oasdiff` в CI.
+- Архитектурные: Spring Modulith.
 - Безопасность: тесты на rate limit, блокировку, отзыв токенов.
 
 ## Предложения и обоснования
-- **JPA vs jOOQ:** JPA быстрее для CRUD и привычен; сложные фильтры/поиск — через `JdbcClient`/Specification с параметрами. Если запросы с динамическими фильтрами станут громоздкими — рассмотреть jOOQ (типобезопасный SQL, тоже защищает от инъекций).
+- **JDBC вместо JPA (решение этапов 1–2):** весь доступ к БД — `JdbcClient` с именованными параметрами. Если запросы с динамическими фильтрами станут громоздкими — рассмотреть jOOQ (типобезопасный SQL, тоже защищает от инъекций).
 - **Redis не вводим на старте** (YAGNI). Появится при нескольких инстансах (rate limit, кэш).
 - **Брокер сообщений не нужен:** события внутри процесса, outbox в БД для писем.
 - **Virtual threads** включить после проверки совместимости драйверов (пул JDBC ограничен).
+
+## Реализация этапа 8.1 (замечания ревью, `docs/review.md`)
+- Модуль `catalog` объединён с `reviews` (R8): `reviews.domain.CategoryService`/`TemplateCopier`, `reviews.persistence.CategoryRepository`, `reviews.web.CategoriesController`; порт `ReviewPublications` удалён; настройки категорий — `podgon.reviews.categories.*` (было `podgon.catalog.*`).
+- R1: `common.ClientVersionFilter` (сервлетный фильтр до Spring Security) → 426 `UPGRADE_REQUIRED`.
+- R3: декодер JWT в `SecurityConfig` после проверки подписи вызывает `SessionService.isActive`; отказ → 401, клиент пытается обновить токен, refresh для отозванной сессии или неактивного пользователя тоже отклоняется → экран входа.
+- R4: `server.forward-headers-strategy: native` + `server.tomcat.remoteip.internal-proxies`; тест `ForwardedIpTest` на настоящем Tomcat.
+- R5: `identity.security.UserRateLimiter` + фильтр после `BearerTokenAuthenticationFilter`.
+- R6: Flyway под владельцем схемы, приложение под `podgon_app`; тест `DbRolesTest` выполняет `deploy/db-init/app-role.sql` и проверяет, что DDL запрещён, а на новые таблицы права выдаются автоматически.
+- R11: миграция V7 — колонка `title_search` и `search_vector` с заменой «ё» на «е»; запрос нормализуется так же.
+- R12: `reviews.domain.TagCleanup` (ночью) удаляет неиспользуемые теги; запись тегов и чистка сериализуются advisory-блокировкой (разделяемой у записи, исключительной у чистки).
+- Ошибки из фильтров пишет `common.writeProblem` (тот же формат problem+json).
 
 ## Реализация этапа 8 (шаринг, выход, удаление)
 - Связи модулей — синхронные события в транзакции инициатора: `groups` публикует `MemberJoined`, `MemberLeft`, `GroupDeleting`; `identity` — `UserDeleting`. Обработчики: `reviews.SharingService`/`LifecycleService` и `groups.AccountMemberships` (порядок через `@Order`: сначала группы, потом рекомендации). Эндпоинты, которым нужны данные рекомендаций (`*-impact`, `share-preview`), — в `reviews.LifecycleController`.

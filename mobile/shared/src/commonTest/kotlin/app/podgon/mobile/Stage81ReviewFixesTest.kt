@@ -95,7 +95,7 @@ class Stage81ReviewFixesTest {
         }
 
     @Test
-    fun `изменяющий запрос не повторяется сам, но следующий идёт на запасной адрес`() =
+    fun `изменяющий запрос не повторяется сам а следующий идёт на запасной адрес`() =
         runTest {
             val hosts = mutableListOf<String>()
             val engine =
