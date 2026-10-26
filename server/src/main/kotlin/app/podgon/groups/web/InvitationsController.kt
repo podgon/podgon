@@ -1,5 +1,6 @@
 package app.podgon.groups.web
 
+import app.podgon.contract.AcceptInvitationRequest
 import app.podgon.contract.CreateInvitationRequest
 import app.podgon.contract.GroupSummary
 import app.podgon.contract.InvitationCreated
@@ -55,6 +56,6 @@ class InvitationsController(
     @PostMapping("/invitations/accept")
     fun accept(
         @AuthenticationPrincipal user: AuthenticatedUser,
-        @RequestBody body: InvitationTokenRequest,
-    ): GroupSummary = invitations.accept(user.userId, body.token)
+        @RequestBody body: AcceptInvitationRequest,
+    ): GroupSummary = invitations.accept(user.userId, body)
 }

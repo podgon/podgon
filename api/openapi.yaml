@@ -1,7 +1,7 @@
 openapi: 3.0.3
 info:
   title: Podgon API
-  version: 0.6.0
+  version: 0.7.0
   description: |
     Контракт API Podgon (contract-first, ADR-005). Этап 2: вход по одноразовому коду, регистрация,
     токены, профиль и сессии устройств. Этап 4: группы, участники, роли, приглашения. Этап 5: категории групп. Этап 6: рекомендации, публикации в группы, лента. Этап 7: поиск и фильтры.
@@ -262,12 +262,18 @@ paths:
       tags: [groups]
       operationId: deleteGroup
       summary: Удалить группу (администратор)
-      description: Необратимо; требует `confirm=true`, иначе 400 `CONFIRMATION_REQUIRED`.
+      description: |
+        Необратимо; требует `confirm=true`, иначе 400 `CONFIRMATION_REQUIRED`. Публикации в группе удаляются.
+        Судьба рекомендаций, опубликованных только в этой группе: `RETURN_TO_PERSONAL` (по умолчанию) — остаются
+        личными у авторов, `DELETE` — удаляются. Опубликованные ещё где-то остаются в любом случае.
       security: [{ bearerAuth: [] }]
       parameters:
         - name: confirm
           in: query
           schema: { type: boolean }
+        - name: reviews
+          in: query
+          schema: { $ref: '#/components/schemas/ReviewsFate' }
       responses:
         '204': { description: Группа удалена }
         '400': { $ref: '#/components/responses/Problem' }
@@ -282,12 +288,101 @@ paths:
       tags: [groups]
       operationId: leaveGroup
       summary: Выйти из группы
-      description: Единственный администратор выйти не может (409 `LAST_ADMIN`).
+      description: |
+        Единственный администратор выйти не может (409 `LAST_ADMIN`). С `deleteMyReviews=true` публикации
+        пользователя в этой группе удаляются (сами рекомендации остаются у него).
       security: [{ bearerAuth: [] }]
+      parameters:
+        - name: deleteMyReviews
+          in: query
+          schema: { type: boolean }
       responses:
         '204': { description: Пользователь вышел из группы }
         '401': { $ref: '#/components/responses/Problem' }
         '404': { $ref: '#/components/responses/Problem' }
+        '409': { $ref: '#/components/responses/Problem' }
+
+  /groups/{groupId}/delete-impact:
+    parameters:
+      - $ref: '#/components/parameters/GroupId'
+    get:
+      tags: [groups]
+      operationId: groupDeleteImpact
+      summary: Что будет с рекомендациями при удалении группы (администратор)
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200':
+          description: Число рекомендаций и публикаций
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/GroupDeleteImpact' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+
+  /groups/{groupId}/leave-impact:
+    parameters:
+      - $ref: '#/components/parameters/GroupId'
+    get:
+      tags: [groups]
+      operationId: leaveImpact
+      summary: Сколько публикаций пользователя в группе (для предложения удалить их при выходе)
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200':
+          description: Число публикаций
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/LeaveImpact' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+
+  /me/delete-impact:
+    get:
+      tags: [me]
+      operationId: accountDeleteImpact
+      summary: Что будет при удалении аккаунта
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200':
+          description: Число рекомендаций и группы, мешающие удалению
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AccountDeleteImpact' }
+        '401': { $ref: '#/components/responses/Problem' }
+
+  /me/deletion/code:
+    post:
+      tags: [me]
+      operationId: requestAccountDeletionCode
+      summary: Выслать на почту код подтверждения удаления аккаунта
+      description: Лимиты те же, что у кода входа (429 `RATE_LIMITED` с `Retry-After`).
+      security: [{ bearerAuth: [] }]
+      responses:
+        '204': { description: Код поставлен в очередь на отправку }
+        '401': { $ref: '#/components/responses/Problem' }
+        '429': { $ref: '#/components/responses/Problem' }
+
+  /me/deletion:
+    post:
+      tags: [me]
+      operationId: deleteAccount
+      summary: Удалить аккаунт
+      description: |
+        Подтверждается кодом из письма (`INVALID_CODE` при ошибке). Если пользователь — единственный администратор
+        группы с другими участниками, 409 `LAST_ADMIN`: сначала передать права или удалить группу. Группы, где он
+        единственный участник, удаляются. С `deleteReviews=false` рекомендации с публикациями переходят служебному
+        пользователю «Удалённый пользователь», личные удаляются; с `true` удаляются все. Все сессии завершаются.
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/DeleteAccountRequest' }
+      responses:
+        '204': { description: Аккаунт удалён }
+        '400': { $ref: '#/components/responses/Problem' }
+        '401': { $ref: '#/components/responses/Problem' }
         '409': { $ref: '#/components/responses/Problem' }
 
   /groups/{groupId}/members:
@@ -855,17 +950,41 @@ paths:
         '400': { $ref: '#/components/responses/Problem' }
         '401': { $ref: '#/components/responses/Problem' }
 
+  /invitations/share-preview:
+    post:
+      tags: [invitations]
+      operationId: sharePreview
+      summary: Предпросмотр переноса своих рекомендаций в группу, куда ведёт приглашение
+      description: Ничего не меняет. Для записей без соответствия категории в новой группе возвращает список `unmatched`.
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/SharePreviewRequest' }
+      responses:
+        '200':
+          description: Что будет перенесено
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SharePreview' }
+        '400': { $ref: '#/components/responses/Problem' }
+        '401': { $ref: '#/components/responses/Problem' }
+
   /invitations/accept:
     post:
       tags: [invitations]
       operationId: acceptInvitation
       summary: Вступить в группу по приглашению
       security: [{ bearerAuth: [] }]
+      description: |
+        Необязательное `share` переносит рекомендации пользователя в новую группу по правилу (см. `share-preview`);
+        рекомендации без соответствия категории переносятся, только если для них есть назначение в `assignments`.
       requestBody:
         required: true
         content:
           application/json:
-            schema: { $ref: '#/components/schemas/InvitationTokenRequest' }
+            schema: { $ref: '#/components/schemas/AcceptInvitationRequest' }
       responses:
         '200':
           description: Пользователь вступил в группу
@@ -1355,6 +1474,119 @@ components:
       required: [token]
       properties:
         token: { type: string, maxLength: 200 }
+
+    ShareMode:
+      type: string
+      enum: [NONE, ALL, CATEGORIES, CATEGORIES_EXCEPT, TAGS, TAGS_EXCEPT]
+
+    ShareRule:
+      type: object
+      required: [mode]
+      properties:
+        mode: { $ref: '#/components/schemas/ShareMode' }
+        categoryIds:
+          type: array
+          maxItems: 20
+          description: 'Категории исходных групп пользователя (для `CATEGORIES` и `CATEGORIES_EXCEPT`).'
+          items: { type: string, format: uuid }
+        tags:
+          type: array
+          maxItems: 10
+          description: 'Теги (для `TAGS` и `TAGS_EXCEPT`): достаточно любого из них.'
+          items: { type: string }
+        withSubcategories:
+          type: boolean
+          default: true
+
+    SharePreviewRequest:
+      type: object
+      required: [token, share]
+      properties:
+        token: { type: string, maxLength: 200 }
+        share: { $ref: '#/components/schemas/ShareRule' }
+
+    UnmatchedReview:
+      type: object
+      required: [reviewId, title]
+      properties:
+        reviewId: { type: string, format: uuid }
+        title: { type: string }
+        sourceCategory: { type: string, description: 'Категория в исходной группе; нет — рекомендация личная.' }
+
+    SharePreview:
+      type: object
+      required: [total, matched, unmatched, categories]
+      properties:
+        total: { type: integer, description: Сколько рекомендаций отобрано правилом. }
+        matched: { type: integer, description: Из них категория в новой группе подобрана автоматически. }
+        unmatched:
+          type: array
+          maxItems: 100
+          items: { $ref: '#/components/schemas/UnmatchedReview' }
+        categories:
+          type: array
+          description: Категории новой группы для ручного выбора.
+          items: { $ref: '#/components/schemas/CategoryInfo' }
+
+    ShareAssignment:
+      type: object
+      required: [reviewId, categoryId]
+      properties:
+        reviewId: { type: string, format: uuid }
+        categoryId: { type: string, format: uuid }
+
+    AcceptInvitationRequest:
+      type: object
+      required: [token]
+      properties:
+        token: { type: string, maxLength: 200 }
+        share: { $ref: '#/components/schemas/ShareRule' }
+        assignments:
+          type: array
+          maxItems: 200
+          items: { $ref: '#/components/schemas/ShareAssignment' }
+
+    ReviewsFate:
+      type: string
+      enum: [RETURN_TO_PERSONAL, DELETE]
+
+    GroupDeleteImpact:
+      type: object
+      required: [exclusiveReviews, publications]
+      properties:
+        exclusiveReviews: { type: integer, description: 'Рекомендации, опубликованные только в этой группе.' }
+        publications: { type: integer, description: Все публикации в группе. }
+
+    LeaveImpact:
+      type: object
+      required: [myPublications]
+      properties:
+        myPublications: { type: integer }
+
+    GroupRef:
+      type: object
+      required: [id, name]
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string }
+
+    AccountDeleteImpact:
+      type: object
+      required: [reviews, publishedReviews, blockingGroups]
+      properties:
+        reviews: { type: integer }
+        publishedReviews: { type: integer, description: Из них опубликованные хотя бы в одной группе. }
+        blockingGroups:
+          type: array
+          description: Группы, где пользователь единственный администратор при наличии других участников.
+          items: { $ref: '#/components/schemas/GroupRef' }
+
+    DeleteAccountRequest:
+      type: object
+      required: [code]
+      properties:
+        code: { type: string, pattern: '^[0-9]{6}$' }
+        deleteReviews: { type: boolean, default: false }
 
     InvitationPreview:
       type: object

@@ -6,10 +6,13 @@ import app.podgon.contract.CreateGroupRequest
 import app.podgon.contract.ErrorCode
 import app.podgon.contract.FieldError
 import app.podgon.contract.GroupSummary
+import app.podgon.contract.ReviewsFate
 import app.podgon.contract.UpdateGroupRequest
 import app.podgon.contract.Validation
 import app.podgon.groups.GroupCreated
+import app.podgon.groups.GroupDeleting
 import app.podgon.groups.GroupsProperties
+import app.podgon.groups.MemberLeft
 import app.podgon.groups.persistence.GroupRepository
 import app.podgon.groups.persistence.RoleRow
 import app.podgon.identity.UserDirectory
@@ -91,31 +94,41 @@ class GroupService(
         return policy.member(userId, groupId).toDto()
     }
 
-    /** Физическое удаление с каскадом; выбор судьбы отзывов появится вместе с отзывами (этап 6). */
+    /**
+     * Физическое удаление с каскадом (участники, роли, категории, приглашения, публикации). Судьбу
+     * рекомендаций, опубликованных только здесь, выбирает администратор: остаются личными или удаляются.
+     */
     fun delete(
         userId: UUID,
         groupId: UUID,
         confirm: Boolean,
+        reviews: ReviewsFate,
     ) {
         policy.admin(userId, groupId)
         if (!confirm) throw ApiException(ErrorCode.CONFIRMATION_REQUIRED, HttpStatus.BAD_REQUEST)
         tx.executeWithoutResult {
             if (!groups.lock(groupId)) throw notFound()
             policy.admin(userId, groupId)
+            events.publishEvent(GroupDeleting(groupId, deleteExclusiveReviews = reviews == ReviewsFate.DELETE))
             groups.delete(groupId)
         }
     }
 
-    /** Единственный администратор выйти не может: сначала назначить другого или удалить группу. */
+    /**
+     * Единственный администратор выйти не может: сначала назначить другого или удалить группу.
+     * С [deleteMyReviews] публикации выходящего в группе удаляются (сами рекомендации остаются у автора).
+     */
     fun leave(
         userId: UUID,
         groupId: UUID,
+        deleteMyReviews: Boolean = false,
     ) {
         tx.executeWithoutResult {
             if (!groups.lock(groupId)) throw notFound()
             policy.member(userId, groupId)
             groups.deleteMember(groupId, userId)
             admins.ensureAdminRemains(groupId)
+            events.publishEvent(MemberLeft(groupId, userId, deleteMyReviews))
         }
     }
 

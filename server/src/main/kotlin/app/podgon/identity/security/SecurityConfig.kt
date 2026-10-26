@@ -36,8 +36,14 @@ class SecurityConfig {
             .sessionManagement { it.sessionCreationPolicy(SessionCreationPolicy.STATELESS) }
             .authorizeHttpRequests {
                 it
-                    .requestMatchers("/api/v1/auth/**", "/openapi.yaml", "/actuator/health", "/actuator/health/**")
-                    .permitAll()
+                    .requestMatchers(
+                        "/api/v1/auth/**",
+                        "/openapi.yaml",
+                        "/actuator/health",
+                        "/actuator/health/**",
+                        "/account-deletion",
+                        "/account-deletion.html",
+                    ).permitAll()
                     .anyRequest()
                     .authenticated()
             }.oauth2ResourceServer {

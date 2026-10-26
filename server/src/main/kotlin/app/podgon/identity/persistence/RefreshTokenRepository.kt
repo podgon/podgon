@@ -101,6 +101,17 @@ class RefreshTokenRepository(
             .param("now", now.toSql())
             .update()
 
+    /** Отзывает все сессии пользователя (при удалении аккаунта). */
+    fun revokeAllOfUser(
+        userId: UUID,
+        now: Instant,
+    ): Int =
+        jdbc
+            .sql("update refresh_tokens set revoked_at = :now where user_id = :user and revoked_at is null")
+            .param("user", userId)
+            .param("now", now.toSql())
+            .update()
+
     /** Отзывает сессию пользователя; 0 — если такой сессии у него нет. */
     fun revokeUserFamily(
         userId: UUID,

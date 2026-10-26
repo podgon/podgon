@@ -1,5 +1,6 @@
 package app.podgon.groups
 
+import app.podgon.contract.GroupRef
 import java.util.UUID
 
 /**
@@ -24,4 +25,7 @@ interface GroupAccess {
 
     /** Все группы пользователя (для проверки видимости чужих рекомендаций). */
     fun memberGroupIds(userId: UUID): Set<UUID>
+
+    /** Группы, где пользователь единственный администратор, а участников больше одного: из них нельзя просто уйти. */
+    fun soleAdminGroups(userId: UUID): List<GroupRef>
 }

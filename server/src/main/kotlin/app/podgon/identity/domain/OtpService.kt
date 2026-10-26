@@ -46,7 +46,25 @@ class OtpService(
         Validation.email(rawEmail)?.let { throw validationFailed(listOf(FieldError("email", it))) }
         val email = Validation.normalizeEmail(rawEmail)
         if (!captcha.verify(captchaToken, ip)) throw ApiException(ErrorCode.CAPTCHA_FAILED, HttpStatus.BAD_REQUEST)
+        issue(email, ip, locale, MailTemplate.LOGIN_CODE)
+    }
 
+    /**
+     * Код подтверждения для уже вошедшего пользователя (например, удаление аккаунта): без капчи, с теми же
+     * лимитами по адресу.
+     */
+    fun requestForSignedIn(
+        email: String,
+        locale: String,
+        template: MailTemplate,
+    ) = issue(Validation.normalizeEmail(email), null, locale, template)
+
+    private fun issue(
+        email: String,
+        ip: String?,
+        locale: String,
+        template: MailTemplate,
+    ) {
         tx.executeWithoutResult {
             codes.lockEmail(email)
             val now = clock.instant()
@@ -59,7 +77,7 @@ class OtpService(
             if (!testAccount) {
                 mail.enqueue(
                     email,
-                    MailTemplate.LOGIN_CODE,
+                    template,
                     locale,
                     mapOf(
                         "code" to code,

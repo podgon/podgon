@@ -3,15 +3,19 @@ package app.podgon.groups.domain
 import app.podgon.common.ApiException
 import app.podgon.common.RateLimitedException
 import app.podgon.common.validationFailed
+import app.podgon.contract.AcceptInvitationRequest
 import app.podgon.contract.CreateInvitationRequest
 import app.podgon.contract.ErrorCode
 import app.podgon.contract.FieldError
+import app.podgon.contract.FieldErrorReason
 import app.podgon.contract.GroupSummary
 import app.podgon.contract.InvitationCreated
 import app.podgon.contract.InvitationInfo
 import app.podgon.contract.InvitationPreview
 import app.podgon.contract.Validation
 import app.podgon.groups.GroupsProperties
+import app.podgon.groups.InvitationGroups
+import app.podgon.groups.MemberJoined
 import app.podgon.groups.persistence.GroupRepository
 import app.podgon.groups.persistence.InvitationRepository
 import app.podgon.groups.persistence.InvitationRow
@@ -19,6 +23,7 @@ import app.podgon.identity.UserDirectory
 import app.podgon.identity.UserSummary
 import app.podgon.mail.MailQueue
 import app.podgon.mail.MailTemplate
+import org.springframework.context.ApplicationEventPublisher
 import org.springframework.http.HttpStatus
 import org.springframework.stereotype.Service
 import org.springframework.transaction.support.TransactionTemplate
@@ -36,9 +41,10 @@ class InvitationService(
     private val users: UserDirectory,
     private val mail: MailQueue,
     private val props: GroupsProperties,
+    private val events: ApplicationEventPublisher,
     private val clock: Clock,
     private val tx: TransactionTemplate,
-) {
+) : InvitationGroups {
     private val random = SecureRandom()
 
     /**
@@ -150,11 +156,27 @@ class InvitationService(
         )
     }
 
-    /** Вступление в группу: одна транзакция — проверки, членство с ролью MEMBER, счётчик использований. */
-    fun accept(
+    /** Группа, куда ведёт действующее приглашение, для предпросмотра переноса рекомендаций. */
+    override fun resolve(
         userId: UUID,
         token: String,
+    ): UUID {
+        val user = users.find(userId) ?: throw ApiException(ErrorCode.UNAUTHORIZED, HttpStatus.UNAUTHORIZED)
+        return usable(invitations.findByHash(hash(token)), user).groupId
+    }
+
+    /**
+     * Вступление в группу: одна транзакция — проверки, членство с ролью MEMBER, счётчик использований
+     * и (если задано правило) перенос рекомендаций через событие [MemberJoined].
+     */
+    fun accept(
+        userId: UUID,
+        request: AcceptInvitationRequest,
     ): GroupSummary {
+        if (request.assignments.size > Validation.SHARE_ASSIGNMENTS_MAX) {
+            throw validationFailed(listOf(FieldError("assignments", FieldErrorReason.TOO_LONG)))
+        }
+        val token = request.token
         val user = users.find(userId) ?: throw ApiException(ErrorCode.UNAUTHORIZED, HttpStatus.UNAUTHORIZED)
         if (user.blocked) throw ApiException(ErrorCode.USER_BLOCKED, HttpStatus.FORBIDDEN)
         val groupId =
@@ -178,6 +200,7 @@ class InvitationService(
                     clock.instant(),
                 )
                 invitations.incrementUsed(invitation.id)
+                events.publishEvent(MemberJoined(invitation.groupId, userId, request.share, request.assignments))
                 invitation.groupId
             }!!
         return policy.member(userId, groupId).toDto()

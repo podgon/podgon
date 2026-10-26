@@ -4,6 +4,7 @@ import app.podgon.contract.CreateGroupRequest
 import app.podgon.contract.CreateRoleRequest
 import app.podgon.contract.GroupSummary
 import app.podgon.contract.MemberInfo
+import app.podgon.contract.ReviewsFate
 import app.podgon.contract.RoleInfo
 import app.podgon.contract.SetMemberRoleRequest
 import app.podgon.contract.UpdateGroupRequest
@@ -66,14 +67,16 @@ class GroupsController(
         @AuthenticationPrincipal user: AuthenticatedUser,
         @PathVariable groupId: String,
         @RequestParam(defaultValue = "false") confirm: Boolean,
-    ) = groups.delete(user.userId, groupId.toUuidOrNotFound(), confirm)
+        @RequestParam(defaultValue = "RETURN_TO_PERSONAL") reviews: ReviewsFate,
+    ) = groups.delete(user.userId, groupId.toUuidOrNotFound(), confirm, reviews)
 
     @PostMapping("/{groupId}/leave")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     fun leave(
         @AuthenticationPrincipal user: AuthenticatedUser,
         @PathVariable groupId: String,
-    ) = groups.leave(user.userId, groupId.toUuidOrNotFound())
+        @RequestParam(defaultValue = "false") deleteMyReviews: Boolean,
+    ) = groups.leave(user.userId, groupId.toUuidOrNotFound(), deleteMyReviews)
 
     @GetMapping("/{groupId}/members")
     fun members(

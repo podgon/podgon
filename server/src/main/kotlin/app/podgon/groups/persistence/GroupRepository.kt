@@ -221,6 +221,41 @@ class GroupRepository(
         jdbc.sql("delete from groups where id = :id").param("id", groupId).update()
     }
 
+    /** Группы (id, название), где пользователь — единственный админ при наличии других участников. */
+    fun soleAdminGroups(userId: UUID): List<Pair<UUID, String>> =
+        jdbc
+            .sql(
+                """
+                select g.id, g.name
+                from memberships m
+                join group_roles r on r.id = m.role_id and r.is_admin
+                join groups g on g.id = m.group_id
+                where m.user_id = :u
+                  and (select count(*) from memberships a join group_roles ar on ar.id = a.role_id
+                       where a.group_id = g.id and ar.is_admin) = 1
+                  and (select count(*) from memberships a where a.group_id = g.id) > 1
+                order by g.name
+                """.trimIndent(),
+            ).param("u", userId)
+            .query { rs, _ -> rs.getObject("id", UUID::class.java) to rs.getString("name") }
+            .list()
+
+    /** Группы, где пользователь — единственный участник. */
+    fun groupsWhereOnlyMember(userId: UUID): List<UUID> =
+        jdbc
+            .sql(
+                """
+                select m.group_id from memberships m
+                where m.user_id = :u and (select count(*) from memberships a where a.group_id = m.group_id) = 1
+                """.trimIndent(),
+            ).param("u", userId)
+            .query { rs, _ -> rs.getObject("group_id", UUID::class.java) }
+            .list()
+
+    fun deleteMembershipsOf(userId: UUID) {
+        jdbc.sql("delete from memberships where user_id = :u").param("u", userId).update()
+    }
+
     fun members(groupId: UUID): List<MemberRow> =
         jdbc
             .sql(

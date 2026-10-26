@@ -89,6 +89,26 @@ class UserRepository(
             .update()
     }
 
+    /**
+     * Мягкое удаление: адрес и имя освобождаются, личные данные очищаются, строка остаётся
+     * (на неё ссылаются группы, приглашения и категории).
+     */
+    fun anonymize(
+        id: UUID,
+        now: Instant,
+    ) {
+        jdbc
+            .sql(
+                """
+                update users set email = 'deleted+' || id || '@invalid', username = 'deleted_' || replace(id::text, '-', ''),
+                       display_name = null, bio = '', status = 'DELETED', deleted_at = :now, updated_at = :now
+                where id = :id and deleted_at is null
+                """.trimIndent(),
+            ).param("id", id)
+            .param("now", now.toSql())
+            .update()
+    }
+
     /** @throws org.springframework.dao.DuplicateKeyException при занятом username */
     fun updateProfile(
         id: UUID,

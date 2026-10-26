@@ -39,6 +39,9 @@ object Validation {
     const val SEARCH_CATEGORIES_MAX = 20
     const val SEARCH_GROUPS_MAX = 50
     const val INVITATION_MAX_USES = 100
+    const val SHARE_CATEGORIES_MAX = 20
+    const val SHARE_UNMATCHED_MAX = 100
+    const val SHARE_ASSIGNMENTS_MAX = 200
     const val INVITATION_TTL_HOURS_DEFAULT = 168
     const val INVITATION_TTL_HOURS_MAX = 24 * 30
 

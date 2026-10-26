@@ -7,4 +7,7 @@ enum class MailTemplate {
 
     /** Приглашение в группу. Параметры: `groupName`, `inviter`, `token`, `ttlHours`. */
     GROUP_INVITATION,
+
+    /** Код подтверждения удаления аккаунта. Параметры: `code`, `ttlMinutes`. */
+    ACCOUNT_DELETION_CODE,
 }

@@ -18,6 +18,8 @@ class MailRenderer {
     ): RenderedMail =
         when (template) {
             MailTemplate.LOGIN_CODE -> loginCode(locale, params.getValue("code"), params.getValue("ttlMinutes"))
+            MailTemplate.ACCOUNT_DELETION_CODE ->
+                deletionCode(locale, params.getValue("code"), params.getValue("ttlMinutes"))
             MailTemplate.GROUP_INVITATION ->
                 groupInvitation(
                     locale,
@@ -52,6 +54,29 @@ class MailRenderer {
                         "Invitation code: $token\n\n" +
                         "In the Podgon app open Groups → Join by code and enter this code. " +
                         "It is valid for $ttlHours hours and works only for this email address.",
+            )
+        }
+
+    private fun deletionCode(
+        locale: String,
+        code: String,
+        ttlMinutes: String,
+    ): RenderedMail =
+        if (locale == "ru") {
+            RenderedMail(
+                subject = "Подтверждение удаления аккаунта Podgon",
+                body =
+                    "Код подтверждения удаления аккаунта: $code\n\n" +
+                        "Он действует $ttlMinutes минут. Удаление необратимо. Никому не сообщайте код.\n" +
+                        "Если вы не запрашивали удаление, проигнорируйте это письмо и смените доступ к почте.",
+            )
+        } else {
+            RenderedMail(
+                subject = "Confirm your Podgon account deletion",
+                body =
+                    "Account deletion confirmation code: $code\n\n" +
+                        "It is valid for $ttlMinutes minutes. Deletion cannot be undone. Do not share the code.\n" +
+                        "If you did not request deletion, ignore this email and secure your mailbox.",
             )
         }
 
