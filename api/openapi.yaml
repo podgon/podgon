@@ -1,10 +1,10 @@
 openapi: 3.0.3
 info:
   title: Podgon API
-  version: 0.5.0
+  version: 0.6.0
   description: |
     Контракт API Podgon (contract-first, ADR-005). Этап 2: вход по одноразовому коду, регистрация,
-    токены, профиль и сессии устройств. Этап 4: группы, участники, роли, приглашения. Этап 5: категории групп. Этап 6: рекомендации, публикации в группы, лента.
+    токены, профиль и сессии устройств. Этап 4: группы, участники, роли, приглашения. Этап 5: категории групп. Этап 6: рекомендации, публикации в группы, лента. Этап 7: поиск и фильтры.
 
     Ошибки — `application/problem+json` (RFC 9457) с машинным полем `code` (см. `ErrorCode`
     в shared-contract); текст для пользователя формирует клиент.
@@ -588,6 +588,40 @@ paths:
         '401': { $ref: '#/components/responses/Problem' }
         '404': { $ref: '#/components/responses/Problem' }
         '409': { $ref: '#/components/responses/Problem' }
+    get:
+      tags: [reviews]
+      operationId: searchReviews
+      summary: Поиск по нескольким своим группам
+      description: |
+        Публикации в выбранных группах; без `groupIds` — во всех своих. Чужая группа — 404. Рекомендация,
+        опубликованная в двух группах, приходит двумя карточками (поле `groupId`).
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: groupIds
+          in: query
+          description: Группы через запятую.
+          style: form
+          explode: false
+          schema:
+            type: array
+            maxItems: 50
+            items: { type: string, format: uuid }
+        - $ref: '#/components/parameters/SearchQuery'
+        - $ref: '#/components/parameters/CategoryIds'
+        - $ref: '#/components/parameters/Tags'
+        - $ref: '#/components/parameters/TagMode'
+        - $ref: '#/components/parameters/AuthorId'
+        - $ref: '#/components/parameters/Cursor'
+        - $ref: '#/components/parameters/Limit'
+      responses:
+        '200':
+          description: Страница результатов
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ReviewPage' }
+        '400': { $ref: '#/components/responses/Problem' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
 
   /reviews/{reviewId}:
     parameters:
@@ -665,6 +699,30 @@ paths:
         '403': { $ref: '#/components/responses/Problem' }
         '404': { $ref: '#/components/responses/Problem' }
 
+  /groups/{groupId}/tags:
+    parameters:
+      - $ref: '#/components/parameters/GroupId'
+    get:
+      tags: [reviews]
+      operationId: listGroupTags
+      summary: Теги группы с числом публикаций (до 100, самые частые первыми)
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: prefix
+          in: query
+          description: Начало тега (автодополнение).
+          schema: { type: string, maxLength: 31 }
+      responses:
+        '200':
+          description: Теги
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/TagCount' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+
   /me/reviews:
     get:
       tags: [reviews]
@@ -690,9 +748,16 @@ paths:
       tags: [reviews]
       operationId: listGroupReviews
       summary: Лента группы (новые публикации сверху)
-      description: Только для участников (иначе 404). Пагинация keyset по `(sharedAt, id)`.
+      description: |
+        Только для участников (иначе 404). Без `q` — по времени публикации, с `q` — по релевантности.
+        Курсор действует только с теми же фильтрами; курсор другого режима — 400.
       security: [{ bearerAuth: [] }]
       parameters:
+        - $ref: '#/components/parameters/SearchQuery'
+        - $ref: '#/components/parameters/CategoryIds'
+        - $ref: '#/components/parameters/Tags'
+        - $ref: '#/components/parameters/TagMode'
+        - $ref: '#/components/parameters/AuthorId'
         - $ref: '#/components/parameters/Cursor'
         - $ref: '#/components/parameters/Limit'
       responses:
@@ -845,6 +910,40 @@ components:
       in: query
       description: Непрозрачный курсор из `nextCursor` предыдущей страницы.
       schema: { type: string, maxLength: 200 }
+    SearchQuery:
+      name: q
+      in: query
+      description: Поиск по названию и описанию (морфология русского, опечатки, подстроки); с ним выдача упорядочена по релевантности.
+      schema: { type: string, maxLength: 100 }
+    CategoryIds:
+      name: categoryIds
+      in: query
+      description: Категории (вместе с подкатегориями), через запятую.
+      style: form
+      explode: false
+      schema:
+        type: array
+        maxItems: 20
+        items: { type: string, format: uuid }
+    Tags:
+      name: tags
+      in: query
+      description: Теги без `#`, через запятую.
+      style: form
+      explode: false
+      schema:
+        type: array
+        maxItems: 10
+        items: { type: string, maxLength: 31 }
+    TagMode:
+      name: tagMode
+      in: query
+      description: «все теги» (по умолчанию) или «любой из тегов».
+      schema: { type: string, enum: [ALL, ANY], default: ALL }
+    AuthorId:
+      name: authorId
+      in: query
+      schema: { type: string, format: uuid }
     Limit:
       name: limit
       in: query
@@ -1202,6 +1301,14 @@ components:
         createdAt: { type: string, format: date-time }
         categoryId: { type: string, format: uuid, nullable: true }
         sharedAt: { type: string, format: date-time, nullable: true }
+        groupId: { type: string, format: uuid, nullable: true }
+
+    TagCount:
+      type: object
+      required: [name, count]
+      properties:
+        name: { type: string }
+        count: { type: integer }
 
     ReviewPage:
       type: object

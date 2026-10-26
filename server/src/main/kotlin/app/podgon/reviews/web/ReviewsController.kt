@@ -6,9 +6,11 @@ import app.podgon.contract.ErrorCode
 import app.podgon.contract.ReviewDetails
 import app.podgon.contract.ReviewPage
 import app.podgon.contract.SetPublicationsRequest
+import app.podgon.contract.TagCount
 import app.podgon.contract.UpdateReviewRequest
 import app.podgon.identity.AuthenticatedUser
 import app.podgon.reviews.domain.ReviewService
+import app.podgon.reviews.domain.SearchParams
 import org.springframework.http.HttpStatus
 import org.springframework.security.core.annotation.AuthenticationPrincipal
 import org.springframework.web.bind.annotation.DeleteMapping
@@ -75,9 +77,40 @@ class ReviewsController(
     fun feed(
         @AuthenticationPrincipal user: AuthenticatedUser,
         @PathVariable groupId: String,
+        @RequestParam(required = false) q: String?,
+        @RequestParam(required = false) categoryIds: List<String>?,
+        @RequestParam(required = false) tags: List<String>?,
+        @RequestParam(required = false) tagMode: String?,
+        @RequestParam(required = false) authorId: String?,
         @RequestParam(required = false) cursor: String?,
         @RequestParam(required = false) limit: Int?,
-    ): ReviewPage = reviews.feed(user.userId, groupId.uuid(), cursor, limit)
+    ): ReviewPage =
+        reviews.feed(user.userId, groupId.uuid(), SearchParams(q, categoryIds, tags, tagMode, authorId, cursor, limit))
+
+    @GetMapping("/reviews")
+    fun search(
+        @AuthenticationPrincipal user: AuthenticatedUser,
+        @RequestParam(required = false) groupIds: List<String>?,
+        @RequestParam(required = false) q: String?,
+        @RequestParam(required = false) categoryIds: List<String>?,
+        @RequestParam(required = false) tags: List<String>?,
+        @RequestParam(required = false) tagMode: String?,
+        @RequestParam(required = false) authorId: String?,
+        @RequestParam(required = false) cursor: String?,
+        @RequestParam(required = false) limit: Int?,
+    ): ReviewPage =
+        reviews.search(
+            user.userId,
+            groupIds?.map { it.uuid() },
+            SearchParams(q, categoryIds, tags, tagMode, authorId, cursor, limit),
+        )
+
+    @GetMapping("/groups/{groupId}/tags")
+    fun tags(
+        @AuthenticationPrincipal user: AuthenticatedUser,
+        @PathVariable groupId: String,
+        @RequestParam(required = false) prefix: String?,
+    ): List<TagCount> = reviews.groupTags(user.userId, groupId.uuid(), prefix)
 
     /** Идентификатор из адреса; нераспознанный считается несуществующим ресурсом (404). */
     private fun String.uuid(): UUID =

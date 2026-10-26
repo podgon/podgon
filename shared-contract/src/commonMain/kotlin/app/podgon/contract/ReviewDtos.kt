@@ -77,6 +77,8 @@ data class ReviewCard(
     val createdAt: String,
     val categoryId: String? = null,
     val sharedAt: String? = null,
+    /** Группа публикации: заполнена в лентах и поиске (рекомендация в двух группах — две карточки). */
+    val groupId: String? = null,
 )
 
 /** Страница списка; [nextCursor] — `null`, если страница последняя. */
@@ -84,6 +86,13 @@ data class ReviewCard(
 data class ReviewPage(
     val items: List<ReviewCard>,
     val nextCursor: String? = null,
+)
+
+/** Тег группы и число публикаций с ним: подсказки и панель фильтров. */
+@Serializable
+data class TagCount(
+    val name: String,
+    val count: Int,
 )
 
 const val REVIEW_EXCERPT_MAX = 200

@@ -35,6 +35,9 @@ object Validation {
     const val RATING_MAX = 10
     const val TAGS_MAX = 10
     const val TAG_MAX = 30
+    const val SEARCH_QUERY_MAX = 100
+    const val SEARCH_CATEGORIES_MAX = 20
+    const val SEARCH_GROUPS_MAX = 50
     const val INVITATION_MAX_USES = 100
     const val INVITATION_TTL_HOURS_DEFAULT = 168
     const val INVITATION_TTL_HOURS_MAX = 24 * 30
@@ -128,6 +131,14 @@ object Validation {
         when {
             values.size > TAGS_MAX -> FieldErrorReason.TOO_LONG
             else -> values.firstNotNullOfOrNull { tag(it) }
+        }
+
+    /** Поисковый запрос необязателен; пустой после обрезки считается отсутствующим. */
+    fun searchQuery(value: String): FieldErrorReason? =
+        when {
+            value.trim().length > SEARCH_QUERY_MAX -> FieldErrorReason.TOO_LONG
+            value.any { it.isISOControl() } -> FieldErrorReason.INVALID_FORMAT
+            else -> null
         }
 
     fun roleTitle(value: String): FieldErrorReason? = title(value, ROLE_TITLE_MAX)
