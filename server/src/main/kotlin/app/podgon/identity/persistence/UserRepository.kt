@@ -56,6 +56,17 @@ class UserRepository(
             .optional()
             .orElse(null)
 
+    fun findByIds(ids: Collection<UUID>): List<UserRow> =
+        if (ids.isEmpty()) {
+            emptyList()
+        } else {
+            jdbc
+                .sql("select $columns from users where id in (:ids)")
+                .param("ids", ids)
+                .query(::map)
+                .list()
+        }
+
     /** @throws org.springframework.dao.DuplicateKeyException при занятых email или username */
     fun insert(
         user: UserRow,

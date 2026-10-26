@@ -4,4 +4,7 @@ package app.podgon.mail
 enum class MailTemplate {
     /** Одноразовый код входа. Параметры: `code`, `ttlMinutes`. */
     LOGIN_CODE,
+
+    /** Приглашение в группу. Параметры: `groupName`, `inviter`, `token`, `ttlHours`. */
+    GROUP_INVITATION,
 }

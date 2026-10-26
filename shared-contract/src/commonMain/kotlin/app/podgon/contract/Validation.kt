@@ -23,6 +23,13 @@ object Validation {
     const val DISPLAY_NAME_MAX = 60
     const val BIO_MAX = 120
     const val CODE_LENGTH = 6
+    const val GROUP_NAME_MAX = 100
+    const val GROUP_DESCRIPTION_MAX = 500
+    const val ROLE_TITLE_MAX = 60
+    const val ROLE_DESCRIPTION_MAX = 255
+    const val INVITATION_MAX_USES = 100
+    const val INVITATION_TTL_HOURS_DEFAULT = 168
+    const val INVITATION_TTL_HOURS_MAX = 24 * 30
 
     /** Префикс зарезервирован для анонимизированных (удалённых) пользователей. */
     const val RESERVED_USERNAME_PREFIX = "deleted_"
@@ -73,6 +80,51 @@ object Validation {
         when {
             value.isEmpty() -> FieldErrorReason.REQUIRED
             value.length != CODE_LENGTH || !value.all { it in '0'..'9' } -> FieldErrorReason.INVALID_FORMAT
+            else -> null
+        }
+
+    fun groupName(value: String): FieldErrorReason? = title(value, GROUP_NAME_MAX)
+
+    fun groupDescription(value: String): FieldErrorReason? = text(value, GROUP_DESCRIPTION_MAX)
+
+    fun roleTitle(value: String): FieldErrorReason? = title(value, ROLE_TITLE_MAX)
+
+    fun roleDescription(value: String): FieldErrorReason? = text(value, ROLE_DESCRIPTION_MAX)
+
+    fun maxUses(value: Int): FieldErrorReason? =
+        when {
+            value < 1 -> FieldErrorReason.TOO_SHORT
+            value > INVITATION_MAX_USES -> FieldErrorReason.TOO_LONG
+            else -> null
+        }
+
+    fun ttlHours(value: Int): FieldErrorReason? =
+        when {
+            value < 1 -> FieldErrorReason.TOO_SHORT
+            value > INVITATION_TTL_HOURS_MAX -> FieldErrorReason.TOO_LONG
+            else -> null
+        }
+
+    /** Однострочное обязательное название. */
+    private fun title(
+        value: String,
+        max: Int,
+    ): FieldErrorReason? =
+        when {
+            value.isBlank() -> FieldErrorReason.REQUIRED
+            value.trim().length > max -> FieldErrorReason.TOO_LONG
+            value.any { it.isISOControl() } -> FieldErrorReason.INVALID_FORMAT
+            else -> null
+        }
+
+    /** Необязательный многострочный текст. */
+    private fun text(
+        value: String,
+        max: Int,
+    ): FieldErrorReason? =
+        when {
+            value.trim().length > max -> FieldErrorReason.TOO_LONG
+            value.any { it.isISOControl() && it != '\n' } -> FieldErrorReason.INVALID_FORMAT
             else -> null
         }
 }

@@ -1,10 +1,10 @@
 openapi: 3.0.3
 info:
   title: Podgon API
-  version: 0.2.0
+  version: 0.3.0
   description: |
     Контракт API Podgon (contract-first, ADR-005). Этап 2: вход по одноразовому коду, регистрация,
-    токены, профиль и сессии устройств.
+    токены, профиль и сессии устройств. Этап 4: группы, участники, роли, приглашения.
 
     Ошибки — `application/problem+json` (RFC 9457) с машинным полем `code` (см. `ErrorCode`
     в shared-contract); текст для пользователя формирует клиент.
@@ -15,6 +15,10 @@ tags:
     description: Вход и регистрация (без авторизации)
   - name: me
     description: Профиль и сессии текущего пользователя
+  - name: groups
+    description: Группы, участники, роли
+  - name: invitations
+    description: Приглашения в группы
 
 paths:
   /auth/otp/request:
@@ -178,12 +182,382 @@ paths:
         '401': { $ref: '#/components/responses/Problem' }
         '404': { $ref: '#/components/responses/Problem' }
 
+  /groups:
+    post:
+      tags: [groups]
+      operationId: createGroup
+      summary: Создать группу (создатель становится администратором)
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CreateGroupRequest' }
+      responses:
+        '201':
+          description: Группа создана
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/GroupSummary' }
+        '400': { $ref: '#/components/responses/Problem' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '409': { $ref: '#/components/responses/Problem' }
+    get:
+      tags: [groups]
+      operationId: listGroups
+      summary: Мои группы
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200':
+          description: Группы, в которых состоит пользователь
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/GroupSummary' }
+        '401': { $ref: '#/components/responses/Problem' }
+
+  /groups/{groupId}:
+    parameters:
+      - $ref: '#/components/parameters/GroupId'
+    get:
+      tags: [groups]
+      operationId: getGroup
+      summary: Группа
+      description: Не участнику группа не видна (404).
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200':
+          description: Группа
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/GroupSummary' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+    patch:
+      tags: [groups]
+      operationId: updateGroup
+      summary: Изменить название и описание (администратор)
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/UpdateGroupRequest' }
+      responses:
+        '200':
+          description: Обновлённая группа
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/GroupSummary' }
+        '400': { $ref: '#/components/responses/Problem' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+    delete:
+      tags: [groups]
+      operationId: deleteGroup
+      summary: Удалить группу (администратор)
+      description: Необратимо; требует `confirm=true`, иначе 400 `CONFIRMATION_REQUIRED`.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: confirm
+          in: query
+          schema: { type: boolean }
+      responses:
+        '204': { description: Группа удалена }
+        '400': { $ref: '#/components/responses/Problem' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+
+  /groups/{groupId}/leave:
+    parameters:
+      - $ref: '#/components/parameters/GroupId'
+    post:
+      tags: [groups]
+      operationId: leaveGroup
+      summary: Выйти из группы
+      description: Единственный администратор выйти не может (409 `LAST_ADMIN`).
+      security: [{ bearerAuth: [] }]
+      responses:
+        '204': { description: Пользователь вышел из группы }
+        '401': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+        '409': { $ref: '#/components/responses/Problem' }
+
+  /groups/{groupId}/members:
+    parameters:
+      - $ref: '#/components/parameters/GroupId'
+    get:
+      tags: [groups]
+      operationId: listMembers
+      summary: Участники группы
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200':
+          description: Участники (администраторы первыми)
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/MemberInfo' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+
+  /groups/{groupId}/members/{userId}:
+    parameters:
+      - $ref: '#/components/parameters/GroupId'
+      - $ref: '#/components/parameters/UserId'
+    delete:
+      tags: [groups]
+      operationId: removeMember
+      summary: Удалить участника (администратор)
+      description: Себя удалить нельзя — для этого есть выход из группы.
+      security: [{ bearerAuth: [] }]
+      responses:
+        '204': { description: Участник удалён }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+        '409': { $ref: '#/components/responses/Problem' }
+
+  /groups/{groupId}/members/{userId}/role:
+    parameters:
+      - $ref: '#/components/parameters/GroupId'
+      - $ref: '#/components/parameters/UserId'
+    put:
+      tags: [groups]
+      operationId: setMemberRole
+      summary: Назначить роль участнику (администратор)
+      description: Снять роль администратора с последнего администратора нельзя (409 `LAST_ADMIN`).
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/SetMemberRoleRequest' }
+      responses:
+        '200':
+          description: Участник с новой ролью
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/MemberInfo' }
+        '400': { $ref: '#/components/responses/Problem' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+        '409': { $ref: '#/components/responses/Problem' }
+
+  /groups/{groupId}/roles:
+    parameters:
+      - $ref: '#/components/parameters/GroupId'
+    get:
+      tags: [groups]
+      operationId: listRoles
+      summary: Роли группы
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200':
+          description: Системные и пользовательские роли
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/RoleInfo' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+    post:
+      tags: [groups]
+      operationId: createRole
+      summary: Создать пользовательскую роль (администратор)
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CreateRoleRequest' }
+      responses:
+        '201':
+          description: Роль создана
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/RoleInfo' }
+        '400': { $ref: '#/components/responses/Problem' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+        '409': { $ref: '#/components/responses/Problem' }
+
+  /groups/{groupId}/roles/{roleId}:
+    parameters:
+      - $ref: '#/components/parameters/GroupId'
+      - $ref: '#/components/parameters/RoleId'
+    patch:
+      tags: [groups]
+      operationId: updateRole
+      summary: Изменить пользовательскую роль (администратор)
+      description: Системные роли менять нельзя (403). Лишение роли прав администратора у последнего администратора — 409 `LAST_ADMIN`.
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/UpdateRoleRequest' }
+      responses:
+        '200':
+          description: Обновлённая роль
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/RoleInfo' }
+        '400': { $ref: '#/components/responses/Problem' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+        '409': { $ref: '#/components/responses/Problem' }
+    delete:
+      tags: [groups]
+      operationId: deleteRole
+      summary: Удалить пользовательскую роль (администратор)
+      description: Участники с этой ролью получают роль MEMBER. Системные роли удалять нельзя (403).
+      security: [{ bearerAuth: [] }]
+      responses:
+        '204': { description: Роль удалена }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+        '409': { $ref: '#/components/responses/Problem' }
+
+  /groups/{groupId}/invitations:
+    parameters:
+      - $ref: '#/components/parameters/GroupId'
+    post:
+      tags: [invitations]
+      operationId: createInvitation
+      summary: Создать приглашение (администратор)
+      description: |
+        Токен возвращается только здесь. Если указан `email`, ему уходит письмо с токеном, и вступить
+        по этому приглашению сможет только владелец адреса.
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CreateInvitationRequest' }
+      responses:
+        '201':
+          description: Приглашение создано
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/InvitationCreated' }
+        '400': { $ref: '#/components/responses/Problem' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+        '409': { $ref: '#/components/responses/Problem' }
+        '429': { $ref: '#/components/responses/RateLimited' }
+    get:
+      tags: [invitations]
+      operationId: listInvitations
+      summary: Приглашения группы (администратор)
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200':
+          description: Приглашения, новые первыми; токены не возвращаются
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/InvitationInfo' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+
+  /groups/{groupId}/invitations/{invitationId}:
+    parameters:
+      - $ref: '#/components/parameters/GroupId'
+      - name: invitationId
+        in: path
+        required: true
+        schema: { type: string, format: uuid }
+    delete:
+      tags: [invitations]
+      operationId: revokeInvitation
+      summary: Отозвать приглашение (администратор)
+      description: Идемпотентно.
+      security: [{ bearerAuth: [] }]
+      responses:
+        '204': { description: Приглашение отозвано }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+
+  /invitations/preview:
+    post:
+      tags: [invitations]
+      operationId: previewInvitation
+      summary: Посмотреть, в какую группу приглашают
+      description: Токен передаётся в теле, а не в адресе, чтобы не попадать в журналы доступа.
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/InvitationTokenRequest' }
+      responses:
+        '200':
+          description: Сведения о группе
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/InvitationPreview' }
+        '400': { $ref: '#/components/responses/Problem' }
+        '401': { $ref: '#/components/responses/Problem' }
+
+  /invitations/accept:
+    post:
+      tags: [invitations]
+      operationId: acceptInvitation
+      summary: Вступить в группу по приглашению
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/InvitationTokenRequest' }
+      responses:
+        '200':
+          description: Пользователь вступил в группу
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/GroupSummary' }
+        '400': { $ref: '#/components/responses/Problem' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '409': { $ref: '#/components/responses/Problem' }
+
 components:
   securitySchemes:
     bearerAuth:
       type: http
       scheme: bearer
       bearerFormat: JWT
+
+  parameters:
+    GroupId:
+      name: groupId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    UserId:
+      name: userId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    RoleId:
+      name: roleId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
 
   responses:
     Problem:
@@ -226,6 +600,11 @@ components:
             - NOT_FOUND
             - USERNAME_TAKEN
             - EMAIL_ALREADY_REGISTERED
+            - LAST_ADMIN
+            - INVALID_INVITATION
+            - ALREADY_MEMBER
+            - LIMIT_EXCEEDED
+            - CONFIRMATION_REQUIRED
             - INTERNAL_ERROR
         errors:
           type: array
@@ -326,3 +705,114 @@ components:
         createdAt: { type: string, format: date-time }
         lastUsedAt: { type: string, format: date-time }
         current: { type: boolean }
+
+    RoleInfo:
+      type: object
+      required: [id, code, title, description, admin, system]
+      properties:
+        id: { type: string, format: uuid }
+        code: { type: string }
+        title: { type: string }
+        description: { type: string }
+        admin: { type: boolean }
+        system: { type: boolean }
+
+    GroupSummary:
+      type: object
+      required: [id, name, description, memberCount, myRole]
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string }
+        description: { type: string }
+        memberCount: { type: integer }
+        myRole: { $ref: '#/components/schemas/RoleInfo' }
+
+    CreateGroupRequest:
+      type: object
+      required: [name]
+      properties:
+        name: { type: string, maxLength: 100 }
+        description: { type: string, maxLength: 500 }
+
+    UpdateGroupRequest:
+      type: object
+      properties:
+        name: { type: string, maxLength: 100, nullable: true }
+        description: { type: string, maxLength: 500, nullable: true }
+
+    MemberInfo:
+      type: object
+      required: [userId, username, displayName, role, joinedAt]
+      properties:
+        userId: { type: string, format: uuid }
+        username: { type: string }
+        displayName: { type: string }
+        role: { $ref: '#/components/schemas/RoleInfo' }
+        joinedAt: { type: string, format: date-time }
+
+    SetMemberRoleRequest:
+      type: object
+      required: [roleId]
+      properties:
+        roleId: { type: string }
+
+    CreateRoleRequest:
+      type: object
+      required: [title]
+      properties:
+        title: { type: string, maxLength: 60 }
+        description: { type: string, maxLength: 255 }
+        admin: { type: boolean }
+
+    UpdateRoleRequest:
+      type: object
+      properties:
+        title: { type: string, maxLength: 60, nullable: true }
+        description: { type: string, maxLength: 255, nullable: true }
+        admin: { type: boolean, nullable: true }
+
+    CreateInvitationRequest:
+      type: object
+      properties:
+        email: { type: string, maxLength: 254, nullable: true }
+        maxUses: { type: integer, minimum: 1, maximum: 100, default: 1 }
+        ttlHours: { type: integer, minimum: 1, maximum: 720, default: 168 }
+
+    InvitationCreated:
+      type: object
+      required: [id, token, expiresAt, maxUses]
+      properties:
+        id: { type: string, format: uuid }
+        token: { type: string, description: Показывается один раз }
+        email: { type: string, nullable: true }
+        expiresAt: { type: string, format: date-time }
+        maxUses: { type: integer }
+
+    InvitationInfo:
+      type: object
+      required: [id, createdBy, createdAt, expiresAt, maxUses, usedCount, revoked, active]
+      properties:
+        id: { type: string, format: uuid }
+        email: { type: string, nullable: true }
+        createdBy: { type: string, description: username автора }
+        createdAt: { type: string, format: date-time }
+        expiresAt: { type: string, format: date-time }
+        maxUses: { type: integer }
+        usedCount: { type: integer }
+        revoked: { type: boolean }
+        active: { type: boolean }
+
+    InvitationTokenRequest:
+      type: object
+      required: [token]
+      properties:
+        token: { type: string, maxLength: 200 }
+
+    InvitationPreview:
+      type: object
+      required: [groupName, groupDescription, memberCount, invitedBy]
+      properties:
+        groupName: { type: string }
+        groupDescription: { type: string }
+        memberCount: { type: integer }
+        invitedBy: { type: string }
