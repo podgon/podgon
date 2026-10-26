@@ -1,8 +1,8 @@
 package app.podgon.mobile.feature.groups
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
@@ -58,6 +58,7 @@ fun CategoriesScreen(
     var creatingRoot by remember { mutableStateOf(false) }
     var editing by remember { mutableStateOf<CategoryInfo?>(null) }
     var moving by remember { mutableStateOf<CategoryInfo?>(null) }
+    var actions by remember { mutableStateOf<CategoryInfo?>(null) }
 
     FormScaffold {
         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -75,36 +76,56 @@ fun CategoriesScreen(
             }
             LazyColumn(modifier = Modifier.weight(1f, fill = false)) {
                 items(state.tree, key = { it.category.id }) { node ->
-                    Column(Modifier.fillMaxWidth().padding(start = (node.depth * 16).dp, top = 6.dp, bottom = 6.dp)) {
+                    Column(
+                        Modifier
+                            .fillMaxWidth()
+                            .then(if (canEdit) Modifier.clickable { actions = node.category } else Modifier)
+                            .padding(start = (node.depth * 16).dp, top = 10.dp, bottom = 10.dp),
+                    ) {
                         Text(node.category.name, style = MaterialTheme.typography.titleSmall)
                         if (node.category.description.isNotBlank()) {
                             Text(node.category.description, style = MaterialTheme.typography.bodySmall)
-                        }
-                        if (canEdit) {
-                            Row {
-                                TextButton(onClick = {
-                                    viewModel.clearErrors()
-                                    creatingIn = node.category
-                                }) { Text(stringResource(Res.string.category_new_sub)) }
-                            }
-                            Row {
-                                TextButton(onClick = {
-                                    viewModel.clearErrors()
-                                    editing = node.category
-                                }) { Text(stringResource(Res.string.category_edit_title)) }
-                                TextButton(onClick = {
-                                    viewModel.clearErrors()
-                                    moving = node.category
-                                }) { Text(stringResource(Res.string.category_move)) }
-                                TextButton(onClick = { viewModel.requestDelete(node.category) }) {
-                                    Text(stringResource(Res.string.action_delete))
-                                }
-                            }
                         }
                     }
                 }
             }
         }
+    }
+
+    actions?.let { category ->
+        AlertDialog(
+            onDismissRequest = { actions = null },
+            title = { Text(category.name) },
+            text = {
+                Column {
+                    TextButton(onClick = {
+                        viewModel.clearErrors()
+                        creatingIn = category
+                        actions = null
+                    }) { Text(stringResource(Res.string.category_new_sub)) }
+                    TextButton(onClick = {
+                        viewModel.clearErrors()
+                        editing = category
+                        actions = null
+                    }) { Text(stringResource(Res.string.category_edit_title)) }
+                    TextButton(onClick = {
+                        viewModel.clearErrors()
+                        moving = category
+                        actions = null
+                    }) { Text(stringResource(Res.string.category_move)) }
+                    TextButton(onClick = {
+                        viewModel.requestDelete(category)
+                        actions = null
+                    }) { Text(stringResource(Res.string.action_delete)) }
+                }
+            },
+            confirmButton = {},
+            dismissButton = {
+                TextButton(
+                    onClick = { actions = null },
+                ) { Text(stringResource(Res.string.action_cancel)) }
+            },
+        )
     }
 
     if (creatingRoot) {
