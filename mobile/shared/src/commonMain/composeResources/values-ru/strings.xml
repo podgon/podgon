@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Podgon</string>
+    <string name="action_continue">Продолжить</string>
+    <string name="action_create_account">Создать аккаунт</string>
+    <string name="action_resend">Отправить код ещё раз</string>
+    <string name="action_logout">Выйти</string>
+    <string name="action_revoke">Завершить сеанс</string>
+
+    <string name="email_title">Добро пожаловать в Podgon</string>
+    <string name="email_hint">Введите email. Мы отправим одноразовый код для входа — пароль не нужен.</string>
+    <string name="email_label">Email</string>
+
+    <string name="code_title">Введите код</string>
+    <string name="code_hint">Мы отправили 6-значный код на %1$s.</string>
+    <string name="code_label">Код из письма</string>
+    <string name="code_resent">Новый код отправлен.</string>
+    <string name="code_resend_in">Отправить код ещё раз через %1$d с</string>
+
+    <string name="register_title">Создайте профиль</string>
+    <string name="username_label">Имя пользователя</string>
+    <string name="username_hint">3–30 символов: латинские буквы, цифры, точка, подчёркивание</string>
+    <string name="display_name_label">Отображаемое имя</string>
+
+    <string name="profile_title">Профиль</string>
+    <string name="profile_sessions">Устройства, где выполнен вход</string>
+    <string name="session_current">Это устройство</string>
+    <string name="session_unknown_device">Неизвестное устройство</string>
+
+    <string name="field_required">Обязательное поле</string>
+    <string name="field_too_short">Слишком коротко</string>
+    <string name="field_too_long">Слишком длинно</string>
+    <string name="field_invalid">Недопустимое значение</string>
+
+    <string name="error_network">Нет связи с сервером. Проверьте интернет и повторите.</string>
+    <string name="error_unknown">Что-то пошло не так. Попробуйте позже.</string>
+    <string name="error_invalid_code">Код неверный или просрочен. Запросите новый.</string>
+    <string name="error_rate_limited">Слишком много запросов. Повторите через %1$d с.</string>
+    <string name="error_captcha">Проверка CAPTCHA не пройдена. Попробуйте ещё раз.</string>
+    <string name="error_username_taken">Это имя пользователя уже занято.</string>
+    <string name="error_email_taken">Аккаунт с таким email уже существует.</string>
+    <string name="error_registration_expired">Сеанс регистрации истёк. Начните заново.</string>
+    <string name="error_blocked">Ваш аккаунт заблокирован.</string>
+</resources>

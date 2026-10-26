@@ -1,5 +1,8 @@
 package app.podgon.contract
 
+import kotlinx.serialization.Serializable
+
+@Serializable
 data class UserProfile(
     val id: String,
     val email: String,
@@ -10,6 +13,7 @@ data class UserProfile(
 )
 
 /** Частичное обновление профиля: `null` — поле не менять; пустой [bio] очищает биографию. */
+@Serializable
 data class UpdateProfileRequest(
     val username: String? = null,
     val displayName: String? = null,
@@ -17,6 +21,7 @@ data class UpdateProfileRequest(
     val locale: String? = null,
 )
 
+@Serializable
 data class SessionInfo(
     val id: String,
     val deviceInfo: String?,

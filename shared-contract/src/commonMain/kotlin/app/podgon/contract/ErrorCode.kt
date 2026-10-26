@@ -43,4 +43,10 @@ enum class ErrorCode {
 
     /** Непредвиденная ошибка сервера. */
     INTERNAL_ERROR,
+    ;
+
+    companion object {
+        /** Код из ответа сервера либо `null`, если клиент такой код не знает. */
+        fun fromCode(code: String?): ErrorCode? = entries.firstOrNull { it.name == code }
+    }
 }

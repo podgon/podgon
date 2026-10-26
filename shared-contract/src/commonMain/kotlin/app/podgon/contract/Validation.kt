@@ -1,6 +1,9 @@
 package app.podgon.contract
 
+import kotlinx.serialization.Serializable
+
 /** Ошибка проверки одного поля: имя поля и причина. */
+@Serializable
 data class FieldError(
     val field: String,
     val reason: FieldErrorReason,

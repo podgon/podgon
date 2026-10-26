@@ -19,3 +19,11 @@ max_line_length = 120
 
 [Makefile]
 indent_style = tab
+
+# Compose: функции-компоненты именуются с заглавной буквы
+[*.kt]
+ktlint_function_naming_ignore_when_annotated_with = Composable
+
+# Сгенерированный код (например, ресурсы Compose) линтером не проверяется
+[**/build/generated/**/*.kt]
+ktlint = disabled
