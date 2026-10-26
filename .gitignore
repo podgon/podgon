@@ -49,3 +49,6 @@ local.properties
 !.env.example
 *.pem
 secrets/
+
+# Локальный контекст для Claude Code (хранится только у разработчика)
+CLAUDE.md
