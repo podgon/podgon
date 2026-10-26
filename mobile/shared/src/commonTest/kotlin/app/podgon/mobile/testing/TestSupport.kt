@@ -3,6 +3,9 @@ package app.podgon.mobile.testing
 import app.podgon.mobile.core.auth.SessionManager
 import app.podgon.mobile.core.auth.StoredTokens
 import app.podgon.mobile.core.auth.TokenStorage
+import app.podgon.mobile.core.cache.CachedResponse
+import app.podgon.mobile.core.cache.CachedResponseDao
+import app.podgon.mobile.core.cache.ResponseCache
 import app.podgon.mobile.core.network.ApiConfig
 import app.podgon.mobile.core.network.AuthApi
 import app.podgon.mobile.core.network.GroupsApi
@@ -10,6 +13,7 @@ import app.podgon.mobile.core.network.MeApi
 import app.podgon.mobile.core.network.ReviewsApi
 import app.podgon.mobile.core.network.createPublicClient
 import app.podgon.mobile.feature.auth.data.AuthRepository
+import app.podgon.mobile.feature.reviews.ReviewsRepository
 import io.ktor.client.engine.mock.MockEngine
 import io.ktor.client.engine.mock.MockRequestHandleScope
 import io.ktor.client.engine.mock.respond
@@ -94,6 +98,8 @@ class GroupsFixture(
     val api = GroupsApi(client)
     val me = MeApi(client)
     val reviews = ReviewsApi(client)
+    val cacheDao = FakeCachedResponseDao()
+    val reviewsRepository = ReviewsRepository(reviews, ResponseCache(cacheDao))
 
     /**
      * Строки вида `GET /api/v1/groups` в порядке поступления. MockEngine отвечает на своём потоке,
@@ -138,3 +144,22 @@ fun memberJson(
 
 const val ME_JSON =
     """{"id":"u-me","email":"me@example.com","username":"me","displayName":"Я","bio":"","locale":"ru"}"""
+
+/** Кэш в памяти вместо Room: логика репозитория проверяется без базы. */
+class FakeCachedResponseDao : CachedResponseDao {
+    val entries = mutableMapOf<String, CachedResponse>()
+
+    override suspend fun find(key: String): CachedResponse? = entries[key]
+
+    override suspend fun save(entry: CachedResponse) {
+        entries[entry.key] = entry
+    }
+
+    override suspend fun delete(key: String) {
+        entries.remove(key)
+    }
+
+    override suspend fun clear() {
+        entries.clear()
+    }
+}

@@ -4,6 +4,8 @@ plugins {
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.compose.multiplatform)
     alias(libs.plugins.android.kmp.library)
+    alias(libs.plugins.ksp)
+    alias(libs.plugins.androidx.room)
     alias(libs.plugins.ktlint)
 }
 
@@ -30,6 +32,8 @@ kotlin {
     sourceSets {
         commonMain.dependencies {
             api(project(":shared-contract"))
+            implementation(libs.androidx.room.runtime)
+            implementation(libs.androidx.sqlite.bundled)
             implementation(libs.compose.runtime)
             implementation(libs.compose.foundation)
             implementation(libs.compose.material3)
@@ -62,6 +66,18 @@ kotlin {
             implementation(libs.turbine)
         }
     }
+}
+
+// Схемы БД кэша хранятся в репозитории: по ним Room проверяет миграции
+room {
+    schemaDirectory("$projectDir/schemas")
+}
+
+dependencies {
+    // Обработчик Room — для каждой цели отдельно (KSP в мультиплатформе)
+    add("kspAndroid", libs.androidx.room.compiler)
+    add("kspIosArm64", libs.androidx.room.compiler)
+    add("kspIosSimulatorArm64", libs.androidx.room.compiler)
 }
 
 compose.resources {

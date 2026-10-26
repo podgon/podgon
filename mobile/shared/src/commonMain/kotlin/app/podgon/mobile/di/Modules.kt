@@ -1,6 +1,8 @@
 package app.podgon.mobile.di
 
 import app.podgon.mobile.core.auth.SessionManager
+import app.podgon.mobile.core.cache.CacheDatabase
+import app.podgon.mobile.core.cache.ResponseCache
 import app.podgon.mobile.core.network.AuthApi
 import app.podgon.mobile.core.network.GroupsApi
 import app.podgon.mobile.core.network.MeApi
@@ -23,6 +25,7 @@ import app.podgon.mobile.feature.profile.ProfileViewModel
 import app.podgon.mobile.feature.reviews.FeedViewModel
 import app.podgon.mobile.feature.reviews.ReviewFormViewModel
 import app.podgon.mobile.feature.reviews.ReviewViewModel
+import app.podgon.mobile.feature.reviews.ReviewsRepository
 import io.ktor.client.HttpClient
 import org.koin.core.module.dsl.viewModel
 import org.koin.core.qualifier.named
@@ -37,7 +40,9 @@ private val AUTHORIZED_CLIENT = named("authorized")
  */
 val appModule =
     module {
-        single { SessionManager(get()) }
+        single { ResponseCache(get<CacheDatabase>().responses()) }
+        single { ReviewsRepository(get(), get()) }
+        single { SessionManager(get()) { get<ResponseCache>().clear() } }
         single<HttpClient>(PUBLIC_CLIENT) { createPublicClient(get(), get()) }
         single<HttpClient>(AUTHORIZED_CLIENT) { createAuthorizedClient(get(), get(), get(), get(PUBLIC_CLIENT)) }
         single { AuthApi(get(PUBLIC_CLIENT)) }

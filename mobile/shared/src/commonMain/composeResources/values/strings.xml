@@ -149,4 +149,5 @@
     <string name="review_delete_title">Delete recommendation?</string>
     <string name="review_delete_text">It will disappear from all groups. This cannot be undone.</string>
     <string name="error_category_foreign_reviews">The category contains recommendations from other members and cannot be deleted.</string>
+    <string name="review_offline">No connection: showing saved data.</string>
 </resources>

@@ -57,6 +57,7 @@ import app.podgon.mobile.resources.review_groups_none
 import app.podgon.mobile.resources.review_load_more
 import app.podgon.mobile.resources.review_my_title
 import app.podgon.mobile.resources.review_new
+import app.podgon.mobile.resources.review_offline
 import app.podgon.mobile.resources.review_pick_category
 import app.podgon.mobile.resources.review_published_in
 import app.podgon.mobile.resources.review_rating
@@ -83,6 +84,12 @@ fun FeedScreen(
                 style = MaterialTheme.typography.headlineMedium,
             )
             Button(onClick = onNew, modifier = Modifier.fillMaxWidth()) { Text(stringResource(Res.string.review_new)) }
+            if (state.offline) {
+                Text(
+                    stringResource(Res.string.review_offline),
+                    style = MaterialTheme.typography.bodySmall,
+                )
+            }
             state.error?.let { RetryError(it, viewModel::refresh) }
             if (state.loading && state.items.isEmpty()) CircularProgressIndicator()
             if (!state.loading && state.items.isEmpty() && state.error == null) {
@@ -139,6 +146,12 @@ fun ReviewScreen(
             modifier = Modifier.verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
+            if (state.offline) {
+                Text(
+                    stringResource(Res.string.review_offline),
+                    style = MaterialTheme.typography.bodySmall,
+                )
+            }
             state.error?.let { RetryError(it, viewModel::load) }
             if (state.loading && state.review == null) CircularProgressIndicator()
             state.review?.let { review ->

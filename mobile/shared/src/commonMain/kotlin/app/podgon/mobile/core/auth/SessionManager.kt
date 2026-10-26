@@ -22,6 +22,8 @@ sealed interface AuthState {
  */
 class SessionManager(
     private val storage: TokenStorage,
+    /** Вызывается при выходе (в том числе принудительном): например, очистка личных данных в кэше. */
+    private val onSignOut: suspend () -> Unit = {},
 ) {
     private val mutex = Mutex()
     private val _state = MutableStateFlow<AuthState>(AuthState.Loading)
@@ -52,6 +54,7 @@ class SessionManager(
     suspend fun signOut() {
         mutex.withLock {
             storage.clear()
+            onSignOut()
             _state.value = AuthState.SignedOut
         }
     }

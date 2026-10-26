@@ -1,6 +1,9 @@
 package app.podgon.mobile
 
 import app.podgon.contract.FieldErrorReason
+import app.podgon.mobile.core.cache.CachedResponse
+import app.podgon.mobile.core.cache.ResponseCache
+import app.podgon.mobile.core.error.AppError
 import app.podgon.mobile.feature.reviews.FeedViewModel
 import app.podgon.mobile.feature.reviews.ReviewFormEffect
 import app.podgon.mobile.feature.reviews.ReviewFormViewModel
@@ -11,6 +14,7 @@ import app.podgon.mobile.testing.GroupsFixture
 import app.podgon.mobile.testing.ME_JSON
 import app.podgon.mobile.testing.groupJson
 import app.podgon.mobile.testing.json
+import app.podgon.mobile.testing.problem
 import io.ktor.http.HttpMethod
 import io.ktor.http.HttpStatusCode
 import kotlinx.coroutines.Dispatchers
@@ -82,7 +86,7 @@ class ReviewsViewModelsTest {
                         else -> error("лишний запрос")
                     }
                 }
-            val vm = FeedViewModel("g1", fixture.reviews)
+            val vm = FeedViewModel("g1", fixture.reviewsRepository)
             val first = vm.state.first { !it.loading }
             assertEquals(listOf("a", "b"), first.items.map { it.id })
             assertEquals("c1", first.nextCursor)
@@ -105,7 +109,7 @@ class ReviewsViewModelsTest {
     fun `мои рекомендации читаются без группы`() =
         runTest(dispatcher) {
             val fixture = GroupsFixture { json("""{"items":[${card("a")}]}""") }
-            val vm = FeedViewModel(null, fixture.reviews)
+            val vm = FeedViewModel(null, fixture.reviewsRepository)
             vm.state.first { !it.loading && it.items.isNotEmpty() }
             assertTrue("GET /api/v1/me/reviews" in fixture.calls())
         }
@@ -124,7 +128,7 @@ class ReviewsViewModelsTest {
                         json(details())
                     }
                 }
-            val vmMine = ReviewViewModel("r1", mine.reviews, mine.me, mine.api)
+            val vmMine = ReviewViewModel("r1", mine.reviewsRepository, mine.me, mine.api)
             assertTrue(vmMine.state.first { !it.loading && it.myUserId != null }.isAuthor)
 
             val foreign =
@@ -137,8 +141,86 @@ class ReviewsViewModelsTest {
                         json(details(author = other))
                     }
                 }
-            val vmForeign = ReviewViewModel("r1", foreign.reviews, foreign.me, foreign.api)
+            val vmForeign = ReviewViewModel("r1", foreign.reviewsRepository, foreign.me, foreign.api)
             assertEquals(false, vmForeign.state.first { !it.loading && it.myUserId != null }.isAuthor)
+        }
+
+    @Test
+    fun `без сети лента показывает сохранённую первую страницу а ошибка остаётся для остального`() =
+        runTest(dispatcher) {
+            var offline = false
+            val fixture =
+                GroupsFixture {
+                    if (offline) error("нет сети") else json("""{"items":[${card("a")}],"nextCursor":"c1"}""")
+                }
+            val vm = FeedViewModel("g1", fixture.reviewsRepository)
+            val online = vm.state.first { !it.loading }
+            assertEquals(false, online.offline)
+            assertTrue("feed:g1" in fixture.cacheDao.entries)
+
+            offline = true
+            vm.refresh()
+            val saved = vm.state.first { it.offline && !it.loading }
+            assertEquals(listOf("a"), saved.items.map { it.id })
+            assertEquals(null, saved.error, "кэш вместо ошибки")
+
+            // следующая страница из кэша не берётся: показывается ошибка сети
+            vm.loadMore()
+            assertEquals(AppError.Network, vm.state.first { it.error != null }.error)
+        }
+
+    @Test
+    fun `без сети и без кэша лента показывает ошибку а чужие ошибки сервера кэшем не маскируются`() =
+        runTest(dispatcher) {
+            val fixture = GroupsFixture { error("нет сети") }
+            val vm = FeedViewModel("g1", fixture.reviewsRepository)
+            assertEquals(AppError.Network, vm.state.first { !it.loading }.error)
+
+            val denied = GroupsFixture { json(problem(404, "NOT_FOUND"), HttpStatusCode.NotFound) }
+            denied.cacheDao.entries["feed:g1"] =
+                CachedResponse("feed:g1", """{"items":[${card("old")}]}""", 0)
+            val vm2 = FeedViewModel("g1", denied.reviewsRepository)
+            val state = vm2.state.first { !it.loading }
+            assertTrue(state.items.isEmpty(), "доступ закрыт: сохранённое не показывается")
+            assertEquals(false, state.offline)
+        }
+
+    @Test
+    fun `карточка без сети берётся из кэша и не даёт править а удаление чистит кэш`() =
+        runTest(dispatcher) {
+            var offline = false
+            val fixture =
+                GroupsFixture { r ->
+                    when {
+                        r.method == HttpMethod.Delete -> json("", HttpStatusCode.NoContent)
+                        offline && r.url.encodedPath.contains("/reviews/") -> error("нет сети")
+                        r.url.encodedPath.endsWith("/me") -> json(ME_JSON)
+                        r.url.encodedPath.endsWith("/groups") -> json("[]")
+                        else -> json(details())
+                    }
+                }
+            val vm = ReviewViewModel("r1", fixture.reviewsRepository, fixture.me, fixture.api)
+            assertTrue(vm.state.first { !it.loading && it.myUserId != null }.isAuthor)
+
+            offline = true
+            vm.load()
+            val cached = vm.state.first { it.offline && !it.loading }
+            assertEquals("Дюна", cached.review?.title)
+            assertEquals(false, cached.isAuthor, "правка и удаление только онлайн")
+
+            offline = false
+            vm.delete()
+            awaitUntil { "review:r1" !in fixture.cacheDao.entries }
+        }
+
+    @Test
+    fun `очистка кэша убирает все сохранённые ответы`() =
+        runTest(dispatcher) {
+            val fixture = GroupsFixture { json("""{"items":[${card("a")}]}""") }
+            FeedViewModel("g1", fixture.reviewsRepository).state.first { !it.loading }
+            assertTrue(fixture.cacheDao.entries.isNotEmpty())
+            ResponseCache(fixture.cacheDao).clear()
+            assertTrue(fixture.cacheDao.entries.isEmpty())
         }
 
     @Test

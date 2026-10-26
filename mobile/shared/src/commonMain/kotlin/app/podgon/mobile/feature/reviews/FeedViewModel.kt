@@ -5,7 +5,6 @@ import androidx.lifecycle.viewModelScope
 import app.podgon.contract.ReviewCard
 import app.podgon.mobile.core.error.AppError
 import app.podgon.mobile.core.error.appError
-import app.podgon.mobile.core.network.ReviewsApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -18,13 +17,15 @@ data class FeedState(
     val items: List<ReviewCard> = emptyList(),
     /** `null` — страниц больше нет. */
     val nextCursor: String? = null,
+    /** Нет сети: показан сохранённый список. */
+    val offline: Boolean = false,
     val error: AppError? = null,
 )
 
 /** Лента группы ([groupId]) либо «мои рекомендации» (`groupId == null`) с подгрузкой страниц. */
 class FeedViewModel(
     private val groupId: String?,
-    private val api: ReviewsApi,
+    private val repository: ReviewsRepository,
 ) : ViewModel() {
     private val _state = MutableStateFlow(FeedState())
     val state: StateFlow<FeedState> = _state.asStateFlow()
@@ -37,11 +38,13 @@ class FeedViewModel(
     fun refresh() {
         _state.update { it.copy(loading = true, error = null) }
         viewModelScope.launch {
-            val result = page(null)
+            val result = repository.feed(groupId, null)
             _state.update {
-                val page = result.getOrNull()
+                val loaded = result.getOrNull()
+                val page = loaded?.value
                 it.copy(
                     loading = false,
+                    offline = loaded?.fromCache ?: it.offline,
                     items = page?.items ?: it.items,
                     nextCursor = if (page != null) page.nextCursor else it.nextCursor,
                     error = result.appError(),
@@ -56,9 +59,9 @@ class FeedViewModel(
         if (current.loading || current.loadingMore) return
         _state.update { it.copy(loadingMore = true, error = null) }
         viewModelScope.launch {
-            val result = page(cursor)
+            val result = repository.feed(groupId, cursor)
             _state.update {
-                val page = result.getOrNull()
+                val page = result.getOrNull()?.value
                 it.copy(
                     loadingMore = false,
                     items = if (page != null) it.items + page.items else it.items,
@@ -68,6 +71,4 @@ class FeedViewModel(
             }
         }
     }
-
-    private suspend fun page(cursor: String?) = if (groupId == null) api.mine(cursor) else api.feed(groupId, cursor)
 }
