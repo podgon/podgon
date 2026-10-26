@@ -6,11 +6,15 @@ services:
       POSTGRES_DB: podgon
       POSTGRES_USER: podgon
       POSTGRES_PASSWORD: ${PODGON_DB_PASSWORD:-podgon_dev}
+      # Пароль роли приложения podgon_app (создаётся скриптом db-init при первом запуске тома)
+      PODGON_APP_DB_PASSWORD: ${PODGON_APP_DB_PASSWORD:-podgon_app_dev}
       LANG: C.UTF-8
     ports:
       - "127.0.0.1:5432:5432"
     volumes:
       - pgdata:/var/lib/postgresql
+      - ./db-init/10-app-role.sh:/docker-entrypoint-initdb.d/10-app-role.sh:ro
+      - ./db-init/app-role.sql:/docker-entrypoint-initdb.d/app-role.sql.template:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U podgon -d podgon"]
       interval: 5s
@@ -34,8 +38,11 @@ services:
         condition: service_started
     environment:
       PODGON_DB_URL: jdbc:postgresql://db:5432/podgon
-      PODGON_DB_USER: podgon
-      PODGON_DB_PASSWORD: ${PODGON_DB_PASSWORD:-podgon_dev}
+      # Приложение — ролью без DDL, миграции — владельцем схемы (R6)
+      PODGON_DB_USER: podgon_app
+      PODGON_DB_PASSWORD: ${PODGON_APP_DB_PASSWORD:-podgon_app_dev}
+      PODGON_DB_MIGRATOR_USER: podgon
+      PODGON_DB_MIGRATOR_PASSWORD: ${PODGON_DB_PASSWORD:-podgon_dev}
       PODGON_SMTP_HOST: mailpit
       PODGON_SMTP_PORT: "1025"
       # Только для локальной разработки: в окружениях Selectel значения задаются секретами и иные

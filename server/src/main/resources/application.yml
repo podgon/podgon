@@ -8,6 +8,10 @@ spring:
   flyway:
     enabled: true
     locations: classpath:db/migration
+    # Миграции — владельцем схемы, приложение — ролью без DDL (R6, deploy/db-init/app-role.sql).
+    # Если переменные не заданы, Flyway работает под пользователем приложения (тесты, старые стенды).
+    user: ${PODGON_DB_MIGRATOR_USER:${PODGON_DB_USER:podgon}}
+    password: ${PODGON_DB_MIGRATOR_PASSWORD:${PODGON_DB_PASSWORD:}}
   mvc:
     problemdetails:
       enabled: true   # ошибки в формате RFC 9457 application/problem+json
@@ -25,6 +29,11 @@ spring:
     timeout-per-shutdown-phase: 20s
 
 podgon:
+  client:
+    # Минимальные номера сборок клиента (R1); старые получают 426 UPGRADE_REQUIRED. 0 — без ограничения
+    min-version:
+      android: ${PODGON_CLIENT_MINVERSION_ANDROID:0}
+      ios: ${PODGON_CLIENT_MINVERSION_IOS:0}
   mail:
     from: ${PODGON_MAIL_FROM:Podgon <no-reply@podgon.local>}
   auth:
