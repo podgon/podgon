@@ -9,8 +9,10 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.text.selection.SelectionContainer
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Checkbox
@@ -59,8 +61,6 @@ import app.podgon.mobile.resources.action_retry
 import app.podgon.mobile.resources.action_revoke_invite
 import app.podgon.mobile.resources.action_save
 import app.podgon.mobile.resources.create_group_title
-import app.podgon.mobile.resources.delete_group_confirm_text
-import app.podgon.mobile.resources.delete_group_confirm_title
 import app.podgon.mobile.resources.group_categories
 import app.podgon.mobile.resources.group_description_label
 import app.podgon.mobile.resources.group_invitations
@@ -88,8 +88,6 @@ import app.podgon.mobile.resources.join_hint
 import app.podgon.mobile.resources.join_invited_by
 import app.podgon.mobile.resources.join_preview_title
 import app.podgon.mobile.resources.join_title
-import app.podgon.mobile.resources.leave_group_confirm_text
-import app.podgon.mobile.resources.leave_group_confirm_title
 import app.podgon.mobile.resources.my_reviews
 import app.podgon.mobile.resources.remove_member_confirm
 import app.podgon.mobile.resources.role_admin_label
@@ -244,7 +242,10 @@ fun JoinGroupScreen(
     val state by viewModel.state.collectAsStateWithLifecycle()
     LaunchedEffect(viewModel) { viewModel.joined.collect(onJoined) }
     FormScaffold {
-        Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+        Column(
+            modifier = Modifier.verticalScroll(rememberScrollState()),
+            verticalArrangement = Arrangement.spacedBy(16.dp),
+        ) {
             Text(stringResource(Res.string.join_title), style = MaterialTheme.typography.headlineMedium)
             Text(stringResource(Res.string.join_hint), style = MaterialTheme.typography.bodyMedium)
             OutlinedTextField(
@@ -286,6 +287,7 @@ fun JoinGroupScreen(
                         stringResource(Res.string.join_invited_by, preview.invitedBy),
                     style = MaterialTheme.typography.bodySmall,
                 )
+                ShareSection(state, viewModel)
                 Button(onClick = viewModel::confirm, enabled = !state.loading, modifier = Modifier.fillMaxWidth()) {
                     if (state.loading) {
                         CircularProgressIndicator(
@@ -315,8 +317,6 @@ fun GroupScreen(
     }
     var roleFor by remember { mutableStateOf<MemberInfo?>(null) }
     var removing by remember { mutableStateOf<MemberInfo?>(null) }
-    var confirmLeave by remember { mutableStateOf(false) }
-    var confirmDelete by remember { mutableStateOf(false) }
 
     FormScaffold {
         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -361,11 +361,11 @@ fun GroupScreen(
                 }
             }
             if (group != null) {
-                OutlinedButton(onClick = { confirmLeave = true }, modifier = Modifier.fillMaxWidth()) {
+                OutlinedButton(onClick = viewModel::prepareLeave, modifier = Modifier.fillMaxWidth()) {
                     Text(stringResource(Res.string.action_leave_group))
                 }
                 if (state.isAdmin) {
-                    OutlinedButton(onClick = { confirmDelete = true }, modifier = Modifier.fillMaxWidth()) {
+                    OutlinedButton(onClick = viewModel::prepareDelete, modifier = Modifier.fillMaxWidth()) {
                         Text(stringResource(Res.string.action_delete_group))
                     }
                 }
@@ -396,28 +396,24 @@ fun GroupScreen(
             onDismiss = { removing = null },
         )
     }
-    if (confirmLeave) {
-        ConfirmDialog(
-            title = stringResource(Res.string.leave_group_confirm_title),
-            text = stringResource(Res.string.leave_group_confirm_text),
-            confirm = stringResource(Res.string.action_leave_group),
-            onConfirm = {
-                confirmLeave = false
-                viewModel.leave()
+    state.leaveImpact?.let { impact ->
+        LeaveGroupDialog(
+            impact,
+            onConfirm = { deleteMine ->
+                viewModel.dismissImpact()
+                viewModel.leave(deleteMine)
             },
-            onDismiss = { confirmLeave = false },
+            onDismiss = viewModel::dismissImpact,
         )
     }
-    if (confirmDelete) {
-        ConfirmDialog(
-            title = stringResource(Res.string.delete_group_confirm_title),
-            text = stringResource(Res.string.delete_group_confirm_text),
-            confirm = stringResource(Res.string.action_delete_group),
-            onConfirm = {
-                confirmDelete = false
-                viewModel.deleteGroup()
+    state.deleteImpact?.let { impact ->
+        DeleteGroupDialog(
+            impact,
+            onConfirm = { fate ->
+                viewModel.dismissImpact()
+                viewModel.deleteGroup(fate)
             },
-            onDismiss = { confirmDelete = false },
+            onDismiss = viewModel::dismissImpact,
         )
     }
 }

@@ -2,8 +2,11 @@ package app.podgon.mobile.feature.groups
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import app.podgon.contract.GroupDeleteImpact
 import app.podgon.contract.GroupSummary
+import app.podgon.contract.LeaveImpact
 import app.podgon.contract.MemberInfo
+import app.podgon.contract.ReviewsFate
 import app.podgon.contract.RoleInfo
 import app.podgon.mobile.core.error.AppError
 import app.podgon.mobile.core.error.appError
@@ -25,6 +28,9 @@ data class GroupState(
     /** Идентификатор текущего пользователя: себя из группы удалять нельзя (для этого есть «Выйти»). */
     val myUserId: String? = null,
     val error: AppError? = null,
+    /** Последствия выхода/удаления: загружаются перед показом подтверждения. */
+    val leaveImpact: LeaveImpact? = null,
+    val deleteImpact: GroupDeleteImpact? = null,
 ) {
     val isAdmin: Boolean get() = group?.myRole?.admin == true
 }
@@ -77,9 +83,27 @@ class GroupViewModel(
 
     fun removeMember(userId: String) = mutate { api.removeMember(groupId, userId) }
 
-    fun leave() = closing { api.leave(groupId) }
+    /** Узнаёт, сколько публикаций пользователя в группе, и открывает подтверждение выхода. */
+    fun prepareLeave() {
+        viewModelScope.launch {
+            val result = api.leaveImpact(groupId)
+            _state.update { it.copy(leaveImpact = result.getOrNull(), error = result.appError()) }
+        }
+    }
 
-    fun deleteGroup() = closing { api.delete(groupId) }
+    /** Узнаёт, что будет с рекомендациями при удалении, и открывает подтверждение. */
+    fun prepareDelete() {
+        viewModelScope.launch {
+            val result = api.deleteImpact(groupId)
+            _state.update { it.copy(deleteImpact = result.getOrNull(), error = result.appError()) }
+        }
+    }
+
+    fun dismissImpact() = _state.update { it.copy(leaveImpact = null, deleteImpact = null) }
+
+    fun leave(deleteMyReviews: Boolean = false) = closing { api.leave(groupId, deleteMyReviews) }
+
+    fun deleteGroup(reviews: ReviewsFate = ReviewsFate.RETURN_TO_PERSONAL) = closing { api.delete(groupId, reviews) }
 
     /** Изменяет состав и перечитывает экран; ошибка (например, LAST_ADMIN) показывается, состояние не меняется. */
     private fun mutate(call: suspend () -> Result<*>) {

@@ -11,6 +11,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -22,6 +23,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.podgon.mobile.core.error.message
 import app.podgon.mobile.designsystem.FormScaffold
 import app.podgon.mobile.resources.Res
+import app.podgon.mobile.resources.action_delete_account
 import app.podgon.mobile.resources.action_logout
 import app.podgon.mobile.resources.action_revoke
 import app.podgon.mobile.resources.profile_sessions
@@ -33,6 +35,7 @@ import org.jetbrains.compose.resources.stringResource
 @Composable
 fun ProfileScreen(viewModel: ProfileViewModel) {
     val state by viewModel.state.collectAsStateWithLifecycle()
+    state.deletion?.let { DeleteAccountDialog(it, viewModel) }
     FormScaffold {
         Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
             Text(stringResource(Res.string.profile_title), style = MaterialTheme.typography.headlineMedium)
@@ -73,6 +76,9 @@ fun ProfileScreen(viewModel: ProfileViewModel) {
             }
             Button(onClick = viewModel::logout, modifier = Modifier.fillMaxWidth()) {
                 Text(stringResource(Res.string.action_logout))
+            }
+            OutlinedButton(onClick = viewModel::startDeletion, modifier = Modifier.fillMaxWidth()) {
+                Text(stringResource(Res.string.action_delete_account))
             }
         }
     }

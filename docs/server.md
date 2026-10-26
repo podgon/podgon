@@ -55,15 +55,15 @@ app.podgon
 - `POST /auth/refresh` (ротация; повторное использование отзывает сессию), `POST /auth/logout` (по refresh-токену, идемпотентно)
 
 Пользователь:
-- `GET /me`, `PATCH /me` (username, displayName, bio, locale; отсутствующее поле не меняется), `GET /me/sessions`, `DELETE /me/sessions/{id}` — этап 2; `DELETE /me` — этап 8
+- `GET /me`, `PATCH /me` (username, displayName, bio, locale; отсутствующее поле не меняется), `GET /me/sessions`, `DELETE /me/sessions/{id}` — этап 2; `GET /me/delete-impact`, `POST /me/deletion/code` (код на почту), `POST /me/deletion` (`code`, `deleteReviews`) — этап 8
 
 Группы (реализовано на этапе 4; полный контракт — `api/openapi.yaml`):
-- `POST /groups` (201; создатель — ADMIN), `GET /groups` (мои), `GET/PATCH/DELETE /groups/{id}` (`DELETE` требует `?confirm=true`, иначе 400 `CONFIRMATION_REQUIRED`; пока физическое удаление, судьба отзывов — этап 6)
-- `GET /groups/{id}/members`, `DELETE /groups/{id}/members/{userId}` (себя нельзя — 403), `POST /groups/{id}/leave` (единственный админ — 409 `LAST_ADMIN`; параметр `deleteMyReviews` — этап 6)
+- `POST /groups` (201; создатель — ADMIN), `GET /groups` (мои), `GET/PATCH/DELETE /groups/{id}` (`DELETE` требует `?confirm=true`, иначе 400 `CONFIRMATION_REQUIRED`; `reviews=RETURN_TO_PERSONAL|DELETE` — судьба рекомендаций, опубликованных только в группе; `GET /groups/{id}/delete-impact`)
+- `GET /groups/{id}/members`, `DELETE /groups/{id}/members/{userId}` (себя нельзя — 403), `POST /groups/{id}/leave` (единственный админ — 409 `LAST_ADMIN`; `deleteMyReviews=true` удаляет публикации автора в группе; `GET /groups/{id}/leave-impact`)
 - `PUT /groups/{id}/members/{userId}/role`
 - `GET/POST /groups/{id}/roles`, `PATCH/DELETE /groups/{id}/roles/{roleId}` (системные ADMIN и MEMBER неизменяемы; при удалении роли участники получают MEMBER)
 - `POST/GET /groups/{id}/invitations`, `DELETE /groups/{id}/invitations/{invitationId}` (отзыв идемпотентен)
-- `POST /invitations/preview` и `POST /invitations/accept` (токен в теле, не в адресе: не попадает в журналы доступа); адресное приглашение принимает только владелец email, любая причина отказа — один и тот же `INVALID_INVITATION`; правила шаринга при вступлении — этап 6
+- `POST /invitations/preview` и `POST /invitations/accept` (токен в теле, не в адресе: не попадает в журналы доступа); адресное приглашение принимает только владелец email, любая причина отказа — один и тот же `INVALID_INVITATION`; `POST /invitations/accept` принимает `share` (`ShareRule`) и `assignments`, `POST /invitations/share-preview` — предпросмотр (этап 8)
 
 Категории:
 - `GET /groups/{id}/categories` (дерево), `POST`, `PATCH`, `DELETE /groups/{id}/categories/{cid}` (`?confirm=true`; без подтверждения при наличии подкатегорий/публикаций — 400 `CONFIRMATION_REQUIRED`; последствия — `GET .../categories/{cid}/delete-impact`), `PUT .../categories/{cid}/parent` (перенос; `null` — в корень). Реализовано на этапе 5
@@ -126,6 +126,12 @@ app.podgon
 - **Redis не вводим на старте** (YAGNI). Появится при нескольких инстансах (rate limit, кэш).
 - **Брокер сообщений не нужен:** события внутри процесса, outbox в БД для писем.
 - **Virtual threads** включить после проверки совместимости драйверов (пул JDBC ограничен).
+
+## Реализация этапа 8 (шаринг, выход, удаление)
+- Связи модулей — синхронные события в транзакции инициатора: `groups` публикует `MemberJoined`, `MemberLeft`, `GroupDeleting`; `identity` — `UserDeleting`. Обработчики: `reviews.SharingService`/`LifecycleService` и `groups.AccountMemberships` (порядок через `@Order`: сначала группы, потом рекомендации). Эндпоинты, которым нужны данные рекомендаций (`*-impact`, `share-preview`), — в `reviews.LifecycleController`.
+- Шаринг: `SharingRepository.candidates` — один запрос по правилу (рекурсивный CTE для подкатегорий, `distinct on` по рекомендации, автоподбор категории по `template_id`); публикация — пакетом `insert ... on conflict do nothing`. Записи без пары переносятся только при назначении категории новой группы в запросе.
+- Удаление аккаунта: код `ACCOUNT_DELETION_CODE` (лимиты как у входа, без капчи), `AccountService.delete` проверяет код и в одной транзакции: события, отзыв токенов, анонимизация `users` (`status = DELETED`, email `deleted+<id>@invalid`). Единственный админ группы с другими участниками — 409 `LAST_ADMIN`; группа из одного участника удаляется. Открытое окно: access-токен удалённого аккаунта живёт до 15 минут (как у отозванной сессии), но профиль и сессии он уже не читает.
+- Страница `/account-deletion` (ru/en) — статический файл для Google Play; форма удаления без приложения и контактный адрес — этап 9.
 
 ## Реализация этапа 4 (группы)
 - Модуль `groups` (`app.podgon.groups`): `persistence` (GroupRepository, InvitationRepository), `domain` (GroupPolicy — единственное место проверки прав, GroupService, MemberService, RoleService, InvitationService, AdminGuard), `web` (контроллеры). Публичные порты: `GroupAccess` (для категорий и рекомендаций) и, в identity, `UserDirectory`; модуль не читает таблицу `users`.

@@ -58,6 +58,9 @@ class AuthRepository(
             session.signIn(it)
         }
 
+    /** Аккаунт удалён на сервере (все сессии уже отозваны): закрываем только локальную сессию. */
+    suspend fun accountDeleted() = session.signOut()
+
     /** Выход: сервер уведомляется по возможности, локальная сессия закрывается в любом случае. */
     suspend fun logout() {
         session.tokens()?.let { api.logout(it.refreshToken) }

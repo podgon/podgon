@@ -163,4 +163,30 @@
     <string name="filter_tags">Tags</string>
     <string name="filter_any_tag">Any of the tags (otherwise all)</string>
     <string name="filter_categories">Categories (with subcategories)</string>
+
+    <string name="share_title">Share my recommendations with this group</string>
+    <string name="share_mode_none">Nothing</string>
+    <string name="share_mode_all">All my recommendations</string>
+    <string name="share_mode_categories">Only from chosen categories</string>
+    <string name="share_mode_categories_except">All except chosen categories</string>
+    <string name="share_mode_tags">Only with chosen tags</string>
+    <string name="share_mode_tags_except">All except those with chosen tags</string>
+    <string name="share_subcategories">Include subcategories</string>
+    <string name="share_tags_label">Tags (separated by spaces or commas)</string>
+    <string name="share_show">Show what will be shared</string>
+    <string name="share_preview_summary">Will be shared: %1$d, category matched automatically: %2$d</string>
+    <string name="share_unmatched_hint">These have no matching category in the group. Pick a category or skip them.</string>
+    <string name="share_skip">Do not share</string>
+    <string name="share_personal">Private recommendation</string>
+    <string name="leave_group_delete_mine">Also remove my publications from this group (%1$d)</string>
+    <string name="delete_group_reviews_hint">%1$d recommendations are published only in this group. What should happen to them?</string>
+    <string name="delete_group_keep">Keep them as private recommendations of their authors</string>
+    <string name="delete_group_remove">Delete them</string>
+    <string name="action_delete_account">Delete account</string>
+    <string name="account_delete_text">The account is deleted permanently: your profile, memberships and sessions are removed. You have %1$d recommendations, %2$d of them published in groups.</string>
+    <string name="account_delete_blocked">You are the only admin of these groups. Make someone else an admin or delete the group first:</string>
+    <string name="account_delete_reviews">Also delete all my recommendations. Otherwise published ones stay in the groups as by “Deleted user”.</string>
+    <string name="account_delete_send_code">Send confirmation code</string>
+    <string name="account_delete_code_label">Code from the email</string>
+    <string name="account_delete_confirm">Delete forever</string>
 </resources>

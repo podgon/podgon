@@ -1,20 +1,28 @@
 package app.podgon.mobile.core.network
 
+import app.podgon.contract.AcceptInvitationRequest
 import app.podgon.contract.CategoryDeleteImpact
 import app.podgon.contract.CategoryInfo
 import app.podgon.contract.CreateCategoryRequest
 import app.podgon.contract.CreateGroupRequest
 import app.podgon.contract.CreateInvitationRequest
 import app.podgon.contract.CreateRoleRequest
+import app.podgon.contract.GroupDeleteImpact
 import app.podgon.contract.GroupSummary
 import app.podgon.contract.InvitationCreated
 import app.podgon.contract.InvitationInfo
 import app.podgon.contract.InvitationPreview
 import app.podgon.contract.InvitationTokenRequest
+import app.podgon.contract.LeaveImpact
 import app.podgon.contract.MemberInfo
 import app.podgon.contract.MoveCategoryRequest
+import app.podgon.contract.ReviewsFate
 import app.podgon.contract.RoleInfo
 import app.podgon.contract.SetMemberRoleRequest
+import app.podgon.contract.ShareAssignment
+import app.podgon.contract.SharePreview
+import app.podgon.contract.SharePreviewRequest
+import app.podgon.contract.ShareRule
 import app.podgon.contract.UpdateCategoryRequest
 import app.podgon.contract.UpdateGroupRequest
 import app.podgon.contract.UpdateRoleRequest
@@ -44,11 +52,33 @@ class GroupsApi(
         request: UpdateGroupRequest,
     ): Result<GroupSummary> = apiCall { client.patch("api/v1/groups/$groupId") { setBody(request) }.bodyOrThrow() }
 
-    suspend fun delete(groupId: String): Result<Unit> =
-        apiCall { client.delete("api/v1/groups/$groupId") { parameter("confirm", true) }.bodyOrThrow<Unit>() }
+    suspend fun delete(
+        groupId: String,
+        reviews: ReviewsFate = ReviewsFate.RETURN_TO_PERSONAL,
+    ): Result<Unit> =
+        apiCall {
+            client
+                .delete("api/v1/groups/$groupId") {
+                    parameter("confirm", true)
+                    parameter("reviews", reviews.name)
+                }.bodyOrThrow<Unit>()
+        }
 
-    suspend fun leave(groupId: String): Result<Unit> =
-        apiCall { client.post("api/v1/groups/$groupId/leave").bodyOrThrow<Unit>() }
+    suspend fun deleteImpact(groupId: String): Result<GroupDeleteImpact> =
+        apiCall { client.get("api/v1/groups/$groupId/delete-impact").bodyOrThrow() }
+
+    suspend fun leave(
+        groupId: String,
+        deleteMyReviews: Boolean = false,
+    ): Result<Unit> =
+        apiCall {
+            client
+                .post("api/v1/groups/$groupId/leave") { parameter("deleteMyReviews", deleteMyReviews) }
+                .bodyOrThrow<Unit>()
+        }
+
+    suspend fun leaveImpact(groupId: String): Result<LeaveImpact> =
+        apiCall { client.get("api/v1/groups/$groupId/leave-impact").bodyOrThrow() }
 
     suspend fun members(groupId: String): Result<List<MemberInfo>> =
         apiCall { client.get("api/v1/groups/$groupId/members").bodyOrThrow() }
@@ -110,8 +140,24 @@ class GroupsApi(
     suspend fun previewInvitation(token: String): Result<InvitationPreview> =
         apiCall { client.post("api/v1/invitations/preview") { setBody(InvitationTokenRequest(token)) }.bodyOrThrow() }
 
-    suspend fun acceptInvitation(token: String): Result<GroupSummary> =
-        apiCall { client.post("api/v1/invitations/accept") { setBody(InvitationTokenRequest(token)) }.bodyOrThrow() }
+    suspend fun acceptInvitation(
+        token: String,
+        share: ShareRule? = null,
+        assignments: List<ShareAssignment> = emptyList(),
+    ): Result<GroupSummary> =
+        apiCall {
+            client
+                .post("api/v1/invitations/accept") { setBody(AcceptInvitationRequest(token, share, assignments)) }
+                .bodyOrThrow()
+        }
+
+    suspend fun sharePreview(
+        token: String,
+        share: ShareRule,
+    ): Result<SharePreview> =
+        apiCall {
+            client.post("api/v1/invitations/share-preview") { setBody(SharePreviewRequest(token, share)) }.bodyOrThrow()
+        }
 
     suspend fun categories(groupId: String): Result<List<CategoryInfo>> =
         apiCall { client.get("api/v1/groups/$groupId/categories").bodyOrThrow() }

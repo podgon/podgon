@@ -1,5 +1,7 @@
 package app.podgon.mobile.core.network
 
+import app.podgon.contract.AccountDeleteImpact
+import app.podgon.contract.DeleteAccountRequest
 import app.podgon.contract.LogoutRequest
 import app.podgon.contract.OtpRequest
 import app.podgon.contract.OtpVerifyRequest
@@ -69,6 +71,21 @@ class MeApi(
         apiCall { client.patch("api/v1/me") { setBody(request) }.bodyOrThrow() }
 
     suspend fun sessions(): Result<List<SessionInfo>> = apiCall { client.get("api/v1/me/sessions").bodyOrThrow() }
+
+    suspend fun deleteImpact(): Result<AccountDeleteImpact> =
+        apiCall { client.get("api/v1/me/delete-impact").bodyOrThrow() }
+
+    /** Выслать на почту код подтверждения удаления аккаунта. */
+    suspend fun requestDeletionCode(): Result<Unit> =
+        apiCall { client.post("api/v1/me/deletion/code").bodyOrThrow<Unit>() }
+
+    suspend fun deleteAccount(
+        code: String,
+        deleteReviews: Boolean,
+    ): Result<Unit> =
+        apiCall {
+            client.post("api/v1/me/deletion") { setBody(DeleteAccountRequest(code, deleteReviews)) }.bodyOrThrow<Unit>()
+        }
 
     suspend fun revokeSession(id: String): Result<Unit> =
         apiCall {

@@ -163,4 +163,30 @@
     <string name="filter_tags">Теги</string>
     <string name="filter_any_tag">Любой из тегов (иначе — все)</string>
     <string name="filter_categories">Категории (вместе с подкатегориями)</string>
+
+    <string name="share_title">Поделиться своими рекомендациями с этой группой</string>
+    <string name="share_mode_none">Ничего</string>
+    <string name="share_mode_all">Все мои рекомендации</string>
+    <string name="share_mode_categories">Только из выбранных категорий</string>
+    <string name="share_mode_categories_except">Все, кроме выбранных категорий</string>
+    <string name="share_mode_tags">Только с выбранными тегами</string>
+    <string name="share_mode_tags_except">Все, кроме с выбранными тегами</string>
+    <string name="share_subcategories">Вместе с подкатегориями</string>
+    <string name="share_tags_label">Теги (через пробел или запятую)</string>
+    <string name="share_show">Показать, что будет перенесено</string>
+    <string name="share_preview_summary">Будет перенесено: %1$d, категория подобрана автоматически: %2$d</string>
+    <string name="share_unmatched_hint">Для этих записей в группе нет подходящей категории. Выберите категорию или не переносите их.</string>
+    <string name="share_skip">Не переносить</string>
+    <string name="share_personal">Личная рекомендация</string>
+    <string name="leave_group_delete_mine">Убрать и мои публикации из этой группы (%1$d)</string>
+    <string name="delete_group_reviews_hint">%1$d рекомендаций опубликованы только в этой группе. Что с ними сделать?</string>
+    <string name="delete_group_keep">Оставить их личными рекомендациями авторов</string>
+    <string name="delete_group_remove">Удалить их</string>
+    <string name="action_delete_account">Удалить аккаунт</string>
+    <string name="account_delete_text">Аккаунт удаляется безвозвратно: профиль, участие в группах и сессии. У вас рекомендаций: %1$d, из них в группах: %2$d.</string>
+    <string name="account_delete_blocked">Вы единственный администратор этих групп. Сначала назначьте администратором другого участника или удалите группу:</string>
+    <string name="account_delete_reviews">Удалить также все мои рекомендации. Иначе опубликованные останутся в группах от имени «Удалённый пользователь».</string>
+    <string name="account_delete_send_code">Выслать код подтверждения</string>
+    <string name="account_delete_code_label">Код из письма</string>
+    <string name="account_delete_confirm">Удалить навсегда</string>
 </resources>
