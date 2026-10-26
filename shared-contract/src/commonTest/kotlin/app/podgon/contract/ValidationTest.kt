@@ -17,7 +17,7 @@ class ValidationTest {
     }
 
     @Test
-    fun `username - длина, символы и зарезервированный префикс`() {
+    fun `username - длина и символы и зарезервированный префикс`() {
         assertNull(Validation.username("Ivan_petrov.1"))
         assertEquals(FieldErrorReason.TOO_SHORT, Validation.username("ab"))
         assertEquals(FieldErrorReason.TOO_LONG, Validation.username("a".repeat(31)))

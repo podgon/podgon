@@ -105,3 +105,10 @@ mobile/
 - **CAPTCHA:** интерфейс `CaptchaProvider` есть, реализация-заглушка возвращает `null`; виджет SmartCaptcha (WebView) подключается на этапе 9 вместе с включением проверки на сервере (в dev-окружении `PODGON_CAPTCHA_MODE=disabled`).
 - **Тесты:** 22 unit-теста (`MockEngine`, Turbine, тестовый диспетчер): репозиторий входа, ViewModel'и (email, код с автопроверкой и таймером повтора, регистрация), refresh и отсутствие токена на публичных эндпоинтах. Сквозной тест `EndToEndTest` (`androidHostTest`) гоняет реальный клиентский стек против живого сервера (email → код из письма → регистрация → профиль → автообновление токена → выход); запускается при `PODGON_E2E_API` и `PODGON_E2E_MAIL_FILE`, в CI пропускается.
 - **Не сделано в этапе 3:** автоматизированная проверка iOS-таргета — на машине разработчика нет Xcode (проверена только компиляция общего кода в metadata); UI-тесты Compose и запуск на эмуляторе/устройстве (нет системных образов Android); R8/подпись — этап 9.
+
+### iOS-таргеты (проверка совместимости, этап 3)
+- Таргеты `iosArm64` и `iosSimulatorArm64` в `shared-contract` и `mobile/shared`; фреймворк `PodgonShared` (static). Для образа backend таргеты и Android отключены флагом `-PserverOnly`.
+- `iosMain`: Keychain (`IosTokenStorage`, `AfterFirstUnlockThisDeviceOnly`), Ktor Darwin, `DeviceInfoProvider` через `UIDevice`, точка входа `mainViewController(apiBaseUrl)` для будущего `iosApp` (этап 11).
+- Kotlin обновлён до 2.4.21: `kotlinx-serialization 1.12.0` собрана Kotlin 2.4.10, и Kotlin/Native 2.3 её не читает.
+- Проверено на Xcode 27.1 и симуляторе iOS 27.1: те же unit-тесты клиента проходят на iOS. Имена тестов без запятых и двоеточий (ограничение Native).
+- Сам `iosApp` (Xcode-проект), Universal Links, CI на macOS — этап 11.

@@ -10,7 +10,7 @@ plugins {
 kotlin {
     jvmToolchain(25)
 
-    // iOS-таргеты добавляются на этапе 11; код пишется в commonMain, платформенное — через expect/actual
+    // Код пишется в commonMain; платформенное (сеть, хранилище токенов, устройство) — через DI
     android {
         namespace = "app.podgon.mobile.shared"
         compileSdk = 37
@@ -18,6 +18,13 @@ kotlin {
         withHostTest {}
         // Без этого ресурсы Compose (строки ru/en) не попадают в APK и приложение падает при старте
         androidResources { enable = true }
+    }
+
+    listOf(iosArm64(), iosSimulatorArm64()).forEach { target ->
+        target.binaries.framework {
+            baseName = "PodgonShared"
+            isStatic = true
+        }
     }
 
     sourceSets {
@@ -44,6 +51,9 @@ kotlin {
         androidMain.dependencies {
             implementation(libs.ktor.client.okhttp)
             implementation(libs.koin.android)
+        }
+        iosMain.dependencies {
+            implementation(libs.ktor.client.darwin)
         }
         commonTest.dependencies {
             implementation(kotlin("test"))

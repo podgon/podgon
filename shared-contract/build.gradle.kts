@@ -20,8 +20,12 @@ if (!providers.gradleProperty("serverOnly").isPresent) {
 kotlin {
     jvmToolchain(25)
 
-    // Сервер использует jvm-таргет, Android-клиент — androidLibrary; iOS добавляется на этапе 11.
+    // Сервер использует jvm-таргет, Android-клиент — androidLibrary, iOS-клиент — iosArm64/iosSimulatorArm64
     jvm()
+    if (!providers.gradleProperty("serverOnly").isPresent) {
+        iosArm64()
+        iosSimulatorArm64()
+    }
 
     sourceSets {
         commonMain.dependencies {

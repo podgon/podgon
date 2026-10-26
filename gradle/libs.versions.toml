@@ -1,6 +1,6 @@
 # Версии согласованы с BOM Spring Boot 4.1.2 (Kotlin 2.3.21, Flyway 12.4.0, Testcontainers 2.0.5).
 [versions]
-kotlin = "2.3.21"
+kotlin = "2.4.21"
 spring-boot = "4.1.2"
 spring-modulith = "2.1.2"
 ktlint-plugin = "14.2.0"
@@ -23,6 +23,7 @@ kotlinx-coroutines-test = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-t
 kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "serialization" }
 ktor-client-core = { module = "io.ktor:ktor-client-core", version.ref = "ktor" }
 ktor-client-okhttp = { module = "io.ktor:ktor-client-okhttp", version.ref = "ktor" }
+ktor-client-darwin = { module = "io.ktor:ktor-client-darwin", version.ref = "ktor" }
 ktor-client-content-negotiation = { module = "io.ktor:ktor-client-content-negotiation", version.ref = "ktor" }
 ktor-client-auth = { module = "io.ktor:ktor-client-auth", version.ref = "ktor" }
 ktor-client-mock = { module = "io.ktor:ktor-client-mock", version.ref = "ktor" }
