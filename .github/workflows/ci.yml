@@ -74,6 +74,26 @@ jobs:
       - name: Сборка, ktlint и unit-тесты
         run: ./gradlew --no-daemon :mobile:shared:check :mobile:androidApp:ktlintCheck :mobile:androidApp:assembleDebug
 
-  # Следующие задания включаются по мере появления кода:
-  # contract: этап 2 — валидация openapi.yaml, проверка обратной совместимости (oasdiff)
-  # docker:  этап 1 — сборка образа backend
+  # Обратная совместимость контракта (ADR-005, замечание R7 ревью): изменение, ломающее уже выпущенных
+  # клиентов (удалённое поле, новый обязательный параметр и т. п.), роняет сборку. Сравнение — с базовой
+  # веткой MR либо с предыдущим состоянием ветки при push.
+  contract:
+    name: Контракт API (обратная совместимость)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: oasdiff breaking
+        env:
+          BASE_REF: ${{ github.event_name == 'pull_request' && format('origin/{0}', github.base_ref) || github.event.before }}
+        run: |
+          if [ -z "$BASE_REF" ] || [ "$BASE_REF" = "0000000000000000000000000000000000000000" ] \
+             || ! git cat-file -e "$BASE_REF:api/openapi.yaml" 2>/dev/null; then
+            echo "Нет базовой версии контракта — сравнивать не с чем"; exit 0
+          fi
+          git show "$BASE_REF:api/openapi.yaml" > base-openapi.yaml
+          docker run --rm -v "$PWD:/w" -w /w tufin/oasdiff:v1.33.0 \
+            breaking base-openapi.yaml api/openapi.yaml --fail-on ERR
+
+  # docker: сборка образа backend в CI — этап 10 (локально образ собирает docker compose)

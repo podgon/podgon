@@ -97,6 +97,21 @@ class SearchTest : GroupsTestBase() {
     }
 
     @Test
+    fun `буквы ё и е в поиске не различаются`() {
+        val u = newUser("s_user_yo")
+        val g = createGroup(u)["id"].asString()
+        val c = categoryId(u, g)
+        addReview(u, "Ёлки-палки", "Трактир с печёной картошкой", publications = listOf(g to c))
+        addReview(u, "Пельменная", "Обычная еда", publications = listOf(g to c))
+        // подстрока и опечатка в названии
+        assertEquals(listOf("Ёлки-палки"), titles(search(u, "/groups/$g/reviews?q=${enc("елки")}")))
+        assertEquals(listOf("Ёлки-палки"), titles(search(u, "/groups/$g/reviews?q=${enc("Елки-палки")}")))
+        // полнотекстовый поиск по описанию в обе стороны
+        assertEquals(listOf("Ёлки-палки"), titles(search(u, "/groups/$g/reviews?q=${enc("печеная")}")))
+        assertEquals(listOf("Ёлки-палки"), titles(search(u, "/groups/$g/reviews?q=${enc("печёной")}")))
+    }
+
+    @Test
     fun `название весит больше описания и выдача упорядочена по релевантности`() {
         val u = newUser("s_user3")
         val g = createGroup(u)["id"].asString()

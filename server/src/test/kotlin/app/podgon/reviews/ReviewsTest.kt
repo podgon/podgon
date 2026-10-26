@@ -1,7 +1,9 @@
 package app.podgon.reviews
 
 import app.podgon.groups.GroupsTestBase
+import app.podgon.reviews.domain.TagCleanup
 import org.junit.jupiter.api.Test
+import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.http.HttpMethod
 import tools.jackson.databind.JsonNode
 import java.time.Duration
@@ -61,6 +63,37 @@ class ReviewsTest : GroupsTestBase() {
         reviewId: String,
         publications: List<Map<String, String>>,
     ) = call(HttpMethod.PUT, "/reviews/$reviewId/groups", access, mapOf("publications" to publications))
+
+    @Autowired
+    lateinit var tagCleanup: TagCleanup
+
+    @Test
+    fun `ночная чистка удаляет только неиспользуемые теги`() {
+        val author = newUser("rv_tags_gc")
+        val id = created(author, tags = listOf("остаётся", "уходит"))["id"].asString()
+        created(author, tags = listOf("общий"))
+        assertEquals(
+            200,
+            status(
+                call(
+                    HttpMethod.PATCH,
+                    "/reviews/$id",
+                    author,
+                    mapOf(
+                        "tags" to listOf("остаётся", "общий"),
+                    ),
+                ),
+            ),
+        )
+        tagCleanup.run()
+        val names =
+            jdbc
+                .sql("select name from tags")
+                .query(String::class.java)
+                .list()
+                .toSet()
+        assertEquals(setOf("остаётся", "общий"), names)
+    }
 
     @Test
     fun `личная рекомендация видна только автору`() {

@@ -166,6 +166,13 @@ class ReviewRepository(
         reviewId: UUID,
         tags: List<String>,
     ) {
+        // разделяемая блокировка: ночная чистка тегов ([deleteUnusedTags]) не удалит тег между вставками ниже
+        jdbc
+            .sql(
+                "select pg_advisory_xact_lock_shared(hashtextextended(:key, 0))",
+            ).param("key", TAGS_LOCK)
+            .query()
+            .singleRow()
         jdbc.sql("delete from review_tags where review_id = :id").param("id", reviewId).update()
         for (tag in tags) {
             jdbc.sql("insert into tags (name) values (:name) on conflict (name) do nothing").param("name", tag).update()
@@ -175,6 +182,21 @@ class ReviewRepository(
                 .param("name", tag)
                 .update()
         }
+    }
+
+    /**
+     * Удаляет теги, которые не использует ни одна рекомендация (замечание R12 ревью). Вызывать в транзакции:
+     * исключительная блокировка ждёт текущие записи тегов, после неё удаление видит их результат.
+     */
+    fun deleteUnusedTags(): Int {
+        jdbc
+            .sql("select pg_advisory_xact_lock(hashtextextended(:key, 0))")
+            .param("key", TAGS_LOCK)
+            .query()
+            .singleRow()
+        return jdbc
+            .sql("delete from tags t where not exists (select 1 from review_tags rt where rt.tag_id = t.id)")
+            .update()
     }
 
     // --- публикации ---
@@ -272,16 +294,18 @@ class ReviewRepository(
             params["tagsNeeded"] = if (filters.anyTag) 1 else filters.tags.size
         }
         var score = "0.0"
-        filters.query?.let {
+        filters.query?.let { raw ->
+            // «ё» = «е»: так же нормализованы search_vector и title_search (миграция V7)
+            val q = raw.replace('ё', 'е').replace('Ё', 'Е')
             inner.append(
                 " and (r.search_vector @@ websearch_to_tsquery('russian', :q)" +
-                    " or r.title ilike :like escape '\\' or r.title % :q)",
+                    " or r.title_search ilike :like escape '\\' or r.title_search % :q)",
             )
-            params["q"] = it
-            params["like"] = "%" + it.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_") + "%"
+            params["q"] = q
+            params["like"] = "%" + q.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_") + "%"
             score =
                 "cast(coalesce(ts_rank_cd(r.search_vector, websearch_to_tsquery('russian', :q)), 0)" +
-                " + similarity(r.title, :q) as float8)"
+                " + similarity(r.title_search, :q) as float8)"
         }
         val single = groupIds.size == 1
         val outer = StringBuilder()
@@ -404,3 +428,5 @@ class ReviewRepository(
                 .single()
         }
 }
+
+private const val TAGS_LOCK = "tags"
