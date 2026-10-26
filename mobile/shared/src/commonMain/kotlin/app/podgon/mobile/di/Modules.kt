@@ -22,6 +22,7 @@ import app.podgon.mobile.feature.groups.InvitationsViewModel
 import app.podgon.mobile.feature.groups.JoinGroupViewModel
 import app.podgon.mobile.feature.groups.RolesViewModel
 import app.podgon.mobile.feature.profile.ProfileViewModel
+import app.podgon.mobile.feature.reviews.FeedScope
 import app.podgon.mobile.feature.reviews.FeedViewModel
 import app.podgon.mobile.feature.reviews.ReviewFormViewModel
 import app.podgon.mobile.feature.reviews.ReviewViewModel
@@ -62,7 +63,7 @@ val appModule =
         viewModel { JoinGroupViewModel(get()) }
         viewModel { (groupId: String) -> GroupViewModel(groupId, get(), get()) }
         viewModel { (groupId: String) -> CategoriesViewModel(groupId, get()) }
-        viewModel { (groupId: String?) -> FeedViewModel(groupId, get()) }
+        viewModel { (scope: FeedScope) -> FeedViewModel(scope, get(), get()) }
         viewModel { (reviewId: String) -> ReviewViewModel(reviewId, get(), get(), get()) }
         viewModel { (reviewId: String?, presetGroupId: String?) ->
             ReviewFormViewModel(reviewId, presetGroupId, get(), get())

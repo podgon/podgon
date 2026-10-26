@@ -27,6 +27,7 @@ import app.podgon.mobile.feature.groups.InvitationsScreen
 import app.podgon.mobile.feature.groups.JoinGroupScreen
 import app.podgon.mobile.feature.groups.RolesScreen
 import app.podgon.mobile.feature.profile.ProfileScreen
+import app.podgon.mobile.feature.reviews.FeedScope
 import app.podgon.mobile.feature.reviews.FeedScreen
 import app.podgon.mobile.feature.reviews.ReviewFormScreen
 import app.podgon.mobile.feature.reviews.ReviewScreen
@@ -76,10 +77,11 @@ private data class CategoriesRoute(
     val canEdit: Boolean,
 )
 
-/** Лента группы; `groupId == null` — мои рекомендации. */
+/** Лента: группа (`groupId`), мои рекомендации (`groupId == null`) или поиск по всем группам (`all`). */
 @Serializable
 private data class FeedRoute(
     val groupId: String?,
+    val all: Boolean = false,
 )
 
 @Serializable
@@ -148,6 +150,7 @@ private fun SignedInNavigation() {
                 onOpen = { nav.navigate(GroupRoute(it)) },
                 onProfile = { nav.navigate(ProfileRoute) },
                 onMyReviews = { nav.navigate(FeedRoute(null)) },
+                onSearch = { nav.navigate(FeedRoute(null, all = true)) },
             )
         }
         composable<ProfileRoute> { ProfileScreen(koinViewModel()) }
@@ -170,9 +173,15 @@ private fun SignedInNavigation() {
         }
         composable<FeedRoute> { entry ->
             val route = entry.toRoute<FeedRoute>()
+            val scope =
+                when {
+                    route.all -> FeedScope.AllGroups
+                    route.groupId == null -> FeedScope.Mine
+                    else -> FeedScope.Group(route.groupId)
+                }
             FeedScreen(
-                koinViewModel(parameters = { parametersOf(route.groupId) }),
-                myOwn = route.groupId == null,
+                koinViewModel(parameters = { parametersOf(scope) }),
+                scope = scope,
                 onOpen = { nav.navigate(ReviewRoute(it)) },
                 onNew = { nav.navigate(ReviewFormRoute(null, route.groupId)) },
             )

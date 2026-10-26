@@ -4,7 +4,9 @@ import app.podgon.contract.FieldErrorReason
 import app.podgon.mobile.core.cache.CachedResponse
 import app.podgon.mobile.core.cache.ResponseCache
 import app.podgon.mobile.core.error.AppError
+import app.podgon.mobile.feature.reviews.FeedScope
 import app.podgon.mobile.feature.reviews.FeedViewModel
+import app.podgon.mobile.feature.reviews.ReviewFilter
 import app.podgon.mobile.feature.reviews.ReviewFormEffect
 import app.podgon.mobile.feature.reviews.ReviewFormViewModel
 import app.podgon.mobile.feature.reviews.ReviewViewModel
@@ -14,6 +16,7 @@ import app.podgon.mobile.testing.GroupsFixture
 import app.podgon.mobile.testing.ME_JSON
 import app.podgon.mobile.testing.groupJson
 import app.podgon.mobile.testing.json
+import app.podgon.mobile.testing.memberJson
 import app.podgon.mobile.testing.problem
 import io.ktor.http.HttpMethod
 import io.ktor.http.HttpStatusCode
@@ -86,7 +89,7 @@ class ReviewsViewModelsTest {
                         else -> error("лишний запрос")
                     }
                 }
-            val vm = FeedViewModel("g1", fixture.reviewsRepository)
+            val vm = FeedViewModel(FeedScope.Group("g1"), fixture.reviewsRepository, fixture.api)
             val first = vm.state.first { !it.loading }
             assertEquals(listOf("a", "b"), first.items.map { it.id })
             assertEquals("c1", first.nextCursor)
@@ -109,7 +112,7 @@ class ReviewsViewModelsTest {
     fun `мои рекомендации читаются без группы`() =
         runTest(dispatcher) {
             val fixture = GroupsFixture { json("""{"items":[${card("a")}]}""") }
-            val vm = FeedViewModel(null, fixture.reviewsRepository)
+            val vm = FeedViewModel(FeedScope.Mine, fixture.reviewsRepository, fixture.api)
             vm.state.first { !it.loading && it.items.isNotEmpty() }
             assertTrue("GET /api/v1/me/reviews" in fixture.calls())
         }
@@ -153,7 +156,7 @@ class ReviewsViewModelsTest {
                 GroupsFixture {
                     if (offline) error("нет сети") else json("""{"items":[${card("a")}],"nextCursor":"c1"}""")
                 }
-            val vm = FeedViewModel("g1", fixture.reviewsRepository)
+            val vm = FeedViewModel(FeedScope.Group("g1"), fixture.reviewsRepository, fixture.api)
             val online = vm.state.first { !it.loading }
             assertEquals(false, online.offline)
             assertTrue("feed:g1" in fixture.cacheDao.entries)
@@ -173,13 +176,13 @@ class ReviewsViewModelsTest {
     fun `без сети и без кэша лента показывает ошибку а чужие ошибки сервера кэшем не маскируются`() =
         runTest(dispatcher) {
             val fixture = GroupsFixture { error("нет сети") }
-            val vm = FeedViewModel("g1", fixture.reviewsRepository)
+            val vm = FeedViewModel(FeedScope.Group("g1"), fixture.reviewsRepository, fixture.api)
             assertEquals(AppError.Network, vm.state.first { !it.loading }.error)
 
             val denied = GroupsFixture { json(problem(404, "NOT_FOUND"), HttpStatusCode.NotFound) }
             denied.cacheDao.entries["feed:g1"] =
                 CachedResponse("feed:g1", """{"items":[${card("old")}]}""", 0)
-            val vm2 = FeedViewModel("g1", denied.reviewsRepository)
+            val vm2 = FeedViewModel(FeedScope.Group("g1"), denied.reviewsRepository, denied.api)
             val state = vm2.state.first { !it.loading }
             assertTrue(state.items.isEmpty(), "доступ закрыт: сохранённое не показывается")
             assertEquals(false, state.offline)
@@ -217,10 +220,117 @@ class ReviewsViewModelsTest {
     fun `очистка кэша убирает все сохранённые ответы`() =
         runTest(dispatcher) {
             val fixture = GroupsFixture { json("""{"items":[${card("a")}]}""") }
-            FeedViewModel("g1", fixture.reviewsRepository).state.first { !it.loading }
+            FeedViewModel(FeedScope.Group("g1"), fixture.reviewsRepository, fixture.api).state.first { !it.loading }
             assertTrue(fixture.cacheDao.entries.isNotEmpty())
             ResponseCache(fixture.cacheDao).clear()
             assertTrue(fixture.cacheDao.entries.isEmpty())
+        }
+
+    @Test
+    fun `фильтры уходят параметрами запроса а результат с фильтром не кэшируется`() =
+        runTest(dispatcher) {
+            val fixture = GroupsFixture { json("""{"items":[${card("a")}]}""") }
+            val vm = FeedViewModel(FeedScope.Group("g1"), fixture.reviewsRepository, fixture.api)
+            vm.state.first { !it.loading }
+            assertTrue("feed:g1" in fixture.cacheDao.entries, "пустой фильтр кэшируется")
+            fixture.cacheDao.entries.clear()
+
+            vm.setFilter(
+                ReviewFilter(
+                    query = "дюна",
+                    categoryIds = setOf("c1", "c2"),
+                    tags = setOf("a", "b"),
+                    anyTag = true,
+                    authorId = "u1",
+                ),
+            )
+            awaitUntil { fixture.requests.size >= 2 }
+            vm.state.first { !it.loading && it.items.isNotEmpty() }
+            val url = fixture.requests.last().url
+            assertEquals("дюна", url.parameters["q"])
+            assertEquals("c1,c2", url.parameters["categoryIds"])
+            assertEquals("a,b", url.parameters["tags"])
+            assertEquals("ANY", url.parameters["tagMode"])
+            assertEquals("u1", url.parameters["authorId"])
+            assertTrue(
+                fixture.cacheDao.entries.keys
+                    .none { it.startsWith("feed:") },
+                "результат с фильтром в кэш не попадает",
+            )
+        }
+
+    @Test
+    fun `последний фильтр группы запоминается и сбрасывается вместе с фильтром`() =
+        runTest(dispatcher) {
+            val fixture = GroupsFixture { json("""{"items":[${card("a")}]}""") }
+            val vm = FeedViewModel(FeedScope.Group("g1"), fixture.reviewsRepository, fixture.api)
+            vm.state.first { !it.loading }
+            vm.search("  дюна ")
+            vm.state.first { it.filter.query == "дюна" && !it.loading }
+            awaitUntil { "filter:g1" in fixture.cacheDao.entries }
+
+            // новая ViewModel (повторное открытие экрана) начинает с сохранённого фильтра
+            val reopened = FeedViewModel(FeedScope.Group("g1"), fixture.reviewsRepository, fixture.api)
+            assertEquals(
+                "дюна",
+                reopened.state
+                    .first { !it.loading }
+                    .filter.query,
+            )
+            assertEquals(
+                "дюна",
+                fixture.requests
+                    .last()
+                    .url.parameters["q"],
+            )
+
+            reopened.clearFilter()
+            awaitUntil { "filter:g1" !in fixture.cacheDao.entries }
+        }
+
+    @Test
+    fun `поиск по всем группам берёт названия групп и идёт на общий адрес`() =
+        runTest(dispatcher) {
+            val fixture =
+                GroupsFixture { r ->
+                    if (r.url.encodedPath.endsWith(
+                            "/groups",
+                        )
+                    ) {
+                        json("[${groupJson("g1", "Клуб")}]")
+                    } else {
+                        json("""{"items":[${card("a")}]}""")
+                    }
+                }
+            val vm = FeedViewModel(FeedScope.AllGroups, fixture.reviewsRepository, fixture.api)
+            val state = vm.state.first { !it.loading && it.items.isNotEmpty() }
+            assertEquals(mapOf("g1" to "Клуб"), state.groupNames)
+            assertTrue("GET /api/v1/reviews" in fixture.calls())
+            assertEquals(0, state.filter.panelCount)
+        }
+
+    @Test
+    fun `панель фильтров загружает категории теги и участников один раз`() =
+        runTest(dispatcher) {
+            val fixture =
+                GroupsFixture { r ->
+                    when {
+                        r.url.encodedPath.endsWith("/categories") -> json(CATEGORIES)
+                        r.url.encodedPath.endsWith("/tags") -> json("""[{"name":"scifi","count":2}]""")
+                        r.url.encodedPath.endsWith("/members") -> json("[${memberJson("u1", "ann")}]")
+                        else -> json("""{"items":[]}""")
+                    }
+                }
+            val vm = FeedViewModel(FeedScope.Group("g1"), fixture.reviewsRepository, fixture.api)
+            vm.state.first { !it.loading }
+            vm.loadOptions()
+            val options = vm.state.first { it.options?.tags?.isNotEmpty() == true }.options!!
+            assertEquals(listOf("Книги"), options.categories.map { it.name })
+            assertEquals(listOf("scifi"), options.tags.map { it.name })
+            assertEquals(listOf("u1"), options.authors.map { it.userId })
+            vm.loadOptions()
+            kotlinx.coroutines.yield()
+            assertEquals(1, fixture.calls().count { it.endsWith("/tags") }, "повторно не грузится")
         }
 
     @Test

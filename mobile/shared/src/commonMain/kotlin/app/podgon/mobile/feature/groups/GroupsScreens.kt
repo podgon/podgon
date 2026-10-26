@@ -101,6 +101,7 @@ import app.podgon.mobile.resources.role_member_title
 import app.podgon.mobile.resources.role_new_title
 import app.podgon.mobile.resources.role_title_label
 import app.podgon.mobile.resources.roles_title
+import app.podgon.mobile.resources.search_all
 import org.jetbrains.compose.resources.stringResource
 
 /** Встроенные роли названы на сервере по-русски; на клиенте их название берётся из локализации по коду. */
@@ -121,6 +122,7 @@ fun GroupsScreen(
     onOpen: (groupId: String) -> Unit,
     onProfile: () -> Unit,
     onMyReviews: () -> Unit,
+    onSearch: () -> Unit,
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     // при возврате с экрана группы (вышли, удалили, переименовали) список обновляется
@@ -143,6 +145,9 @@ fun GroupsScreen(
             }
             OutlinedButton(onClick = onMyReviews, modifier = Modifier.fillMaxWidth()) {
                 Text(stringResource(Res.string.my_reviews))
+            }
+            OutlinedButton(onClick = onSearch, modifier = Modifier.fillMaxWidth()) {
+                Text(stringResource(Res.string.search_all))
             }
             state.error?.let { RetryError(it, viewModel::load) }
             if (state.loading && state.groups.isEmpty()) CircularProgressIndicator()

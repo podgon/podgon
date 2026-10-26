@@ -150,4 +150,17 @@
     <string name="review_delete_text">Она исчезнет из всех групп. Это нельзя отменить.</string>
     <string name="error_category_foreign_reviews">В категории есть рекомендации других участников: удалить её нельзя.</string>
     <string name="review_offline">Нет сети: показаны сохранённые данные.</string>
+    <string name="search_all">Поиск</string>
+    <string name="search_hint">Поиск рекомендаций</string>
+    <string name="search_action">Найти</string>
+    <string name="search_empty">Ничего не найдено.</string>
+    <string name="filters_button">Фильтры</string>
+    <string name="filters_button_count">Фильтры (%1$d)</string>
+    <string name="filters_title">Фильтры</string>
+    <string name="filters_reset">Сбросить</string>
+    <string name="filter_apply">Применить</string>
+    <string name="filter_author">Автор</string>
+    <string name="filter_tags">Теги</string>
+    <string name="filter_any_tag">Любой из тегов (иначе — все)</string>
+    <string name="filter_categories">Категории (вместе с подкатегориями)</string>
 </resources>

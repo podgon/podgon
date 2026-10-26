@@ -150,4 +150,17 @@
     <string name="review_delete_text">It will disappear from all groups. This cannot be undone.</string>
     <string name="error_category_foreign_reviews">The category contains recommendations from other members and cannot be deleted.</string>
     <string name="review_offline">No connection: showing saved data.</string>
+    <string name="search_all">Search</string>
+    <string name="search_hint">Search recommendations</string>
+    <string name="search_action">Find</string>
+    <string name="search_empty">Nothing found.</string>
+    <string name="filters_button">Filters</string>
+    <string name="filters_button_count">Filters (%1$d)</string>
+    <string name="filters_title">Filters</string>
+    <string name="filters_reset">Reset</string>
+    <string name="filter_apply">Apply</string>
+    <string name="filter_author">Author</string>
+    <string name="filter_tags">Tags</string>
+    <string name="filter_any_tag">Any of the tags (otherwise all)</string>
+    <string name="filter_categories">Categories (with subcategories)</string>
 </resources>

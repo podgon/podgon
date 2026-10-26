@@ -2,6 +2,7 @@ package app.podgon.mobile.feature.reviews
 
 import app.podgon.contract.ReviewDetails
 import app.podgon.contract.ReviewPage
+import app.podgon.contract.TagCount
 import app.podgon.mobile.core.cache.ResponseCache
 import app.podgon.mobile.core.error.AppError
 import app.podgon.mobile.core.error.appError
@@ -21,21 +22,31 @@ class ReviewsRepository(
     private val api: ReviewsApi,
     private val cache: ResponseCache,
 ) {
-    /** Страница ленты группы (`groupId == null` — мои рекомендации); в кэше — только первая страница. */
+    /**
+     * Страница ленты ([scope]) с фильтром. В кэш попадает только первая страница без фильтра; при сетевой
+     * ошибке с фильтром или на следующей странице сохранённое не подставляется.
+     */
     suspend fun feed(
-        groupId: String?,
+        scope: FeedScope,
+        filter: ReviewFilter,
         cursor: String?,
     ): Result<Cached<ReviewPage>> {
-        val result = if (groupId == null) api.mine(cursor) else api.feed(groupId, cursor)
-        val key = feedKey(groupId)
+        val result =
+            when (scope) {
+                is FeedScope.Group -> api.feed(scope.groupId, filter, cursor)
+                FeedScope.Mine -> api.mine(cursor)
+                FeedScope.AllGroups -> api.search(filter, cursor)
+            }
+        val key = feedKey(scope)
+        val cacheable = cursor == null && filter.isEmpty
         return result.fold(
             onSuccess = { page ->
-                if (cursor == null) cache.write(key, page)
+                if (cacheable) cache.write(key, page)
                 Result.success(Cached(page, fromCache = false))
             },
             onFailure = {
                 val cached =
-                    if (cursor == null &&
+                    if (cacheable &&
                         result.appError() == AppError.Network
                     ) {
                         cache.read<ReviewPage>(key)
@@ -45,6 +56,18 @@ class ReviewsRepository(
                 if (cached != null) Result.success(Cached(cached, fromCache = true)) else Result.failure(it)
             },
         )
+    }
+
+    suspend fun tags(groupId: String): Result<List<TagCount>> = api.tags(groupId)
+
+    /** Последний фильтр ленты группы (хранится в локальном кэше и очищается при выходе). */
+    suspend fun savedFilter(groupId: String): ReviewFilter? = cache.read<ReviewFilter>(filterKey(groupId))
+
+    suspend fun saveFilter(
+        groupId: String,
+        filter: ReviewFilter,
+    ) {
+        if (filter.isEmpty) cache.remove(filterKey(groupId)) else cache.write(filterKey(groupId), filter)
     }
 
     suspend fun review(reviewId: String): Result<Cached<ReviewDetails>> {
@@ -68,7 +91,14 @@ class ReviewsRepository(
         return result
     }
 
-    private fun feedKey(groupId: String?) = if (groupId == null) "mine" else "feed:$groupId"
+    private fun feedKey(scope: FeedScope) =
+        when (scope) {
+            is FeedScope.Group -> "feed:${scope.groupId}"
+            FeedScope.Mine -> "mine"
+            FeedScope.AllGroups -> "all"
+        }
+
+    private fun filterKey(groupId: String) = "filter:$groupId"
 
     private fun reviewKey(reviewId: String) = "review:$reviewId"
 }

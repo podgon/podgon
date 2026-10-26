@@ -4,8 +4,11 @@ import app.podgon.contract.CreateReviewRequest
 import app.podgon.contract.ReviewDetails
 import app.podgon.contract.ReviewPage
 import app.podgon.contract.SetPublicationsRequest
+import app.podgon.contract.TagCount
 import app.podgon.contract.UpdateReviewRequest
+import app.podgon.mobile.feature.reviews.ReviewFilter
 import io.ktor.client.HttpClient
+import io.ktor.client.request.HttpRequestBuilder
 import io.ktor.client.request.delete
 import io.ktor.client.request.get
 import io.ktor.client.request.parameter
@@ -45,15 +48,41 @@ class ReviewsApi(
     suspend fun mine(cursor: String? = null): Result<ReviewPage> =
         apiCall { client.get("api/v1/me/reviews") { cursor?.let { parameter("cursor", it) } }.bodyOrThrow() }
 
+    /** Лента и поиск в одной группе. */
     suspend fun feed(
         groupId: String,
+        filter: ReviewFilter = ReviewFilter(),
         cursor: String? = null,
     ): Result<ReviewPage> =
-        apiCall {
-            client
-                .get(
-                    "api/v1/groups/$groupId/reviews",
-                ) { cursor?.let { parameter("cursor", it) } }
-                .bodyOrThrow()
+        apiCall { client.get("api/v1/groups/$groupId/reviews") { applyFilter(filter, cursor) }.bodyOrThrow() }
+
+    /** Поиск по всем своим группам. */
+    suspend fun search(
+        filter: ReviewFilter,
+        cursor: String? = null,
+    ): Result<ReviewPage> = apiCall { client.get("api/v1/reviews") { applyFilter(filter, cursor) }.bodyOrThrow() }
+
+    /** Теги группы с числом публикаций (подсказки и панель фильтров). */
+    suspend fun tags(
+        groupId: String,
+        prefix: String? = null,
+    ): Result<List<TagCount>> =
+        apiCall { client.get("api/v1/groups/$groupId/tags") { prefix?.let { parameter("prefix", it) } }.bodyOrThrow() }
+
+    private fun HttpRequestBuilder.applyFilter(
+        filter: ReviewFilter,
+        cursor: String?,
+    ) {
+        filter.query
+            .trim()
+            .takeIf { it.isNotEmpty() }
+            ?.let { parameter("q", it) }
+        if (filter.categoryIds.isNotEmpty()) parameter("categoryIds", filter.categoryIds.joinToString(","))
+        if (filter.tags.isNotEmpty()) {
+            parameter("tags", filter.tags.joinToString(","))
+            if (filter.anyTag) parameter("tagMode", "ANY")
         }
+        filter.authorId?.let { parameter("authorId", it) }
+        cursor?.let { parameter("cursor", it) }
+    }
 }
