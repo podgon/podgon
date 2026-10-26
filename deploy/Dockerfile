@@ -8,7 +8,7 @@ COPY server/ ./server/
 COPY api/ ./api/
 # Загрузки зависимостей иногда обрываются по TLS: кэш Gradle сохраняется между попытками, шаг повторяется
 RUN --mount=type=cache,target=/root/.gradle \
-    for i in 1 2 3 4 5 6; do ./gradlew --no-daemon :server:bootJar -x test && exit 0; echo "Попытка $i не удалась, повтор"; sleep 5; done; exit 1
+    for i in 1 2 3 4 5 6; do ./gradlew --no-daemon :server:bootJar -x test -PserverOnly && exit 0; echo "Попытка $i не удалась, повтор"; sleep 5; done; exit 1
 
 FROM eclipse-temurin:25-jre
 RUN useradd --system --uid 10001 --no-create-home podgon

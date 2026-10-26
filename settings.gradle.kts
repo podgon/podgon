@@ -14,4 +14,8 @@ pluginManagement {
     }
 }
 
-include(":server", ":shared-contract", ":mobile:shared", ":mobile:androidApp")
+include(":server", ":shared-contract")
+// Мобильные модули требуют Android SDK; образ backend собирается без них (-PserverOnly)
+if (!providers.gradleProperty("serverOnly").isPresent) {
+    include(":mobile:shared", ":mobile:androidApp")
+}
