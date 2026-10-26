@@ -39,6 +39,17 @@ class InvitationsTest : GroupsTestBase() {
     }
 
     @Test
+    fun `код принимается при вводе без дефисов и в любом регистре`() {
+        val owner = newUser("inv_owner11")
+        val guest = newUser("inv_guest11")
+        val id = createGroup(owner)["id"].asString()
+        val token = invite(owner, id)
+        val typed = " " + token.lowercase().replace("-", " ") + " "
+        assertEquals(200, status(accept(guest, typed)))
+        assertEquals(2, members(owner, id).size())
+    }
+
+    @Test
     fun `многоразовое приглашение принимает до maxUses человек`() {
         val owner = newUser("inv_owner2")
         val id = createGroup(owner)["id"].asString()
@@ -92,7 +103,7 @@ class InvitationsTest : GroupsTestBase() {
                 .single()
         assertEquals(32, stored.size)
         assertNotEquals(token, String(stored, Charsets.UTF_8))
-        assertEquals(22, token.length, "128 бит в base64url")
+        assertTrue(Regex("^([0-9A-HJKMNP-TV-Z]{4}-){5}[0-9A-HJKMNP-TV-Z]{4}$").matches(token), "читаемый код: $token")
 
         val listing = get("/groups/$id/invitations", owner)
         assertFalse(listing.response.contentAsString.contains(token), "список не раскрывает токен")

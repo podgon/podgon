@@ -72,6 +72,7 @@ import app.podgon.mobile.resources.groups_title
 import app.podgon.mobile.resources.invitations_title
 import app.podgon.mobile.resources.invite_created_hint
 import app.podgon.mobile.resources.invite_created_title
+import app.podgon.mobile.resources.invite_email_hint
 import app.podgon.mobile.resources.invite_email_label
 import app.podgon.mobile.resources.invite_for
 import app.podgon.mobile.resources.invite_max_uses_label
@@ -130,9 +131,11 @@ fun GroupsScreen(
                 Text(stringResource(Res.string.groups_title), style = MaterialTheme.typography.headlineMedium)
                 TextButton(onClick = onProfile) { Text(stringResource(Res.string.action_profile)) }
             }
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Button(onClick = onCreate) { Text(stringResource(Res.string.action_create_group)) }
-                OutlinedButton(onClick = onJoin) { Text(stringResource(Res.string.action_join_group)) }
+            Button(onClick = onCreate, modifier = Modifier.fillMaxWidth()) {
+                Text(stringResource(Res.string.action_create_group))
+            }
+            OutlinedButton(onClick = onJoin, modifier = Modifier.fillMaxWidth()) {
+                Text(stringResource(Res.string.action_join_group))
             }
             state.error?.let { RetryError(it, viewModel::load) }
             if (state.loading && state.groups.isEmpty()) CircularProgressIndicator()
@@ -315,9 +318,11 @@ fun GroupScreen(
             }
             state.error?.let { RetryError(it, viewModel::load) }
             if (state.isAdmin) {
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    OutlinedButton(onClick = onInvitations) { Text(stringResource(Res.string.group_invitations)) }
-                    OutlinedButton(onClick = onRoles) { Text(stringResource(Res.string.group_roles)) }
+                OutlinedButton(onClick = onInvitations, modifier = Modifier.fillMaxWidth()) {
+                    Text(stringResource(Res.string.group_invitations))
+                }
+                OutlinedButton(onClick = onRoles, modifier = Modifier.fillMaxWidth()) {
+                    Text(stringResource(Res.string.group_roles))
                 }
             }
             Text(stringResource(Res.string.group_members), style = MaterialTheme.typography.titleMedium)
@@ -334,14 +339,12 @@ fun GroupScreen(
                 }
             }
             if (group != null) {
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    OutlinedButton(
-                        onClick = { confirmLeave = true },
-                    ) { Text(stringResource(Res.string.action_leave_group)) }
-                    if (state.isAdmin) {
-                        OutlinedButton(
-                            onClick = { confirmDelete = true },
-                        ) { Text(stringResource(Res.string.action_delete_group)) }
+                OutlinedButton(onClick = { confirmLeave = true }, modifier = Modifier.fillMaxWidth()) {
+                    Text(stringResource(Res.string.action_leave_group))
+                }
+                if (state.isAdmin) {
+                    OutlinedButton(onClick = { confirmDelete = true }, modifier = Modifier.fillMaxWidth()) {
+                        Text(stringResource(Res.string.action_delete_group))
                     }
                 }
             }
@@ -597,7 +600,7 @@ fun InvitationsScreen(viewModel: InvitationsViewModel) {
                 label = { Text(stringResource(Res.string.invite_email_label)) },
                 singleLine = true,
                 isError = state.emailError != null,
-                supportingText = state.emailError?.let { reason -> { Text(reason.message()) } },
+                supportingText = { Text(state.emailError?.message() ?: stringResource(Res.string.invite_email_hint)) },
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
                 modifier = Modifier.fillMaxWidth(),
             )

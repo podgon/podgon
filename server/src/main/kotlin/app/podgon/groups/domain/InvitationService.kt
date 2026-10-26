@@ -26,7 +26,6 @@ import java.security.MessageDigest
 import java.security.SecureRandom
 import java.time.Clock
 import java.time.Duration
-import java.util.Base64
 import java.util.UUID
 
 @Service
@@ -212,19 +211,57 @@ class InvitationService(
 
     private fun invalidInvitation() = ApiException(ErrorCode.INVALID_INVITATION, HttpStatus.BAD_REQUEST)
 
+    /** Код приглашения читается и вводится человеком: 120 бит, алфавит Crockford без похожих символов, группы по 4. */
     private fun newToken(): String {
         val bytes = ByteArray(TOKEN_BYTES).also(random::nextBytes)
-        return Base64.getUrlEncoder().withoutPadding().encodeToString(bytes)
+        val chars = StringBuilder()
+        var buffer = 0
+        var bits = 0
+        for (byte in bytes) {
+            buffer = (buffer shl BYTE_BITS) or (byte.toInt() and BYTE_MASK)
+            bits += BYTE_BITS
+            while (bits >= SYMBOL_BITS) {
+                bits -= SYMBOL_BITS
+                chars.append(ALPHABET[(buffer shr bits) and SYMBOL_MASK])
+            }
+            buffer = buffer and ((1 shl bits) - 1)
+        }
+        return chars.chunked(GROUP).joinToString("-")
     }
 
-    /** Токен длиннее разумного или пустой не может быть настоящим — сразу отказ без обращения к БД. */
-    private fun hash(token: String): ByteArray {
-        if (token.isBlank() || token.length > MAX_TOKEN_LENGTH) throw invalidInvitation()
-        return MessageDigest.getInstance("SHA-256").digest(token.trim().toByteArray(Charsets.UTF_8))
+    /**
+     * Приводит введённый код к каноническому виду: без дефисов и пробелов, в верхнем регистре, похожие
+     * символы заменены по правилам Crockford (O→0, I и L→1). Не код — сразу отказ без обращения к БД.
+     */
+    private fun canonical(token: String): String {
+        if (token.length > MAX_TOKEN_LENGTH) throw invalidInvitation()
+        val normalized =
+            token
+                .uppercase()
+                .filter { it != '-' && !it.isWhitespace() }
+                .map {
+                    when (it) {
+                        'O' -> '0'
+                        'I', 'L' -> '1'
+                        else -> it
+                    }
+                }.joinToString("")
+        if (normalized.length != TOKEN_CHARS || normalized.any { it !in ALPHABET }) throw invalidInvitation()
+        return normalized
     }
+
+    private fun hash(token: String): ByteArray =
+        MessageDigest.getInstance("SHA-256").digest(canonical(token).toByteArray(Charsets.UTF_8))
 
     private companion object {
-        const val TOKEN_BYTES = 16
+        const val ALPHABET = "0123456789ABCDEFGHJKMNPQRSTVWXYZ"
+        const val TOKEN_BYTES = 15
+        const val TOKEN_CHARS = 24
+        const val GROUP = 4
+        const val BYTE_BITS = 8
+        const val BYTE_MASK = 0xFF
+        const val SYMBOL_BITS = 5
+        const val SYMBOL_MASK = 0x1F
         const val MAX_TOKEN_LENGTH = 200
     }
 }

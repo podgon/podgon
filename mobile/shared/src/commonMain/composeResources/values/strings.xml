@@ -91,7 +91,8 @@
 
     <string name="invitations_title">Invitations</string>
     <string name="invite_new_title">New invitation</string>
-    <string name="invite_email_label">Email (optional — the code will be emailed)</string>
+    <string name="invite_email_label">Email (optional)</string>
+    <string name="invite_email_hint">If you enter an email, the code is sent there and only its owner can join.</string>
     <string name="invite_max_uses_label">How many people can join</string>
     <string name="invite_created_title">Invitation created</string>
     <string name="invite_created_hint">Copy the code now — it is shown only once.</string>

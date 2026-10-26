@@ -48,7 +48,7 @@
     <string name="action_save">Сохранить</string>
     <string name="action_create">Создать</string>
     <string name="action_delete">Удалить</string>
-    <string name="action_remove">Удалить из группы</string>
+    <string name="action_remove">Удалить</string>
     <string name="action_profile">Профиль</string>
     <string name="action_create_group">Создать группу</string>
     <string name="action_join_group">Вступить по коду</string>
@@ -91,7 +91,8 @@
 
     <string name="invitations_title">Приглашения</string>
     <string name="invite_new_title">Новое приглашение</string>
-    <string name="invite_email_label">Email (необязательно — код придёт письмом)</string>
+    <string name="invite_email_label">Email (необязательно)</string>
+    <string name="invite_email_hint">Если указать email, код придёт на него, и вступить сможет только его владелец.</string>
     <string name="invite_max_uses_label">Сколько человек могут вступить</string>
     <string name="invite_created_title">Приглашение создано</string>
     <string name="invite_created_hint">Скопируйте код сейчас — он показывается один раз.</string>
