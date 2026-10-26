@@ -1,0 +1,13 @@
+# Профиль интеграционных тестов: секреты только тестовые, CAPTCHA выключена, фоновая отправка писем выключена
+podgon:
+  mail:
+    poll-enabled: false
+    retry-backoff: 30s
+  auth:
+    code-hmac-secret: test-code-hmac-secret-0123456789abcdef
+    jwt-active-kid: t1
+    jwt-keys:
+      t1: dGVzdC1qd3Qta2V5LW9uZS0wMTIzNDU2Nzg5YWJjZGVmLXBhZGRpbmc=
+      t0: dGVzdC1qd3Qta2V5LW9sZC0wMTIzNDU2Nzg5YWJjZGVmLXBhZGRpbmc=
+    captcha:
+      mode: disabled

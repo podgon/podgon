@@ -7,13 +7,16 @@ Backend: Kotlin на JDK 25, Spring Boot 4.1.x, модульный моноли�
 ```
 export PODGON_DB_URL=jdbc:postgresql://localhost:5432/podgon
 export PODGON_DB_USER=podgon
-gradle bootRun          # либо ./gradlew bootRun
+export PODGON_CODE_HMAC_SECRET=...        # не короче 32 символов (обязательно)
+export PODGON_AUTH_JWTKEYS_K1=...         # Base64 от 32+ случайных байт (обязательно)
+export PODGON_CAPTCHA_MODE=disabled       # локально; в проде smartcaptcha + PODGON_CAPTCHA_SECRET
+gradle :server:bootRun  # из корня репозитория; либо ./gradlew :server:bootRun
 ```
 Проверка: `curl localhost:8080/actuator/health` → `{"status":"UP"}`.
 
 ## Тесты
 ```
-gradle test             # интеграционные тесты используют Testcontainers (образ postgres:18, нужен Docker/OrbStack)
+gradle :server:test     # интеграционные тесты используют Testcontainers (образ postgres:18, нужен Docker/OrbStack)
 ```
 
 ## Миграции

@@ -108,10 +108,10 @@ category_templates (self: parent_id)  — базовый набор
 Теги группы = `DISTINCT` теги публикаций группы (запрос по индексам). При необходимости — материализованная таблица `group_tags` со счётчиками.
 
 ### Служебные таблицы
-- `refresh_tokens(id, user_id, family_id, token_hash unique, device_info, expires_at, rotated_at, revoked_at, created_at)` — ротация и обнаружение повторного использования.
-- `email_codes(id, email citext, code_hmac, expires_at, attempts, last_sent_at, consumed_at, ip)` — одноразовые коды входа; пароля в системе нет. Записи удаляются по расписанию. Индекс `(email, created_at desc)`.
+- `refresh_tokens(id, user_id, family_id, token_hash unique, device_info, session_started_at, created_at, expires_at, rotated_at, revoked_at)` — ротация и обнаружение повторного использования. `family_id` = сессия (устройство): у живой сессии ровно один не использованный и не отозванный токен; `session_started_at` переносится при ротации и ограничивает возраст сессии (90 дней). `created_at` живого токена = время последнего обновления.
+- `email_codes(id, email citext, code_hmac bytea, created_at, expires_at, attempts, consumed_at, ip)` — одноразовые коды входа; пароля в системе нет. Активен всегда последний неиспользованный код email. Лимиты отправки считаются запросами к этой таблице (по email и по ip за час; интервал — по `max(created_at)`), операции с кодами одного email сериализуются `pg_advisory_xact_lock`. Записи удаляются по расписанию (старше суток). Индексы `(email, created_at desc)`, `(ip, created_at desc)`.
 - `registrationToken` не хранится: это подписанный короткоживущий JWT.
-- `mail_outbox(id, to_address, template, payload jsonb, status, attempts, next_attempt_at, created_at)`.
+- `mail_outbox(id, to_address, template, locale, payload jsonb, status, attempts, next_attempt_at, created_at, sent_at)` — `status`: `PENDING`/`SENT`/`FAILED`. Пока письмо не отправлено, в `payload` лежит одноразовый код в открытом виде (иначе его не отправить); после отправки или окончательной ошибки `payload` стирается (`{}`), обработанные записи удаляются через 7 дней. Выборка — `FOR UPDATE SKIP LOCKED`.
 - `reports(id, reporter_id, target_type, target_id, reason, status, created_at)`; `user_blocks(blocker_id, blocked_id)` (этап 9).
 - `flyway_schema_history` — Flyway.
 

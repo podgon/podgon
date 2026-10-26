@@ -8,7 +8,7 @@
 | Сборка | Gradle (Kotlin DSL) | Maven — допустимая альтернатива |
 | Доступ к БД | Spring Data JPA (Hibernate) + нативные/JdbcClient запросы для поиска и фильтров | Все запросы параметризованы |
 | Миграции | Flyway | |
-| Контракт | OpenAPI 3.1, springdoc / openapi-generator | contract-first |
+| Контракт | OpenAPI 3.0.3 (`api/openapi.yaml`, вручную), проверка запросов и ответов в тестах (swagger-request-validator) | contract-first; 3.0.3, а не 3.1 — валидатор 3.1 пока не поддерживает; клиент генерируется из yaml на этапе 3 |
 | Безопасность | Spring Security 6, JWT (Nimbus), одноразовые коды (HMAC-SHA256) | пароль не используется |
 | Rate limit | Bucket4j (на старте in-memory, Redis при масштабировании) | |
 | Почта | Spring Mail / API провайдера, outbox | |
@@ -23,16 +23,17 @@ app.podgon
 ├── PodgonApplication
 ├── common/            ошибки, время (Clock), id, пагинация, утилиты — без бизнес-логики
 ├── identity/          пользователи, регистрация, вход, токены, профили
-│   ├── api/           публичные интерфейсы и DTO модуля (UserApi, CurrentUser)
+│   │                  публичное API модуля — классы в самом пакете `identity` (AuthenticatedUser, AuthProperties)
 │   ├── web/           контроллеры
-│   ├── domain/        сущности, сервисы
-│   └── persistence/   репозитории
+│   ├── domain/        сервисы (OtpService, AuthService, SessionService, TokenService, ProfileService)
+│   ├── security/      Spring Security, конфигурация JWT
+│   └── persistence/   репозитории (Spring JDBC)
 ├── groups/            группы, членство, роли, приглашения
 ├── catalog/           категории (шаблон и категории групп)
 ├── reviews/           рекомендации, теги, публикации в группы, правила шаринга
 ├── search/            поиск и фильтры (читающая модель)
 ├── moderation/        жалобы, блокировки
-└── mail/              отправка писем, outbox
+└── mail/              очередь писем (MailQueue, MailSender в корне пакета), outbox и отправка в `mail.internal`
 ```
 Правила: модуль виден другим только через `api`; зависимости проверяются Spring Modulith/ArchUnit. Общение «событийное» там, где это уместно (например, `UserDeleted`, `MemberLeftGroup` → `reviews` снимает публикации).
 
@@ -47,13 +48,14 @@ app.podgon
 ## API (черновик, `/api/v1`)
 
 Аутентификация:
-- `POST /auth/otp/request` (email, captchaToken) — всегда 202
-- `POST /auth/otp/verify` (email, code) → токены либо `registrationToken` для нового пользователя
-- `POST /auth/register` (registrationToken, username, displayName) → токены
-- `POST /auth/refresh`, `POST /auth/logout`
+Реализовано на этапе 2 (полный контракт — `api/openapi.yaml`):
+- `POST /auth/otp/request` (email, captchaToken) — 202 для любого корректного запроса независимо от наличия аккаунта; 429 + `Retry-After` при превышении лимитов (интервал 60 с, 5 кодов в час на email, 20 в час на IP); 400 `CAPTCHA_FAILED`
+- `POST /auth/otp/verify` (email, code, deviceInfo) → `tokens` либо `registrationToken` для нового пользователя; `INVALID_CODE` не различает неверный, просроченный, использованный код и исчерпанные попытки; 403 `USER_BLOCKED`
+- `POST /auth/register` (registrationToken, username, displayName, deviceInfo) → 201 токены; 409 `USERNAME_TAKEN` / `EMAIL_ALREADY_REGISTERED`
+- `POST /auth/refresh` (ротация; повторное использование отзывает сессию), `POST /auth/logout` (по refresh-токену, идемпотентно)
 
 Пользователь:
-- `GET /me`, `PATCH /me` (displayName, bio, username), `DELETE /me`, `GET /me/sessions`, `DELETE /me/sessions/{id}`
+- `GET /me`, `PATCH /me` (username, displayName, bio, locale; отсутствующее поле не меняется), `GET /me/sessions`, `DELETE /me/sessions/{id}` — этап 2; `DELETE /me` — этап 8
 
 Группы:
 - `POST /groups`, `GET /groups` (мои), `GET/PATCH/DELETE /groups/{id}`

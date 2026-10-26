@@ -11,11 +11,40 @@ spring:
   mvc:
     problemdetails:
       enabled: true   # ошибки в формате RFC 9457 application/problem+json
+  jackson:
+    default-property-inclusion: non_null
+  mail:
+    host: ${PODGON_SMTP_HOST:localhost}
+    port: ${PODGON_SMTP_PORT:1025}
+    username: ${PODGON_SMTP_USER:}
+    password: ${PODGON_SMTP_PASSWORD:}
+    properties:
+      mail.smtp.auth: ${PODGON_SMTP_AUTH:false}
+      mail.smtp.starttls.enable: ${PODGON_SMTP_STARTTLS:false}
   lifecycle:
     timeout-per-shutdown-phase: 20s
 
+podgon:
+  mail:
+    from: ${PODGON_MAIL_FROM:Podgon <no-reply@podgon.local>}
+  auth:
+    # Секреты обязательны и задаются только через окружение (в репозитории значений нет)
+    code-hmac-secret: ${PODGON_CODE_HMAC_SECRET:}
+    jwt-active-kid: ${PODGON_AUTH_JWTACTIVEKID:k1}
+    # Ключи подписи JWT (kid → секрет Base64, ≥ 32 байт) задаются переменными PODGON_AUTH_JWTKEYS_<KID>,
+    # например PODGON_AUTH_JWTKEYS_K1; при ротации старый ключ остаётся для проверки выданных токенов
+    captcha:
+      mode: ${PODGON_CAPTCHA_MODE:smartcaptcha}
+      secret: ${PODGON_CAPTCHA_SECRET:}
+    test-account:
+      enabled: ${PODGON_TEST_ACCOUNT_ENABLED:false}
+      email: ${PODGON_TEST_ACCOUNT_EMAIL:}
+      code: ${PODGON_TEST_ACCOUNT_CODE:}
+
 server:
   port: ${PODGON_PORT:8080}
+  # За обратным прокси (Selectel) задать PODGON_FORWARD_HEADERS=native, иначе лимиты по IP видят адрес прокси
+  forward-headers-strategy: ${PODGON_FORWARD_HEADERS:none}
   shutdown: graceful
   servlet:
     encoding:
@@ -23,6 +52,9 @@ server:
       force: true
 
 management:
+  health:
+    mail:
+      enabled: false   # готовность сервиса не должна зависеть от почтового провайдера
   endpoints:
     web:
       exposure:

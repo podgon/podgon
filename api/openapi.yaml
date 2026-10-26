@@ -1,0 +1,328 @@
+openapi: 3.0.3
+info:
+  title: Podgon API
+  version: 0.2.0
+  description: |
+    Контракт API Podgon (contract-first, ADR-005). Этап 2: вход по одноразовому коду, регистрация,
+    токены, профиль и сессии устройств.
+
+    Ошибки — `application/problem+json` (RFC 9457) с машинным полем `code` (см. `ErrorCode`
+    в shared-contract); текст для пользователя формирует клиент.
+servers:
+  - url: /api/v1
+tags:
+  - name: auth
+    description: Вход и регистрация (без авторизации)
+  - name: me
+    description: Профиль и сессии текущего пользователя
+
+paths:
+  /auth/otp/request:
+    post:
+      tags: [auth]
+      operationId: requestOtp
+      summary: Запросить одноразовый код входа
+      description: |
+        Всегда отвечает 202 при корректном запросе — независимо от того, зарегистрирован ли email.
+        Лимиты: интервал между кодами, число кодов в час на email и на IP (429 с `Retry-After`).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/OtpRequest' }
+      responses:
+        '202': { description: Код отправлен (или запрос принят без отправки) }
+        '400': { $ref: '#/components/responses/Problem' }
+        '429': { $ref: '#/components/responses/RateLimited' }
+
+  /auth/otp/verify:
+    post:
+      tags: [auth]
+      operationId: verifyOtp
+      summary: Проверить код
+      description: |
+        Если аккаунт существует — возвращает токены; иначе `registrationToken` для завершения регистрации.
+        Ошибка `INVALID_CODE` не различает неверный, просроченный, использованный код и исчерпанные попытки.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/OtpVerifyRequest' }
+      responses:
+        '200':
+          description: Код принят
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/OtpVerifyResponse' }
+        '400': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+
+  /auth/register:
+    post:
+      tags: [auth]
+      operationId: register
+      summary: Завершить регистрацию
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/RegisterRequest' }
+      responses:
+        '201':
+          description: Пользователь создан
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/TokenPair' }
+        '400': { $ref: '#/components/responses/Problem' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '409': { $ref: '#/components/responses/Problem' }
+
+  /auth/refresh:
+    post:
+      tags: [auth]
+      operationId: refreshTokens
+      summary: Обменять refresh-токен на новую пару
+      description: Refresh одноразовый. Повторное предъявление уже обменянного токена отзывает всю сессию.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/RefreshRequest' }
+      responses:
+        '200':
+          description: Новая пара токенов
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/TokenPair' }
+        '400': { $ref: '#/components/responses/Problem' }
+        '401': { $ref: '#/components/responses/Problem' }
+
+  /auth/logout:
+    post:
+      tags: [auth]
+      operationId: logout
+      summary: Завершить сессию
+      description: "Идемпотентно: неизвестный токен не считается ошибкой."
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/LogoutRequest' }
+      responses:
+        '204': { description: Сессия завершена }
+        '400': { $ref: '#/components/responses/Problem' }
+
+  /me:
+    get:
+      tags: [me]
+      operationId: getMe
+      summary: Мой профиль
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200':
+          description: Профиль
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/UserProfile' }
+        '401': { $ref: '#/components/responses/Problem' }
+    patch:
+      tags: [me]
+      operationId: updateMe
+      summary: Изменить профиль
+      description: Поля, которых нет в запросе, не меняются. Пустой `bio` очищает биографию.
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/UpdateProfileRequest' }
+      responses:
+        '200':
+          description: Обновлённый профиль
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/UserProfile' }
+        '400': { $ref: '#/components/responses/Problem' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '409': { $ref: '#/components/responses/Problem' }
+
+  /me/sessions:
+    get:
+      tags: [me]
+      operationId: listSessions
+      summary: Мои сессии (устройства)
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200':
+          description: Активные сессии
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/SessionInfo' }
+        '401': { $ref: '#/components/responses/Problem' }
+
+  /me/sessions/{id}:
+    delete:
+      tags: [me]
+      operationId: revokeSession
+      summary: Завершить сессию на устройстве
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        '204': { description: Сессия завершена }
+        '401': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  responses:
+    Problem:
+      description: Ошибка
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/Problem' }
+    RateLimited:
+      description: Слишком частые запросы
+      headers:
+        Retry-After:
+          description: Через сколько секунд можно повторить
+          schema: { type: integer }
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/Problem' }
+
+  schemas:
+    Problem:
+      type: object
+      required: [status, code]
+      properties:
+        type: { type: string }
+        title: { type: string }
+        status: { type: integer }
+        detail: { type: string }
+        instance: { type: string }
+        code:
+          type: string
+          enum:
+            - VALIDATION_FAILED
+            - CAPTCHA_FAILED
+            - RATE_LIMITED
+            - INVALID_CODE
+            - INVALID_REGISTRATION_TOKEN
+            - INVALID_REFRESH_TOKEN
+            - UNAUTHORIZED
+            - FORBIDDEN
+            - USER_BLOCKED
+            - NOT_FOUND
+            - USERNAME_TAKEN
+            - EMAIL_ALREADY_REGISTERED
+            - INTERNAL_ERROR
+        errors:
+          type: array
+          description: Ошибки полей (для `VALIDATION_FAILED`)
+          items:
+            type: object
+            required: [field, reason]
+            properties:
+              field: { type: string }
+              reason:
+                type: string
+                enum: [REQUIRED, TOO_SHORT, TOO_LONG, INVALID_FORMAT, RESERVED]
+
+    OtpRequest:
+      type: object
+      required: [email]
+      properties:
+        email: { type: string, maxLength: 254 }
+        captchaToken: { type: string, nullable: true }
+
+    OtpVerifyRequest:
+      type: object
+      required: [email, code]
+      properties:
+        email: { type: string, maxLength: 254 }
+        code: { type: string, pattern: '^[0-9]{6}$' }
+        deviceInfo: { type: string, maxLength: 200, nullable: true }
+
+    OtpVerifyResponse:
+      type: object
+      description: Заполнено ровно одно из полей.
+      properties:
+        tokens: { $ref: '#/components/schemas/TokenPair' }
+        registrationToken: { type: string }
+
+    RegisterRequest:
+      type: object
+      required: [registrationToken, username, displayName]
+      properties:
+        registrationToken: { type: string }
+        username:
+          type: string
+          minLength: 3
+          maxLength: 30
+          pattern: '^[A-Za-z0-9_.]+$'
+          description: Уникален без учёта регистра; префикс `deleted_` зарезервирован.
+        displayName: { type: string, maxLength: 60 }
+        deviceInfo: { type: string, maxLength: 200, nullable: true }
+
+    TokenPair:
+      type: object
+      required: [accessToken, refreshToken, expiresIn]
+      properties:
+        accessToken: { type: string }
+        refreshToken: { type: string }
+        expiresIn:
+          type: integer
+          format: int64
+          description: Срок жизни access-токена, секунд
+
+    RefreshRequest:
+      type: object
+      required: [refreshToken]
+      properties:
+        refreshToken: { type: string }
+
+    LogoutRequest:
+      type: object
+      required: [refreshToken]
+      properties:
+        refreshToken: { type: string }
+
+    UserProfile:
+      type: object
+      required: [id, email, username, displayName, bio, locale]
+      properties:
+        id: { type: string, format: uuid }
+        email: { type: string }
+        username: { type: string }
+        displayName: { type: string }
+        bio: { type: string }
+        locale: { type: string, enum: [ru, en] }
+
+    UpdateProfileRequest:
+      type: object
+      properties:
+        username: { type: string, nullable: true }
+        displayName: { type: string, nullable: true }
+        bio: { type: string, maxLength: 120, nullable: true }
+        locale: { type: string, enum: [ru, en], nullable: true }
+
+    SessionInfo:
+      type: object
+      required: [id, createdAt, lastUsedAt, current]
+      properties:
+        id: { type: string, format: uuid }
+        deviceInfo: { type: string, nullable: true }
+        createdAt: { type: string, format: date-time }
+        lastUsedAt: { type: string, format: date-time }
+        current: { type: boolean }

@@ -30,10 +30,18 @@ services:
     depends_on:
       db:
         condition: service_healthy
+      mailpit:
+        condition: service_started
     environment:
       PODGON_DB_URL: jdbc:postgresql://db:5432/podgon
       PODGON_DB_USER: podgon
       PODGON_DB_PASSWORD: ${PODGON_DB_PASSWORD:-podgon_dev}
+      PODGON_SMTP_HOST: mailpit
+      PODGON_SMTP_PORT: "1025"
+      # Только для локальной разработки: в окружениях Selectel значения задаются секретами и иные
+      PODGON_CAPTCHA_MODE: disabled
+      PODGON_CODE_HMAC_SECRET: ${PODGON_CODE_HMAC_SECRET:-dev-only-code-hmac-secret-change-me-0123456789}
+      PODGON_AUTH_JWTKEYS_K1: ${PODGON_AUTH_JWTKEYS_K1:-ZGV2LW9ubHktand0LWtleS1jaGFuZ2UtbWUtMDEyMzQ1Njc4OWFiY2RlZg==}
     ports:
       - "127.0.0.1:8080:8080"
 
