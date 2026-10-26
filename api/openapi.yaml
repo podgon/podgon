@@ -1202,7 +1202,10 @@ components:
         instance: { type: string }
         code:
           type: string
-          enum:
+          description: |
+            Машинный код ошибки (`ErrorCode` в shared-contract). Список расширяемый: новые коды добавляются
+            без смены версии API, клиент обязан обрабатывать неизвестный код как общую ошибку.
+          x-extensible-enum:
             - VALIDATION_FAILED
             - CAPTCHA_FAILED
             - RATE_LIMITED
