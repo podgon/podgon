@@ -1,4 +1,4 @@
-package app.podgon.catalog.persistence
+package app.podgon.reviews.persistence
 
 import app.podgon.common.toSql
 import org.springframework.jdbc.core.simple.JdbcClient

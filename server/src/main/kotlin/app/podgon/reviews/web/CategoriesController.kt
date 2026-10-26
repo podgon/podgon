@@ -1,6 +1,5 @@
-package app.podgon.catalog.web
+package app.podgon.reviews.web
 
-import app.podgon.catalog.domain.CategoryService
 import app.podgon.common.ApiException
 import app.podgon.contract.CategoryDeleteImpact
 import app.podgon.contract.CategoryInfo
@@ -9,6 +8,7 @@ import app.podgon.contract.ErrorCode
 import app.podgon.contract.MoveCategoryRequest
 import app.podgon.contract.UpdateCategoryRequest
 import app.podgon.identity.AuthenticatedUser
+import app.podgon.reviews.domain.CategoryService
 import org.springframework.http.HttpStatus
 import org.springframework.security.core.annotation.AuthenticationPrincipal
 import org.springframework.web.bind.annotation.DeleteMapping

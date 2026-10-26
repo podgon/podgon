@@ -1,7 +1,7 @@
-package app.podgon.catalog.domain
+package app.podgon.reviews.domain
 
-import app.podgon.catalog.persistence.CategoryRepository
 import app.podgon.groups.GroupCreated
+import app.podgon.reviews.persistence.CategoryRepository
 import org.springframework.context.event.EventListener
 import org.springframework.stereotype.Component
 import java.time.Clock

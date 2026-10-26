@@ -1,4 +1,4 @@
-package app.podgon.catalog
+package app.podgon.reviews
 
 import app.podgon.groups.GroupsTestBase
 import org.junit.jupiter.api.Test

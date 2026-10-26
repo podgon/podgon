@@ -1,8 +1,5 @@
-package app.podgon.catalog.domain
+package app.podgon.reviews.domain
 
-import app.podgon.catalog.CatalogProperties
-import app.podgon.catalog.persistence.CategoryRepository
-import app.podgon.catalog.persistence.CategoryRow
 import app.podgon.common.ApiException
 import app.podgon.common.validationFailed
 import app.podgon.contract.CategoryDeleteImpact
@@ -14,7 +11,10 @@ import app.podgon.contract.MoveCategoryRequest
 import app.podgon.contract.UpdateCategoryRequest
 import app.podgon.contract.Validation
 import app.podgon.groups.GroupAccess
-import app.podgon.reviews.ReviewPublications
+import app.podgon.reviews.ReviewsProperties
+import app.podgon.reviews.persistence.CategoryRepository
+import app.podgon.reviews.persistence.CategoryRow
+import app.podgon.reviews.persistence.ReviewRepository
 import org.springframework.http.HttpStatus
 import org.springframework.stereotype.Service
 import org.springframework.transaction.support.TransactionTemplate
@@ -38,8 +38,8 @@ private fun String.toUuidOrNull(): UUID? = runCatching { UUID.fromString(this) }
 class CategoryService(
     private val categories: CategoryRepository,
     private val access: GroupAccess,
-    private val publications: ReviewPublications,
-    private val props: CatalogProperties,
+    private val reviews: ReviewRepository,
+    private val props: ReviewsProperties,
     private val clock: Clock,
     private val tx: TransactionTemplate,
 ) {
@@ -63,11 +63,11 @@ class CategoryService(
         validate(name, description)
         return tx.execute {
             categories.lockGroup(groupId)
-            if (categories.count(groupId) >= props.maxCategoriesPerGroup) throw conflict(ErrorCode.LIMIT_EXCEEDED)
+            if (categories.count(groupId) >= props.categories.maxPerGroup) throw conflict(ErrorCode.LIMIT_EXCEEDED)
             if (parentId != null) {
                 categories.find(groupId, parentId) ?: throw notFound()
                 if (categories.depthOf(groupId, parentId) + 1 >
-                    props.maxDepth
+                    props.categories.maxDepth
                 ) {
                     throw conflict(ErrorCode.CATEGORY_TOO_DEEP)
                 }
@@ -130,7 +130,11 @@ class CategoryService(
                 if (subtree.any { it.id == newParentId }) throw conflict(ErrorCode.CATEGORY_CYCLE)
             }
             val parentDepth = newParentId?.let { categories.depthOf(groupId, it) } ?: 0
-            if (parentDepth + subtree.maxOf { it.level } > props.maxDepth) throw conflict(ErrorCode.CATEGORY_TOO_DEEP)
+            if (parentDepth + subtree.maxOf { it.level } >
+                props.categories.maxDepth
+            ) {
+                throw conflict(ErrorCode.CATEGORY_TOO_DEEP)
+            }
             if (categories.nameExists(groupId, newParentId, current.name, exceptId = categoryId)) {
                 throw conflict(ErrorCode.CATEGORY_NAME_TAKEN)
             }
@@ -176,8 +180,8 @@ class CategoryService(
         val ids = categories.subtree(groupId, categoryId).map { it.id }
         return CategoryDeleteImpact(
             subcategories = ids.size - 1,
-            publications = publications.count(groupId, ids),
-            foreignPublications = publications.countByOthers(groupId, ids, userId),
+            publications = reviews.countPublications(groupId, ids),
+            foreignPublications = reviews.countPublicationsByOthers(groupId, ids, userId),
         )
     }
 
