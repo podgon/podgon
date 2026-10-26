@@ -11,6 +11,7 @@ import app.podgon.mobile.feature.auth.data.CaptchaProvider
 import app.podgon.mobile.feature.auth.ui.CodeViewModel
 import app.podgon.mobile.feature.auth.ui.EmailViewModel
 import app.podgon.mobile.feature.auth.ui.RegisterViewModel
+import app.podgon.mobile.feature.groups.CategoriesViewModel
 import app.podgon.mobile.feature.groups.CreateGroupViewModel
 import app.podgon.mobile.feature.groups.GroupViewModel
 import app.podgon.mobile.feature.groups.GroupsViewModel
@@ -50,6 +51,7 @@ val appModule =
         viewModel { CreateGroupViewModel(get()) }
         viewModel { JoinGroupViewModel(get()) }
         viewModel { (groupId: String) -> GroupViewModel(groupId, get(), get()) }
+        viewModel { (groupId: String) -> CategoriesViewModel(groupId, get()) }
         viewModel { (groupId: String) -> RolesViewModel(groupId, get()) }
         viewModel { (groupId: String) -> InvitationsViewModel(groupId, get()) }
     }

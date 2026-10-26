@@ -6,6 +6,9 @@ import app.podgon.mobile.resources.Res
 import app.podgon.mobile.resources.error_already_member
 import app.podgon.mobile.resources.error_blocked
 import app.podgon.mobile.resources.error_captcha
+import app.podgon.mobile.resources.error_category_cycle
+import app.podgon.mobile.resources.error_category_name_taken
+import app.podgon.mobile.resources.error_category_too_deep
 import app.podgon.mobile.resources.error_email_taken
 import app.podgon.mobile.resources.error_forbidden
 import app.podgon.mobile.resources.error_invalid_code
@@ -39,6 +42,9 @@ fun AppError.message(): String =
                 ErrorCode.INVALID_INVITATION -> stringResource(Res.string.error_invalid_invitation)
                 ErrorCode.ALREADY_MEMBER -> stringResource(Res.string.error_already_member)
                 ErrorCode.LIMIT_EXCEEDED -> stringResource(Res.string.error_limit)
+                ErrorCode.CATEGORY_NAME_TAKEN -> stringResource(Res.string.error_category_name_taken)
+                ErrorCode.CATEGORY_CYCLE -> stringResource(Res.string.error_category_cycle)
+                ErrorCode.CATEGORY_TOO_DEEP -> stringResource(Res.string.error_category_too_deep)
                 ErrorCode.FORBIDDEN -> stringResource(Res.string.error_forbidden)
                 ErrorCode.NOT_FOUND -> stringResource(Res.string.error_not_found)
                 else -> stringResource(Res.string.error_unknown)

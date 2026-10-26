@@ -27,6 +27,8 @@ object Validation {
     const val GROUP_DESCRIPTION_MAX = 500
     const val ROLE_TITLE_MAX = 60
     const val ROLE_DESCRIPTION_MAX = 255
+    const val CATEGORY_NAME_MAX = 100
+    const val CATEGORY_DESCRIPTION_MAX = 500
     const val INVITATION_MAX_USES = 100
     const val INVITATION_TTL_HOURS_DEFAULT = 168
     const val INVITATION_TTL_HOURS_MAX = 24 * 30
@@ -86,6 +88,10 @@ object Validation {
     fun groupName(value: String): FieldErrorReason? = title(value, GROUP_NAME_MAX)
 
     fun groupDescription(value: String): FieldErrorReason? = text(value, GROUP_DESCRIPTION_MAX)
+
+    fun categoryName(value: String): FieldErrorReason? = title(value, CATEGORY_NAME_MAX)
+
+    fun categoryDescription(value: String): FieldErrorReason? = text(value, CATEGORY_DESCRIPTION_MAX)
 
     fun roleTitle(value: String): FieldErrorReason? = title(value, ROLE_TITLE_MAX)
 

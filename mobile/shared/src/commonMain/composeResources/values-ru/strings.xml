@@ -108,4 +108,21 @@
     <string name="error_limit">Достигнут лимит.</string>
     <string name="error_forbidden">Недостаточно прав для этого действия.</string>
     <string name="error_not_found">Не найдено. Возможно, это уже удалено.</string>
+    <string name="group_categories">Категории</string>
+    <string name="categories_title">Категории</string>
+    <string name="category_new_title">Новая категория</string>
+    <string name="category_new_sub">Добавить подкатегорию</string>
+    <string name="category_edit_title">Изменить категорию</string>
+    <string name="category_name_label">Название</string>
+    <string name="category_description_label">Описание (необязательно)</string>
+    <string name="category_move">Перенести</string>
+    <string name="category_move_title">Перенести в…</string>
+    <string name="category_root">Верхний уровень</string>
+    <string name="categories_empty">Категорий пока нет.</string>
+    <string name="category_delete_title">Удалить категорию «%1$s»?</string>
+    <string name="category_delete_text">Вместе с ней удалятся подкатегории: %1$d. Рекомендации, опубликованные в них: %2$d. Это нельзя отменить.</string>
+    <string name="category_delete_simple">Категория будет удалена. Это нельзя отменить.</string>
+    <string name="error_category_name_taken">Категория с таким названием уже есть на этом уровне.</string>
+    <string name="error_category_cycle">Нельзя перенести категорию в саму себя или в свою подкатегорию.</string>
+    <string name="error_category_too_deep">Вложенность категорий — не более 5 уровней.</string>
 </resources>

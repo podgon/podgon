@@ -108,4 +108,21 @@
     <string name="error_limit">The limit has been reached.</string>
     <string name="error_forbidden">You do not have permission to do this.</string>
     <string name="error_not_found">Not found. It may have been deleted.</string>
+    <string name="group_categories">Categories</string>
+    <string name="categories_title">Categories</string>
+    <string name="category_new_title">New category</string>
+    <string name="category_new_sub">Add subcategory</string>
+    <string name="category_edit_title">Edit category</string>
+    <string name="category_name_label">Name</string>
+    <string name="category_description_label">Description (optional)</string>
+    <string name="category_move">Move</string>
+    <string name="category_move_title">Move to…</string>
+    <string name="category_root">Top level</string>
+    <string name="categories_empty">No categories yet.</string>
+    <string name="category_delete_title">Delete category “%1$s”?</string>
+    <string name="category_delete_text">This will also delete subcategories: %1$d. Recommendations published in them: %2$d. This cannot be undone.</string>
+    <string name="category_delete_simple">The category will be deleted. This cannot be undone.</string>
+    <string name="error_category_name_taken">A category with this name already exists at this level.</string>
+    <string name="error_category_cycle">A category cannot be moved into itself or its subcategory.</string>
+    <string name="error_category_too_deep">Categories can be nested at most 5 levels deep.</string>
 </resources>

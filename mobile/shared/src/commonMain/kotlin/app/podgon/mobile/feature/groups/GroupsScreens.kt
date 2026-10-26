@@ -61,6 +61,7 @@ import app.podgon.mobile.resources.action_save
 import app.podgon.mobile.resources.create_group_title
 import app.podgon.mobile.resources.delete_group_confirm_text
 import app.podgon.mobile.resources.delete_group_confirm_title
+import app.podgon.mobile.resources.group_categories
 import app.podgon.mobile.resources.group_description_label
 import app.podgon.mobile.resources.group_invitations
 import app.podgon.mobile.resources.group_member_count
@@ -172,7 +173,7 @@ private fun GroupRow(
 }
 
 @Composable
-private fun RetryError(
+internal fun RetryError(
     error: AppError,
     onRetry: () -> Unit,
 ) {
@@ -291,6 +292,7 @@ fun JoinGroupScreen(
 @Composable
 fun GroupScreen(
     viewModel: GroupViewModel,
+    onCategories: (canEdit: Boolean) -> Unit,
     onRoles: () -> Unit,
     onInvitations: () -> Unit,
     onClosed: () -> Unit,
@@ -317,6 +319,11 @@ fun GroupScreen(
                 )
             }
             state.error?.let { RetryError(it, viewModel::load) }
+            if (group != null) {
+                OutlinedButton(onClick = { onCategories(state.isAdmin) }, modifier = Modifier.fillMaxWidth()) {
+                    Text(stringResource(Res.string.group_categories))
+                }
+            }
             if (state.isAdmin) {
                 OutlinedButton(onClick = onInvitations, modifier = Modifier.fillMaxWidth()) {
                     Text(stringResource(Res.string.group_invitations))

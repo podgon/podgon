@@ -1,10 +1,10 @@
 openapi: 3.0.3
 info:
   title: Podgon API
-  version: 0.3.0
+  version: 0.4.0
   description: |
     Контракт API Podgon (contract-first, ADR-005). Этап 2: вход по одноразовому коду, регистрация,
-    токены, профиль и сессии устройств. Этап 4: группы, участники, роли, приглашения.
+    токены, профиль и сессии устройств. Этап 4: группы, участники, роли, приглашения. Этап 5: категории групп.
 
     Ошибки — `application/problem+json` (RFC 9457) с машинным полем `code` (см. `ErrorCode`
     в shared-contract); текст для пользователя формирует клиент.
@@ -17,6 +17,8 @@ tags:
     description: Профиль и сессии текущего пользователя
   - name: groups
     description: Группы, участники, роли
+  - name: categories
+    description: Категории группы (иерархия)
   - name: invitations
     description: Приглашения в группы
 
@@ -428,6 +430,137 @@ paths:
         '404': { $ref: '#/components/responses/Problem' }
         '409': { $ref: '#/components/responses/Problem' }
 
+  /groups/{groupId}/categories:
+    parameters:
+      - $ref: '#/components/parameters/GroupId'
+    get:
+      tags: [categories]
+      operationId: listCategories
+      summary: Категории группы (плоский список, упорядоченный; иерархия — по parentId)
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200':
+          description: Категории
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/CategoryInfo' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+    post:
+      tags: [categories]
+      operationId: createCategory
+      summary: Создать категорию (администратор)
+      description: 409 — `CATEGORY_NAME_TAKEN`, `CATEGORY_TOO_DEEP` или `LIMIT_EXCEEDED`.
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CreateCategoryRequest' }
+      responses:
+        '201':
+          description: Категория создана
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/CategoryInfo' }
+        '400': { $ref: '#/components/responses/Problem' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+        '409': { $ref: '#/components/responses/Problem' }
+
+  /groups/{groupId}/categories/{categoryId}:
+    parameters:
+      - $ref: '#/components/parameters/GroupId'
+      - $ref: '#/components/parameters/CategoryId'
+    patch:
+      tags: [categories]
+      operationId: updateCategory
+      summary: Изменить название и описание (администратор)
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/UpdateCategoryRequest' }
+      responses:
+        '200':
+          description: Обновлённая категория
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/CategoryInfo' }
+        '400': { $ref: '#/components/responses/Problem' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+        '409': { $ref: '#/components/responses/Problem' }
+    delete:
+      tags: [categories]
+      operationId: deleteCategory
+      summary: Удалить категорию вместе с подкатегориями (администратор)
+      description: |
+        Если у категории есть подкатегории или публикации, требуется `confirm=true`, иначе 400
+        `CONFIRMATION_REQUIRED` (последствия — в `delete-impact`).
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: confirm
+          in: query
+          schema: { type: boolean }
+      responses:
+        '204': { description: Категория удалена }
+        '400': { $ref: '#/components/responses/Problem' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+
+  /groups/{groupId}/categories/{categoryId}/parent:
+    parameters:
+      - $ref: '#/components/parameters/GroupId'
+      - $ref: '#/components/parameters/CategoryId'
+    put:
+      tags: [categories]
+      operationId: moveCategory
+      summary: Перенести категорию под другого родителя или в корень (администратор)
+      description: 409 — `CATEGORY_CYCLE` (в себя или потомка), `CATEGORY_TOO_DEEP`, `CATEGORY_NAME_TAKEN`.
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/MoveCategoryRequest' }
+      responses:
+        '200':
+          description: Категория после переноса
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/CategoryInfo' }
+        '400': { $ref: '#/components/responses/Problem' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+        '409': { $ref: '#/components/responses/Problem' }
+
+  /groups/{groupId}/categories/{categoryId}/delete-impact:
+    parameters:
+      - $ref: '#/components/parameters/GroupId'
+      - $ref: '#/components/parameters/CategoryId'
+    get:
+      tags: [categories]
+      operationId: categoryDeleteImpact
+      summary: Что будет удалено вместе с категорией (администратор)
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200':
+          description: Число подкатегорий и публикаций
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/CategoryDeleteImpact' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+
   /groups/{groupId}/invitations:
     parameters:
       - $ref: '#/components/parameters/GroupId'
@@ -553,6 +686,11 @@ components:
       in: path
       required: true
       schema: { type: string, format: uuid }
+    CategoryId:
+      name: categoryId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
     RoleId:
       name: roleId
       in: path
@@ -605,6 +743,9 @@ components:
             - ALREADY_MEMBER
             - LIMIT_EXCEEDED
             - CONFIRMATION_REQUIRED
+            - CATEGORY_NAME_TAKEN
+            - CATEGORY_CYCLE
+            - CATEGORY_TOO_DEEP
             - INTERNAL_ERROR
         errors:
           type: array
@@ -770,6 +911,41 @@ components:
         title: { type: string, maxLength: 60, nullable: true }
         description: { type: string, maxLength: 255, nullable: true }
         admin: { type: boolean, nullable: true }
+
+    CategoryInfo:
+      type: object
+      required: [id, parentId, name, description]
+      properties:
+        id: { type: string, format: uuid }
+        parentId: { type: string, format: uuid, nullable: true }
+        name: { type: string }
+        description: { type: string }
+
+    CreateCategoryRequest:
+      type: object
+      required: [name]
+      properties:
+        name: { type: string, maxLength: 100 }
+        description: { type: string, maxLength: 500 }
+        parentId: { type: string, format: uuid, nullable: true }
+
+    UpdateCategoryRequest:
+      type: object
+      properties:
+        name: { type: string, maxLength: 100, nullable: true }
+        description: { type: string, maxLength: 500, nullable: true }
+
+    MoveCategoryRequest:
+      type: object
+      properties:
+        parentId: { type: string, format: uuid, nullable: true }
+
+    CategoryDeleteImpact:
+      type: object
+      required: [subcategories, publications]
+      properties:
+        subcategories: { type: integer }
+        publications: { type: integer }
 
     CreateInvitationRequest:
       type: object

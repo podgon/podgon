@@ -66,7 +66,7 @@ app.podgon
 - `POST /invitations/preview` и `POST /invitations/accept` (токен в теле, не в адресе: не попадает в журналы доступа); адресное приглашение принимает только владелец email, любая причина отказа — один и тот же `INVALID_INVITATION`; правила шаринга при вступлении — этап 6
 
 Категории:
-- `GET /groups/{id}/categories` (дерево), `POST`, `PATCH`, `DELETE /groups/{id}/categories/{cid}` (`?confirm=true`; ответ 409 с описанием последствий, если подтверждения нет — основа для предупреждения в UI; также `GET .../categories/{cid}/delete-impact`)
+- `GET /groups/{id}/categories` (дерево), `POST`, `PATCH`, `DELETE /groups/{id}/categories/{cid}` (`?confirm=true`; без подтверждения при наличии подкатегорий/публикаций — 400 `CONFIRMATION_REQUIRED`; последствия — `GET .../categories/{cid}/delete-impact`), `PUT .../categories/{cid}/parent` (перенос; `null` — в корень). Реализовано на этапе 5
 
 Рекомендации:
 - `POST /reviews`, `GET/PATCH/DELETE /reviews/{id}`, `GET /me/reviews`
