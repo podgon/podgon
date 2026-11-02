@@ -1,0 +1,164 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<title>Podgon — вход</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#D9532F}a:hover{color:#B8401F}
+.pg-scroll::-webkit-scrollbar{display:none}
+.pg-scroll>*{flex-shrink:0}
+.pg-field:focus{outline:none}
+.pg-field::placeholder{color:#9A98A0}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; position: relative; overflow: hidden; display: flex; flex-direction: column; background: {{c.bg}}; color: {{c.ink}}; font-family: 'Manrope', system-ui, sans-serif;">
+  <!-- Вход без пароля: email → код из письма → профиль (только для нового пользователя) -->
+  <header style="height: 72px; padding: 18px 16px 0; box-sizing: border-box; flex: none;">
+    <sc-if value="{{hasBack}}" hint-placeholder-val="{{false}}">
+      <a href="{{backHref}}" aria-label="Назад" title="Назад" style="width: 44px; height: 44px; border-radius: 22px; border: 1px solid {{c.line}}; background: {{c.surface}}; color: {{c.ink}}; display: flex; align-items: center; justify-content: center; box-sizing: border-box;">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 6-6 6 6 6"></path></svg>
+      </a>
+    </sc-if>
+  </header>
+  <main class="pg-scroll" style="flex: 1; min-height: 0; overflow-y: auto; scrollbar-width: none; padding: {{topPad}}px 24px 24px; display: flex; flex-direction: column; gap: 14px;">
+    <sc-if value="{{isEmail}}" hint-placeholder-val="{{true}}">
+      <div style="display: flex; justify-content: center; margin-bottom: 10px;">
+      <svg width="64" height="64" viewBox="0 0 34 34" aria-hidden="true">
+        <rect x="1" y="1" width="32" height="32" rx="11" fill="{{c.accent}}"></rect>
+        <path d="M12 25V10h6.2a4.8 4.8 0 0 1 0 9.6H12" fill="none" stroke="#FFFFFF" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"></path>
+        <circle cx="23.5" cy="24.5" r="1.9" fill="#FFFFFF"></circle>
+      </svg>
+      </div>
+    </sc-if>
+    <sc-if value="{{isRegister}}" hint-placeholder-val="{{false}}">
+      <div style="display: flex; justify-content: center; margin-bottom: 4px;"><svg width="88" height="88" viewBox="0 0 48 48" aria-hidden="true" style="flex: none;"><circle cx="24" cy="24" r="24" fill="{{c.chip}}"></circle><circle cx="24" cy="19" r="7" fill="none" stroke="{{c.muted}}" stroke-width="2.4"></circle><path d="M11.5 38a13.5 13.5 0 0 1 25 0" fill="none" stroke="{{c.muted}}" stroke-width="2.4" stroke-linecap="round"></path></svg></div>
+    </sc-if>
+    <h1 style="margin: 0; font-size: 26px; font-weight: 800; letter-spacing: -0.4px; text-align: {{align}};">{{title}}</h1>
+    <p style="margin: 0 0 6px; font-size: 15px; line-height: 1.5; color: {{c.muted}}; text-align: {{align}};">{{hint}}</p>
+
+    <sc-if value="{{isEmail}}" hint-placeholder-val="{{true}}">
+      <label style="display: flex; flex-direction: column; gap: 6px;">
+        <span style="font-size: 12px; font-weight: 700; color: {{c.muted}}; padding: 0 4px;">Email</span>
+        <input class="pg-field" type="email" inputmode="email" autocomplete="email" placeholder="name@example.com" value="{{email}}" onChange="{{onEmail}}" style="height: 52px; border: 1px solid {{c.line}}; border-radius: 18px; background: {{c.surface}}; box-shadow: {{c.shadow}}; font-family: inherit; font-size: 17px; font-weight: 600; color: {{c.ink}}; padding: 0 16px; box-sizing: border-box; width: 100%;">
+      </label>
+      <!-- Яндекс SmartCaptcha (виджет подключается на этапе 9) -->
+      <div style="height: 64px; border-radius: 18px; border: 1px solid {{c.line}}; background: {{c.surface}}; display: flex; align-items: center; gap: 12px; padding: 0 16px; box-sizing: border-box;">
+        <button type="button" role="checkbox" aria-checked="{{robotAria}}" onClick="{{toggleRobot}}" style="width: 28px; height: 28px; border-radius: 8px; border: 2px solid {{robotBorder}}; background: {{robotBg}}; color: #FFFFFF; display: flex; align-items: center; justify-content: center; cursor: pointer; padding: 0; box-sizing: border-box;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12.5 4.5 4.5L19 7.5"></path></svg></button>
+        <span style="flex: 1; font-size: 15px; font-weight: 600;">Я не робот</span>
+        <span style="font-size: 11px; color: {{c.muted}}; text-align: right; line-height: 1.3;">SmartCaptcha</span>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{isCode}}" hint-placeholder-val="{{false}}">
+      <label style="position: relative; display: block; height: 60px;">
+        <span style="display: flex; gap: 8px; justify-content: space-between;">
+          <sc-for list="{{cells}}" as="d" hint-placeholder-count="6">
+            <span style="flex: 1; height: 60px; border-radius: 16px; border: {{d.border}}; background: {{c.surface}}; box-shadow: {{c.shadow}}; display: flex; align-items: center; justify-content: center; font-size: 26px; font-weight: 800; font-variant-numeric: tabular-nums; box-sizing: border-box;">{{d.v}}</span>
+          </sc-for>
+        </span>
+        <input class="pg-field" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="6" aria-label="Код из письма" value="{{code}}" onChange="{{onCode}}" onFocus="{{onCodeFocus}}" onBlur="{{onCodeBlur}}" style="position: absolute; inset: 0; opacity: 0; width: 100%; height: 100%; border: none; cursor: text;">
+      </label>
+      <div style="display: flex; justify-content: space-between; align-items: center; padding: 2px 4px;">
+        <a href="Auth.dc.html" style="font-size: 14px; font-weight: 700; text-decoration: none;">Изменить email</a>
+        <button type="button" onClick="{{resend}}" style="border: none; background: transparent; font-family: inherit; font-size: 14px; font-weight: 600; color: {{resendColor}}; cursor: pointer; padding: 0;">{{resendText}}</button>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{isRegister}}" hint-placeholder-val="{{false}}">
+      <label style="display: flex; flex-direction: column; gap: 6px;">
+        <span style="font-size: 12px; font-weight: 700; color: {{c.muted}}; padding: 0 4px;">Отображаемое имя</span>
+        <input class="pg-field" type="text" autocomplete="name" placeholder="Как вас называть в группах" value="{{displayName}}" onChange="{{onName}}" style="height: 52px; border: 1px solid {{c.line}}; border-radius: 18px; background: {{c.surface}}; box-shadow: {{c.shadow}}; font-family: inherit; font-size: 17px; font-weight: 600; color: {{c.ink}}; padding: 0 16px; box-sizing: border-box; width: 100%;">
+      </label>
+      <label style="display: flex; flex-direction: column; gap: 6px;">
+        <span style="font-size: 12px; font-weight: 700; color: {{c.muted}}; padding: 0 4px;">Имя пользователя</span>
+        <span style="position: relative; display: block;">
+          <span style="position: absolute; left: 16px; top: 0; height: 52px; display: flex; align-items: center; font-size: 17px; font-weight: 600; color: {{c.muted}};">@</span>
+          <input class="pg-field" type="text" autocapitalize="none" placeholder="anna.s" value="{{username}}" onChange="{{onUsername}}" style="height: 52px; border: 1px solid {{c.line}}; border-radius: 18px; background: {{c.surface}}; box-shadow: {{c.shadow}}; font-family: inherit; font-size: 17px; font-weight: 600; color: {{c.ink}}; padding: 0 16px; box-sizing: border-box; width: 100%; padding-left: 34px;">
+        </span>
+        <span style="font-size: 12px; line-height: 1.4; color: {{c.muted}}; padding: 0 4px;">3–30 символов: буквы, цифры, точка, подчёркивание. Аватар у всех пока один — свой можно будет поставить позже.</span>
+      </label>
+    </sc-if>
+  </main>
+
+  <!-- Основная кнопка внизу, над клавиатурой -->
+  <div style="padding: 8px 24px 34px; flex: none;">
+    <a href="{{nextHref}}" onClick="{{next}}" style="height: 54px; border-radius: 27px; background: {{nextBg}}; color: #FFFFFF; text-decoration: none; font-size: 16px; font-weight: 800; display: flex; align-items: center; justify-content: center; box-shadow: {{nextShadow}};">{{nextLabel}}</a>
+    <sc-if value="{{isEmail}}" hint-placeholder-val="{{true}}">
+      <p style="margin: 12px 0 0; font-size: 12px; line-height: 1.45; color: {{c.muted}}; text-align: center;">Продолжая, вы принимаете условия и политику конфиденциальности (появятся на этапе 9).</p>
+    </sc-if>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"dark":{"editor":"boolean","default":false},"step":{"editor":"enum","options":["email","code","register"],"default":"email"},"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { email: props.step === 'email' || !props.step ? '' : 'anna@example.com', robot: false, code: props.step === 'code' ? '4821' : '', codeFocus: props.step === 'code', wait: 42, displayName: '', username: '' };
+  }
+  renderVals() {
+    var self = this;
+    var dark = !!this.props.dark;
+    var light = {
+      bg: '#F6F5F2', surface: '#FFFFFF', chip: '#ECEAE5', ink: '#1B1B1F', muted: '#5E5D66', line: '#E4E2DD', lineStrong: '#B9B6AF',
+      accent: '#D9532F', accentGlow: 'rgba(217,83,47,0.35)', accentSoft: '#FBE4DC', accentInk: '#9A3415', disabled: '#C9C6C0',
+      danger: '#C0352B', dangerSoft: '#FBE3E0',
+      shadow: '0 4px 14px rgba(27,27,31,0.07)', barShadow: '0 10px 30px rgba(27,27,31,0.14)',
+      tabOnBg: '#1B1B1F', tabOnFg: '#FFFFFF', segOn: '#FFFFFF', segShadow: '0 1px 4px rgba(27,27,31,0.12)', scrim: 'rgba(27,27,31,0.32)'
+    };
+    var night = {
+      bg: '#121214', surface: '#1E1E22', chip: '#2C2C31', ink: '#F2F1EE', muted: '#A9A8B0', line: '#2E2E34', lineStrong: '#55555D',
+      accent: '#F0673F', accentGlow: 'rgba(240,103,63,0.30)', accentSoft: '#3A2219', accentInk: '#FFB59C', disabled: '#45454C',
+      danger: '#FF8A7A', dangerSoft: '#3A1F1C',
+      shadow: 'none', barShadow: '0 10px 30px rgba(0,0,0,0.5)',
+      tabOnBg: '#F2F1EE', tabOnFg: '#121214', segOn: '#45454C', segShadow: 'none', scrim: 'rgba(0,0,0,0.55)'
+    };
+    var c = dark ? night : light;
+    var st = this.state;
+    var step = this.props.step || 'email';
+    var cells = [];
+    for (var i = 0; i < 6; i++) {
+      var cur = st.codeFocus && i === Math.min(st.code.length, 5);
+      cells.push({ v: st.code.charAt(i) || '', border: cur ? '2px solid ' + c.ink : '1px solid ' + c.line });
+    }
+    var ready = step === 'email' ? /.+@.+\..+/.test(st.email) && st.robot
+      : step === 'code' ? st.code.length === 6
+      : st.displayName.trim().length > 0 && /^[a-z0-9._]{3,30}$/i.test(st.username);
+    var texts = {
+      email: ['Добро пожаловать в Podgon', 'Введите email — пришлём одноразовый код для входа. Пароль не нужен.', 'Продолжить', 'AuthCode.dc.html'],
+      code: ['Введите код', 'Мы отправили 6-значный код на ' + st.email + '. Он действует 10 минут.', 'Войти', 'AuthRegister.dc.html'],
+      register: ['Создайте профиль', 'Так вас увидят участники ваших групп.', 'Создать аккаунт', 'MainNewUser.dc.html']
+    }[step];
+    return {
+      c: c, isEmail: step === 'email', isCode: step === 'code', isRegister: step === 'register',
+      hasBack: step !== 'email', backHref: step === 'code' ? 'Auth.dc.html' : 'AuthCode.dc.html',
+      topPad: step === 'email' ? 48 : 8, align: step === 'email' || step === 'register' ? 'center' : 'left',
+      title: texts[0], hint: texts[1], nextLabel: texts[2], nextHref: ready ? texts[3] : '#',
+      nextBg: ready ? c.accent : c.disabled, nextShadow: ready ? '0 8px 20px ' + c.accentGlow : 'none',
+      next: function (e) { if (!ready) e.preventDefault(); },
+      email: st.email, onEmail: function (e) { self.setState({ email: e.target.value.trim() }); },
+      robotAria: st.robot ? 'true' : 'false', robotBg: st.robot ? c.accent : 'transparent', robotBorder: st.robot ? c.accent : c.lineStrong,
+      toggleRobot: function () { self.setState({ robot: !self.state.robot }); },
+      cells: cells, code: st.code,
+      onCode: function (e) { self.setState({ code: e.target.value.replace(/\D/g, '').slice(0, 6) }); },
+      onCodeFocus: function () { self.setState({ codeFocus: true }); },
+      onCodeBlur: function () { self.setState({ codeFocus: false }); },
+      resendText: st.wait ? 'Отправить снова через ' + st.wait + ' с' : 'Отправить код снова',
+      resendColor: st.wait ? c.muted : c.accent,
+      resend: function () { if (!self.state.wait) self.setState({ wait: 60 }); },
+      displayName: st.displayName, username: st.username,
+      onName: function (e) { self.setState({ displayName: e.target.value }); },
+      onUsername: function (e) { self.setState({ username: e.target.value.trim() }); }
+    };
+  }
+}
+</script>
+</body>
+</html>

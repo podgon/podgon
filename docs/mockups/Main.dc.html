@@ -1,0 +1,618 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<title>Podgon — главный экран</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#D9532F}a:hover{color:#B8401F}
+.pg-scroll::-webkit-scrollbar{display:none}
+.pg-input:focus{outline:none}
+.pg-tabs{cursor:grab}
+.pg-tabs:active{cursor:grabbing}
+@keyframes pgspin{to{transform:rotate(360deg)}}
+@keyframes pgpulse{0%,100%{opacity:1}50%{opacity:.45}}
+.pg-spin{animation:pgspin .9s linear infinite}
+.pg-skel{animation:pgpulse 1.3s ease-in-out infinite}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; position: relative; overflow: hidden; display: flex; flex-direction: column; background: {{c.bg}}; color: {{c.ink}}; font-family: 'Manrope', system-ui, sans-serif;">
+
+  <!-- 1. Верхняя строка: логотип; колокольчик и профиль -->
+  <header style="display: flex; align-items: center; justify-content: space-between; padding: 18px 12px 6px 20px; flex: none;">
+    <div style="display: flex; align-items: center; gap: 10px;">
+      <svg width="34" height="34" viewBox="0 0 34 34" aria-hidden="true">
+        <rect x="1" y="1" width="32" height="32" rx="11" fill="{{c.accent}}"></rect>
+        <path d="M12 25V10h6.2a4.8 4.8 0 0 1 0 9.6H12" fill="none" stroke="#FFFFFF" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"></path>
+        <circle cx="23.5" cy="24.5" r="1.9" fill="#FFFFFF"></circle>
+      </svg>
+      <span style="font-size: 21px; font-weight: 800; letter-spacing: -0.4px;">Podgon</span>
+    </div>
+    <div style="display: flex; align-items: center; gap: 4px;">
+      <button type="button" aria-label="Уведомления" title="Уведомления" style="width: 44px; height: 44px; border: none; border-radius: 22px; background: transparent; color: {{c.ink}}; display: flex; align-items: center; justify-content: center; cursor: pointer;">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 16.5V11a6 6 0 0 1 12 0v5.5l1.5 2h-15z"></path><path d="M10 21h4"></path></svg>
+      </button>
+      <a href="Profile.dc.html" aria-label="Профиль" title="Профиль" style="width: 52px; height: 52px; border-radius: 26px; display: flex; align-items: center; justify-content: center;">
+        <svg width="44" height="44" viewBox="0 0 48 48" aria-hidden="true"><circle cx="24" cy="24" r="24" fill="{{c.chip}}"></circle><circle cx="24" cy="19" r="7" fill="none" stroke="{{c.muted}}" stroke-width="2.4"></circle><path d="M11.5 38a13.5 13.5 0 0 1 25 0" fill="none" stroke="{{c.muted}}" stroke-width="2.4" stroke-linecap="round"></path></svg>
+      </a>
+    </div>
+  </header>
+
+  <!-- 2. Поиск и фильтр -->
+  <div style="display: flex; align-items: center; gap: 10px; padding: 6px 16px; flex: none;">
+    <label style="flex: 1; min-width: 0; height: 44px; border-radius: 22px; background: {{c.surface}}; box-shadow: {{c.shadow}}; border: 1px solid {{c.line}}; display: flex; align-items: center; gap: 10px; padding: 0 16px; box-sizing: border-box; cursor: text;">
+      <sc-if value="{{showLoupe}}" hint-placeholder-val="{{true}}">
+        <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="{{c.ink}}" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"></circle><path d="M15.5 15.5 20 20"></path></svg>
+      </sc-if>
+      <input class="pg-input" type="search" aria-label="Поиск" value="{{query}}" onChange="{{onQuery}}" onFocus="{{onFocus}}" onBlur="{{onBlur}}" style="flex: 1; min-width: 0; border: none; background: transparent; font-family: inherit; font-size: 16px; color: {{c.ink}}; padding: 0;">
+    </label>
+    <a href="Filters.dc.html" aria-label="{{filtersLabel}}" title="Фильтры" style="position: relative; width: 44px; height: 44px; flex: none; border-radius: 22px; border: 1px solid {{c.line}}; background: {{c.surface}}; box-shadow: {{c.shadow}}; color: {{c.ink}}; display: flex; align-items: center; justify-content: center; cursor: pointer; padding: 0; box-sizing: border-box;">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><circle cx="12" cy="12" r="9.5"></circle><circle cx="9" cy="9" r="1.5" fill="currentColor" stroke="none"></circle><circle cx="15" cy="9" r="1.5" fill="currentColor" stroke="none"></circle><circle cx="9" cy="15" r="1.5" fill="currentColor" stroke="none"></circle><circle cx="15" cy="15" r="1.5" fill="currentColor" stroke="none"></circle></svg>
+      <sc-if value="{{hasActive}}" hint-placeholder-val="{{true}}">
+        <span style="position: absolute; top: -4px; right: -4px; min-width: 18px; height: 18px; border-radius: 9px; background: {{c.accent}}; color: #FFFFFF; font-size: 11px; font-weight: 700; display: flex; align-items: center; justify-content: center; border: 2px solid {{c.bg}};">{{activeCount}}</span>
+      </sc-if>
+    </a>
+  </div>
+
+  <!-- И10: активные фильтры чипами — снимаются по одному без открытия панели -->
+  <sc-if value="{{hasActive}}" hint-placeholder-val="{{true}}">
+    <div class="pg-scroll" style="display: flex; gap: 5px; padding: 2px 16px 4px; overflow-x: auto; scrollbar-width: none; flex: none;">
+      <sc-for list="{{activeChips}}" as="a" hint-placeholder-count="3">
+        <span style="flex: none; height: 28px; padding: 0 2px 0 11px; border-radius: 14px; background: {{c.chip}}; color: {{c.ink}}; font-size: 13px; font-weight: 700; display: flex; align-items: center; gap: 1px; white-space: nowrap;">{{a.label}}
+          <button type="button" aria-label="{{a.removeLabel}}" title="Убрать" onClick="{{a.remove}}" style="width: 24px; height: 24px; border: none; border-radius: 12px; background: transparent; color: {{c.muted}}; display: flex; align-items: center; justify-content: center; cursor: pointer; padding: 0;">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" aria-hidden="true"><path d="M7 7l10 10M17 7 7 17"></path></svg>
+          </button>
+        </span>
+      </sc-for>
+    </div>
+  </sc-if>
+
+  <!-- И9: подсказки при фокусе в пустом поиске — недавние запросы и популярные теги вкладки -->
+  <sc-if value="{{showSuggest}}" hint-placeholder-val="{{false}}">
+    <div onMouseDown="{{keepFocus}}" style="position: absolute; z-index: 6; left: 16px; right: 16px; top: 130px; border-radius: 22px; background: {{c.surface}}; border: 1px solid {{c.line}}; box-shadow: {{c.barShadow}}; padding: 10px 6px 12px; box-sizing: border-box;">
+      <div style="padding: 0 10px 4px; font-size: 12px; font-weight: 800; color: {{c.muted}};">Недавние</div>
+      <sc-for list="{{recent}}" as="h" hint-placeholder-count="3">
+        <div style="display: flex; align-items: center; gap: 6px;">
+          <button type="button" onClick="{{h.pick}}" style="flex: 1; min-width: 0; height: 40px; border: none; border-radius: 14px; background: transparent; color: {{c.ink}}; font-family: inherit; font-size: 15px; font-weight: 600; display: flex; align-items: center; gap: 10px; padding: 0 10px; cursor: pointer; text-align: left;">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="{{c.muted}}" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="8.5"></circle><path d="M12 7.5V12l3 2"></path></svg>
+            <span style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{h.text}}</span>
+          </button>
+          <button type="button" aria-label="{{h.removeLabel}}" title="Удалить из истории" onClick="{{h.remove}}" style="width: 36px; height: 36px; flex: none; border: none; border-radius: 18px; background: transparent; color: {{c.muted}}; display: flex; align-items: center; justify-content: center; cursor: pointer; padding: 0;">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M7 7l10 10M17 7 7 17"></path></svg>
+          </button>
+        </div>
+      </sc-for>
+      <div style="padding: 10px 10px 6px; font-size: 12px; font-weight: 800; color: {{c.muted}};">{{tagsTitle}}</div>
+      <div style="display: flex; flex-wrap: wrap; gap: 5px; padding: 0 8px;">
+        <sc-for list="{{popularTags}}" as="t" hint-placeholder-count="6">
+          <button type="button" onClick="{{t.pick}}" style="height: 30px; padding: 0 11px; border: none; border-radius: 15px; background: {{c.chip}}; color: {{c.ink}}; font-family: inherit; font-size: 13px; font-weight: 700; cursor: pointer;">{{t.label}}</button>
+        </sc-for>
+      </div>
+    </div>
+  </sc-if>
+
+  <!-- 3. Вкладки групп / заголовок раздела. Вкладки листаются свайпом, колесом и перетаскиванием -->
+  <sc-if value="{{showHeading}}" hint-placeholder-val="{{false}}">
+    <h1 style="margin: 0; padding: 8px 20px 10px; font-size: 22px; font-weight: 800; letter-spacing: -0.3px; flex: none;">{{heading}}</h1>
+  </sc-if>
+  <sc-if value="{{showTabs}}" hint-placeholder-val="{{true}}">
+    <div style="padding: 4px 16px 8px; flex: none;">
+      <div style="position: relative; border-radius: 20px; background: {{c.surface}}; border: 1px solid {{c.line}}; box-shadow: {{c.shadow}}; overflow: hidden;">
+        <nav aria-label="Группы" class="pg-scroll pg-tabs" onWheel="{{onTabsWheel}}" onScroll="{{onTabsScroll}}" onPointerDown="{{onDragStart}}" onPointerMove="{{onDragMove}}" onPointerUp="{{onDragEnd}}" onPointerLeave="{{onDragEnd}}" style="padding: 4px; display: flex; gap: 2px; overflow-x: auto; scrollbar-width: none; user-select: none; touch-action: pan-x;">
+          <sc-for list="{{tabs}}" as="t" hint-placeholder-count="6">
+            <button type="button" aria-pressed="{{t.pressed}}" onClick="{{t.pick}}" onPointerDown="{{t.pressStart}}" onPointerUp="{{pressEnd}}" onPointerLeave="{{pressEnd}}" onContextMenu="{{t.openMenu}}" style="-webkit-touch-callout: none; flex: none; min-width: 56px; height: 32px; padding: 0 14px; border: none; border-radius: 16px; background: {{t.bg}}; color: {{t.fg}}; font-family: inherit; font-size: 14px; font-weight: {{t.weight}}; display: flex; align-items: center; justify-content: center; cursor: pointer; white-space: nowrap;">{{t.label}}</button>
+          </sc-for>
+        </nav>
+        <sc-if value="{{fadeLeft}}" hint-placeholder-val="{{false}}">
+          <span aria-hidden="true" style="position: absolute; left: 0; top: 0; bottom: 0; width: 32px; background: linear-gradient(to right, {{c.surface}}, {{c.surfaceClear}}); pointer-events: none;"></span>
+        </sc-if>
+        <sc-if value="{{fadeRight}}" hint-placeholder-val="{{true}}">
+          <span aria-hidden="true" style="position: absolute; right: 0; top: 0; bottom: 0; width: 40px; background: linear-gradient(to left, {{c.surface}}, {{c.surfaceClear}}); pointer-events: none;"></span>
+        </sc-if>
+      </div>
+    </div>
+  </sc-if>
+
+  <!-- 5. Лента: сверху закреплённые секции (сохранённые фильтры и категории) в порядке пользователя,
+       ниже — остальные корневые категории, сначала обновлённые. Долгое нажатие на заголовок — меню секции -->
+  <!-- И13: «потянуть вниз» — обновление (в макете — перетащить ленту мышью вниз) -->
+  <div aria-hidden="{{pullHidden}}" style="height: {{pullH}}px; flex: none; overflow: hidden; display: flex; align-items: center; justify-content: center; transition: {{pullTransition}};">
+    <span style="width: 34px; height: 34px; border-radius: 17px; background: {{c.surface}}; border: 1px solid {{c.line}}; box-shadow: {{c.shadow}}; display: flex; align-items: center; justify-content: center; color: {{c.accent}};">
+      <svg class="{{spinClass}}" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true" style="transform: rotate({{pullAngle}}deg);"><path d="M20 12a8 8 0 1 1-2.3-5.7"></path><path d="M20 4v4.5h-4.5"></path></svg>
+    </span>
+  </div>
+  <main class="pg-scroll" onPointerDown="{{feedDown}}" onPointerMove="{{feedMove}}" onPointerUp="{{feedUp}}" onPointerCancel="{{feedUp}}" style="flex: 1; min-height: 0; overflow-y: auto; scrollbar-width: none; padding: 0 0 112px; user-select: none;">
+    <!-- И13: скелетоны при первой загрузке -->
+    <sc-if value="{{loading}}" hint-placeholder-val="{{false}}">
+      <sc-for list="{{skeleton}}" as="k" hint-placeholder-count="3">
+        <div class="pg-skel" aria-hidden="true">
+          <div style="height: 30px; border-bottom: 1px solid {{c.line}}; display: flex; align-items: center; gap: 8px; padding: 0 20px;">
+            <span style="width: {{k.w}}px; height: 10px; border-radius: 5px; background: {{c.chip}};"></span>
+            <span style="width: 22px; height: 14px; border-radius: 7px; background: {{c.chip}};"></span>
+          </div>
+          <sc-for list="{{k.rows}}" as="r" hint-placeholder-count="3">
+            <div style="height: 64px; border-bottom: 1px solid {{c.line}}; display: flex; align-items: center; gap: 12px; padding: 0 20px;">
+              <span style="flex: 1; display: flex; flex-direction: column; gap: 9px;">
+                <span style="width: {{r.w1}}%; height: 12px; border-radius: 6px; background: {{c.chip}};"></span>
+                <span style="width: {{r.w2}}%; height: 9px; border-radius: 5px; background: {{c.chip}};"></span>
+              </span>
+              <span style="width: 22px; height: 20px; border-radius: 10px; background: {{c.chip}};"></span>
+            </div>
+          </sc-for>
+        </div>
+      </sc-for>
+    </sc-if>
+    <sc-if value="{{isEmpty}}" hint-placeholder-val="{{false}}">
+      <div style="padding: {{emptyTop}}px 36px 0; display: flex; flex-direction: column; align-items: center; gap: 12px; text-align: center;">
+        <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="{{c.muted}}" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="4" width="16" height="16" rx="5"></rect><path d="M9 12h6M12 9v6"></path></svg>
+        <p style="margin: 0; font-size: 16px; font-weight: 700;">{{emptyTitle}}</p>
+        <p style="margin: 0; font-size: 14px; line-height: 1.45; color: {{c.muted}};">{{emptyText}}</p>
+        <div style="display: flex; flex-direction: column; align-items: stretch; gap: 8px; margin-top: 6px; width: 100%; max-width: 260px;">
+          <sc-for list="{{emptyActions}}" as="e" hint-placeholder-count="2">
+            <a href="{{e.href}}" onClick="{{e.act}}" style="height: 46px; border-radius: 23px; background: {{e.bg}}; color: {{e.fg}}; border: 1px solid {{e.border}}; text-decoration: none; font-size: 15px; font-weight: 700; display: flex; align-items: center; justify-content: center; box-sizing: border-box;">{{e.label}}</a>
+          </sc-for>
+        </div>
+      </div>
+    </sc-if>
+    <sc-for list="{{sections}}" as="s" hint-placeholder-count="3">
+      <section aria-label="{{s.name}}">
+        <sc-if value="{{s.showHeader}}" hint-placeholder-val="{{true}}">
+          <button type="button" aria-expanded="{{s.expanded}}" onClick="{{s.toggle}}" onPointerDown="{{s.pressStart}}" onPointerUp="{{pressEnd}}" onPointerLeave="{{pressEnd}}" onContextMenu="{{s.openMenu}}" style="position: sticky; top: 0; z-index: 1; width: 100%; height: 30px; border: none; border-bottom: 1px solid {{c.line}}; background: {{c.bg}}; color: {{c.ink}}; font-family: inherit; display: flex; align-items: center; gap: 6px; padding: 0 18px 0 20px; cursor: pointer; text-align: left; user-select: none; -webkit-touch-callout: none;">
+            <sc-if value="{{s.isFilter}}" hint-placeholder-val="{{false}}">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="{{c.accent}}" stroke="{{c.accent}}" stroke-width="2" stroke-linejoin="round" aria-label="Сохранённый фильтр"><path d="M6.5 4h11v16.5L12 16.8l-5.5 3.7z"></path></svg>
+            </sc-if>
+            <sc-if value="{{s.isPinnedCat}}" hint-placeholder-val="{{false}}">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="{{c.accent}}" stroke="{{c.accent}}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-label="Закреплена"><path d="M9 3.5h6l-1 6 3.5 3.5h-11L10 9.5z"></path><path d="M12 13v7.5"></path></svg>
+            </sc-if>
+            <span style="font-size: 13px; font-weight: 800; letter-spacing: 0.2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{s.name}}</span>
+            <span style="height: 18px; min-width: 18px; padding: 0 6px; border-radius: 9px; background: {{c.chip}}; color: {{c.muted}}; font-size: 11px; font-weight: 700; display: flex; align-items: center; justify-content: center; box-sizing: border-box; font-variant-numeric: tabular-nums;">{{s.total}}</span>
+            <span style="flex: 1;"></span>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="{{c.muted}}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="transform: {{s.chevron}}; transition: transform 160ms;"><path d="m6 9 6 6 6-6"></path></svg>
+          </button>
+        </sc-if>
+        <sc-if value="{{s.open}}" hint-placeholder-val="{{true}}">
+          <sc-for list="{{s.rows}}" as="r" hint-placeholder-count="3">
+            <div style="display: flex; align-items: stretch; gap: 4px; padding: 0 8px 0 4px; border-bottom: 1px solid {{c.line}};">
+              <a href="Review.dc.html" onClick="{{guardClick}}" draggable="false" style="flex: 1; min-width: 0; color: {{c.ink}}; text-decoration: none; padding: 12px 4px 12px 16px; display: flex; flex-direction: column; gap: 5px;">
+                <span style="display: block; font-size: 15px; font-weight: 700; line-height: 1.3; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; width: 100%;">{{r.title}}</span>
+                <span style="display: flex; align-items: center; gap: 6px; font-size: 13px; line-height: 1.3; color: {{c.muted}}; white-space: nowrap; width: 100%; min-width: 0;">
+                  <span style="display: flex; align-items: center; gap: 3px; flex: none; color: {{c.ink}}; font-weight: 700;">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="{{c.accent}}" aria-hidden="true"><path d="M12 3.2l2.6 5.6 6.1.7-4.5 4.2 1.2 6-5.4-3-5.4 3 1.2-6-4.5-4.2 6.1-.7z"></path></svg>{{r.rating}}<span style="font-weight: 500; color: {{c.muted}};">/10</span>
+                  </span>
+                  <sc-if value="{{r.hasCategory}}" hint-placeholder-val="{{true}}">
+                    <span aria-hidden="true" style="flex: none;">·</span>
+                    <span style="flex: none;">{{r.category}}</span>
+                  </sc-if>
+                  <sc-if value="{{r.hasAuthor}}" hint-placeholder-val="{{true}}">
+                    <span aria-hidden="true" style="flex: none;">·</span>
+                    <span style="min-width: 0; overflow: hidden; text-overflow: ellipsis;">{{r.author}}</span>
+                  </sc-if>
+                </span>
+              </a>
+              <div style="flex: none; width: 56px; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; padding: 4px 0 10px;">
+                <button type="button" aria-label="{{r.favLabel}}" title="{{r.favLabel}}" style="width: 48px; height: 44px; border: none; background: transparent; color: {{r.heartColor}}; display: flex; align-items: center; justify-content: center; cursor: pointer;">
+                  <svg width="27" height="27" viewBox="0 0 24 24" fill="{{r.heartFill}}" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round" aria-hidden="true"><path d="M12 20s-7.5-4.6-7.5-10.2A4.3 4.3 0 0 1 12 7.2a4.3 4.3 0 0 1 7.5 2.6C19.5 15.4 12 20 12 20z"></path></svg>
+                </button>
+                <span style="font-size: 12px; color: {{c.muted}}; white-space: nowrap; font-variant-numeric: tabular-nums;">{{r.when}}</span>
+              </div>
+            </div>
+          </sc-for>
+        </sc-if>
+      </section>
+    </sc-for>
+  </main>
+
+  <!-- Меню секции (долгое нажатие на заголовок; в макете — также правая кнопка мыши) -->
+  <sc-if value="{{menuOpen}}" hint-placeholder-val="{{false}}">
+    <div onClick="{{closeMenu}}" style="position: absolute; inset: 0; z-index: 8; background: {{c.scrim}};"></div>
+    <div role="menu" aria-label="{{menuTitle}}" style="position: absolute; z-index: 9; left: 8px; right: 8px; bottom: 8px; border-radius: 28px; background: {{c.surface}}; box-shadow: {{c.barShadow}}; padding: 8px 8px 12px; box-sizing: border-box;">
+      <div style="width: 36px; height: 4px; border-radius: 2px; background: {{c.line}}; margin: 2px auto 10px;"></div>
+      <div style="padding: 0 14px 10px; display: flex; flex-direction: column; gap: 2px;">
+        <span style="font-size: 16px; font-weight: 800;">{{menuTitle}}</span>
+        <span style="font-size: 13px; color: {{c.muted}};">{{menuSub}}</span>
+      </div>
+      <sc-for list="{{menuItems}}" as="m" hint-placeholder-count="3">
+        <a href="{{m.href}}" role="menuitem" onClick="{{m.act}}" style="min-height: 50px; border-radius: 16px; color: {{c.ink}}; text-decoration: none; font-size: 15px; font-weight: 600; display: flex; align-items: center; gap: 14px; padding: 0 14px; cursor: pointer;">
+          <span style="width: 22px; display: flex; justify-content: center; color: {{c.muted}};">
+            <sc-if value="{{m.isPin}}" hint-placeholder-val="{{true}}"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 3.5h6l-1 6 3.5 3.5h-11L10 9.5z"></path><path d="M12 13v7.5"></path></svg></sc-if>
+            <sc-if value="{{m.isFold}}" hint-placeholder-val="{{false}}"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m7 4 5 5 5-5M7 20l5-5 5 5"></path></svg></sc-if>
+            <sc-if value="{{m.isEdit}}" hint-placeholder-val="{{false}}"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16z"></path></svg></sc-if>
+            <sc-if value="{{m.isOrder}}" hint-placeholder-val="{{false}}"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6h11M9 12h11M9 18h11"></path><path d="M4 5l1.5 1.5L4 8M4 11l1.5 1.5L4 14M4 17l1.5 1.5L4 20"></path></svg></sc-if>
+          </span>
+          {{m.label}}
+        </a>
+      </sc-for>
+    </div>
+  </sc-if>
+
+  <!-- И7: меню группы — долгое нажатие на вкладку (в макете — также правая кнопка мыши) -->
+  <sc-if value="{{tabMenuOpen}}" hint-placeholder-val="{{false}}">
+    <div onClick="{{closeTabMenu}}" style="position: absolute; inset: 0; z-index: 8; background: {{c.scrim}};"></div>
+    <div role="menu" aria-label="{{tabMenuTitle}}" style="position: absolute; z-index: 9; left: 8px; right: 8px; bottom: 8px; border-radius: 28px; background: {{c.surface}}; box-shadow: {{c.barShadow}}; padding: 8px 8px 12px; box-sizing: border-box;">
+      <div style="width: 36px; height: 4px; border-radius: 2px; background: {{c.line}}; margin: 2px auto 10px;"></div>
+      <div style="display: flex; align-items: center; gap: 12px; padding: 0 14px 10px;">
+        <span style="width: 38px; height: 38px; flex: none; border-radius: 13px; background: {{c.chip}}; display: flex; align-items: center; justify-content: center; font-size: 15px; font-weight: 800;">{{tabMenuLetter}}</span>
+        <span style="display: flex; flex-direction: column; gap: 2px;">
+          <span style="font-size: 16px; font-weight: 800;">{{tabMenuTitle}}</span>
+          <span style="font-size: 13px; color: {{c.muted}};">{{tabMenuSub}}</span>
+        </span>
+      </div>
+      <a href="Group.dc.html" role="menuitem" style="min-height: 50px; border-radius: 16px; color: {{c.ink}}; text-decoration: none; font-size: 15px; font-weight: 600; display: flex; align-items: center; gap: 14px; padding: 0 14px;">
+        <span style="width: 22px; display: flex; justify-content: center; color: {{c.muted}};"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="9" r="3.2"></circle><path d="M3.5 19a5.5 5.5 0 0 1 11 0"></path><circle cx="16.5" cy="8" r="2.6"></circle><path d="M15.5 13.6A4.6 4.6 0 0 1 21 18"></path></svg></span>
+        Страница группы
+      </a>
+      <sc-if value="{{tabMenuAdmin}}" hint-placeholder-val="{{true}}">
+        <a href="GroupInvite.dc.html" role="menuitem" style="min-height: 50px; border-radius: 16px; color: {{c.ink}}; text-decoration: none; font-size: 15px; font-weight: 600; display: flex; align-items: center; gap: 14px; padding: 0 14px;">
+          <span style="width: 22px; display: flex; justify-content: center; color: {{c.muted}};"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="9" r="3.2"></circle><path d="M3.5 19a5.5 5.5 0 0 1 9-4.2"></path><path d="M18 13v7M14.5 16.5h7"></path></svg></span>
+          Пригласить
+        </a>
+      </sc-if>
+    </div>
+  </sc-if>
+
+  <!-- Нижнее меню: Лента · Избранное · + · Личное · Настройки -->
+  <nav aria-label="Основное меню" style="position: absolute; z-index: 5; left: 16px; right: 16px; bottom: 22px; height: 68px; border-radius: 34px; background: {{c.surface}}; border: 1px solid {{c.line}}; box-shadow: {{c.barShadow}}; display: flex; align-items: center; justify-content: space-between; padding: 0 6px; box-sizing: border-box;">
+    <sc-for list="{{navLeft}}" as="n" hint-placeholder-count="2">
+      <button type="button" aria-current="{{n.current}}" onClick="{{n.pick}}" style="width: 68px; height: 54px; border: none; border-radius: 27px; background: {{n.bg}}; color: {{n.fg}}; font-family: inherit; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; cursor: pointer; padding: 0;">
+        <sc-if value="{{n.isFeed}}" hint-placeholder-val="{{true}}"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="4" width="16" height="7" rx="3"></rect><path d="M4 15.5h16M4 19.5h10"></path></svg></sc-if>
+        <sc-if value="{{n.isFav}}" hint-placeholder-val="{{false}}"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><path d="M12 20s-7.5-4.6-7.5-10.2A4.3 4.3 0 0 1 12 7.2a4.3 4.3 0 0 1 7.5 2.6C19.5 15.4 12 20 12 20z"></path></svg></sc-if>
+        <span style="font-size: 11px; font-weight: {{n.weight}};">{{n.label}}</span>
+      </button>
+    </sc-for>
+    <a href="ReviewForm.dc.html" aria-label="Новая рекомендация" title="Новая рекомендация" style="width: 54px; height: 54px; flex: none; border-radius: 27px; background: {{c.accent}}; color: #FFFFFF; display: flex; align-items: center; justify-content: center; cursor: pointer; box-shadow: 0 6px 16px {{c.accentGlow}};">
+      <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"></path></svg>
+    </a>
+    <sc-for list="{{navRight}}" as="n" hint-placeholder-count="1">
+      <button type="button" aria-current="{{n.current}}" onClick="{{n.pick}}" style="width: 68px; height: 54px; border: none; border-radius: 27px; background: {{n.bg}}; color: {{n.fg}}; font-family: inherit; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; cursor: pointer; padding: 0;">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="8" cy="15" r="4.5"></circle><path d="M11.2 11.8 20 3M16.5 6.5l2.5 2.5M14 9l2 2"></path></svg>
+        <span style="font-size: 11px; font-weight: {{n.weight}};">{{n.label}}</span>
+      </button>
+    </sc-for>
+    <a href="Settings.dc.html" style="width: 68px; height: 54px; border-radius: 27px; color: {{c.muted}}; text-decoration: none; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px;">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12.2 2.5h-.4a1.8 1.8 0 0 0-1.8 1.8v.2a1.8 1.8 0 0 1-.9 1.5l-.4.2a1.8 1.8 0 0 1-1.8 0l-.1-.1a1.8 1.8 0 0 0-2.5.7l-.2.3a1.8 1.8 0 0 0 .7 2.5l.1.1a1.8 1.8 0 0 1 .9 1.5v.5a1.8 1.8 0 0 1-.9 1.6l-.1.1a1.8 1.8 0 0 0-.7 2.5l.2.3a1.8 1.8 0 0 0 2.5.7l.1-.1a1.8 1.8 0 0 1 1.8 0l.4.2a1.8 1.8 0 0 1 .9 1.5v.2a1.8 1.8 0 0 0 1.8 1.8h.4a1.8 1.8 0 0 0 1.8-1.8v-.2a1.8 1.8 0 0 1 .9-1.5l.4-.2a1.8 1.8 0 0 1 1.8 0l.1.1a1.8 1.8 0 0 0 2.5-.7l.2-.3a1.8 1.8 0 0 0-.7-2.5l-.1-.1a1.8 1.8 0 0 1-.9-1.6v-.4a1.8 1.8 0 0 1 .9-1.6l.1-.1a1.8 1.8 0 0 0 .7-2.5l-.2-.3a1.8 1.8 0 0 0-2.5-.7l-.1.1a1.8 1.8 0 0 1-1.8 0l-.4-.2a1.8 1.8 0 0 1-.9-1.5v-.2a1.8 1.8 0 0 0-1.8-1.8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+      <span style="font-size: 11px; font-weight: 600;">Настройки</span>
+    </a>
+  </nav>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"dark":{"editor":"boolean","default":false},"screen":{"editor":"enum","options":["feed","search","loading","empty","newUser"],"default":"feed"},"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    // pinned — закреплённые секции в порядке пользователя (на сервере вместе с сохранёнными фильтрами)
+    var screen = props.screen || 'feed';
+    this.state = {
+      tab: screen === 'empty' ? 'family' : 'all', focused: screen === 'search', section: 'feed', query: '', collapsed: {},
+      fadeLeft: false, fadeRight: true, pinned: ['f:coffee', 'c:Книги'], menuFor: null, tabMenu: null,
+      // активные фильтры панели (И10)
+      active: screen === 'feed' || screen === 'search' ? ['Кофейни', '#кофе'] : [],
+      recent: ['флэт уайт', 'стоматология', 'дюна'],
+      loading: screen === 'loading', pull: 0, refreshing: false
+    };
+    this.drag = null;
+    this.press = null;
+  }
+  renderVals() {
+    var dark = !!this.props.dark;
+    var section = this.state.section;
+    var light = {
+      bg: '#F6F5F2', surface: '#FFFFFF', surfaceClear: 'rgba(255,255,255,0)', chip: '#ECEAE5', ink: '#1B1B1F', muted: '#5E5D66', line: '#E4E2DD',
+      accent: '#D9532F', accentGlow: 'rgba(217,83,47,0.35)', accentInk: '#9A3415',
+      shadow: '0 4px 14px rgba(27,27,31,0.07)', barShadow: '0 10px 30px rgba(27,27,31,0.14)',
+      tabOnBg: '#1B1B1F', tabOnFg: '#FFFFFF', scrim: 'rgba(27,27,31,0.32)'
+    };
+    var night = {
+      bg: '#121214', surface: '#1E1E22', surfaceClear: 'rgba(30,30,34,0)', chip: '#2C2C31', ink: '#F2F1EE', muted: '#A9A8B0', line: '#2E2E34',
+      accent: '#F0673F', accentGlow: 'rgba(240,103,63,0.30)', accentInk: '#FFB59C',
+      shadow: 'none', barShadow: '0 10px 30px rgba(0,0,0,0.5)',
+      tabOnBg: '#F2F1EE', tabOnFg: '#121214', scrim: 'rgba(0,0,0,0.55)'
+    };
+    var c = dark ? night : light;
+    var self = this;
+    var tabDefs = [
+      { id: 'all', label: 'Все' },
+      { id: 'friends', label: 'Друзья' },
+      { id: 'work', label: 'Работа' },
+      { id: 'family', label: 'Семья' },
+      { id: 'books', label: 'Книжный клуб' },
+      { id: 'run', label: 'Бег' },
+      { id: 'dacha', label: 'Дача' }
+    ];
+    var tabs = tabDefs.map(function (t) {
+      var on = self.state.tab === t.id;
+      return {
+        label: t.label, pressed: on ? 'true' : 'false',
+        bg: on ? c.tabOnBg : 'transparent', fg: on ? c.tabOnFg : c.muted, weight: on ? 700 : 600,
+        pick: function () { if (self.dragMoved || self.tabLong) { self.tabLong = false; return; } self.setState({ tab: t.id }); },
+        pressStart: function () {
+          clearTimeout(self.press);
+          self.tabLong = false;
+          if (t.id === 'all') return;
+          self.press = setTimeout(function () { if (self.dragMoved) return; self.tabLong = true; self.setState({ tabMenu: t }); }, 450);
+        },
+        openMenu: function (e) { e.preventDefault(); if (t.id !== 'all') self.setState({ tabMenu: t }); }
+      };
+    });
+    // Отсортировано по дате публикации, свежие сверху
+    var all = [
+      { title: 'Кофейня «Зерно» на Покровке', rating: 9, root: 'Рестораны', sub: 'Кофейни', author: 'Анна Смирнова', when: '14:05', g: 'friends', fav: true },
+      { title: 'Дюна: Часть вторая', rating: 8, root: 'Фильмы', author: 'Олег', when: '11:20', g: 'friends' },
+      { title: 'Мастер по ремонту велосипедов в Сокольниках — быстро, недорого и с гарантией', rating: 10, root: 'Услуги', sub: 'Ремонт', author: 'Ирина Ковалёва', when: '25 окт.', g: 'run', fav: true },
+      { title: 'Стоунер, Джон Уильямс', rating: 9, root: 'Книги', sub: 'Проза', author: 'Дмитрий', when: '24 окт.', g: 'books' },
+      { title: 'Бар «Ровесник»', rating: 8, root: 'Рестораны', sub: 'Бары', author: 'Максим Петров', when: '23 окт.', g: 'friends' },
+      { title: 'Грузинский ресторан «Сакартвело»', rating: 7, root: 'Рестораны', sub: 'Грузинская кухня', author: 'Анна Смирнова', when: '22 окт.', g: 'work' },
+      { title: 'Кофейня «Скуратов» на Мясницкой', rating: 10, root: 'Рестораны', sub: 'Кофейни', author: 'Олег', when: '20 окт.', g: 'work' },
+      { title: 'Сериал «Слово пацана»', rating: 6, root: 'Сериалы', author: 'Максим Петров', when: '19 окт.', g: 'friends' },
+      { title: 'Проект «Аве Мария», Энди Вейер', rating: 10, root: 'Книги', sub: 'Фантастика', author: 'Елена', when: '18 окт.', g: 'books', fav: true },
+      { title: 'Стоматология на Соколе', rating: 8, root: 'Здоровье', author: 'Елена', when: '15 окт.', g: 'work' },
+      { title: 'Калининград на выходные: маршрут на три дня', rating: 9, root: 'Путешествия', author: 'Олег', when: '3 окт.', g: 'friends' },
+      { title: 'Кроссовки для длинных пробежек', rating: 7, root: 'Спорт', author: 'Ирина Ковалёва', when: '28.09.2025', g: 'run' },
+      { title: 'Мастер и Маргарита (2024)', rating: 8, root: 'Фильмы', author: 'Дмитрий', when: '12.09.2025', g: 'books' }
+    ];
+    // Счётчики с сервера: в заголовке секции — сколько всего, записи подгружаются при прокрутке
+    var totals = { 'Рестораны': 38, 'Фильмы': 27, 'Книги': 19, 'Сериалы': 14, 'Путешествия': 12, 'Услуги': 11, 'Здоровье': 8, 'Спорт': 6 };
+    var personal = [
+      { title: 'Подарок маме на юбилей — идеи', rating: 8, root: 'Без категории', when: '09:40' },
+      { title: 'Сыроварня в Истре', rating: 9, root: 'Рестораны', sub: 'Сыроварни', when: '20 окт.' },
+      { title: 'Шахматы Fischer Random — попробовать с сыном', rating: 7, root: 'Хобби', when: '2 окт.' },
+      { title: 'Таверна у моря, Анапа', rating: 6, root: 'Рестораны', when: '29.08.2025' }
+    ];
+    var list;
+    var newUser = this.props.screen === 'newUser';
+    if (newUser) list = [];
+    else if (section === 'personal') list = personal;
+    else if (section === 'fav') list = all.filter(function (x) { return x.fav; });
+    else if (this.state.tab === 'all') list = all;
+    else { var tab = this.state.tab; list = all.filter(function (x) { return x.g === tab; }); }
+    var q = this.state.query.trim().toLowerCase();
+    function row(x, showRoot, leaf) {
+      var fav = !!x.fav;
+      // в секции категории — подкатегория; в секции-фильтре — категория (лист); в поиске — путь
+      var cat = showRoot ? x.root + (x.sub ? ' › ' + x.sub : '') : (leaf ? (x.sub || x.root) : (x.sub || ''));
+      return {
+        title: x.title, rating: x.rating, category: cat, hasCategory: !!cat,
+        author: x.author || '', hasAuthor: !!x.author, when: x.when,
+        heartFill: fav ? c.accent : 'none', heartColor: fav ? c.accent : c.muted,
+        favLabel: fav ? 'Убрать из избранного' : 'В избранное'
+      };
+    }
+    // Сохранённые фильтры, которые можно показывать секциями (пример)
+    var filters = {
+      'f:coffee': { name: 'Кофе 9–10', summary: 'Кофейни · оценка 9–10', match: function (x) { return x.sub === 'Кофейни' && x.rating >= 9; } },
+      'f:dima': { name: 'Книги от Дмитрия', summary: 'Книги · Дмитрий', match: function (x) { return x.root === 'Книги' && x.author === 'Дмитрий'; } }
+    };
+    var sections = [];
+    var st = this.state;
+    var key = section + ':' + st.tab;
+    var collapsed = st.collapsed[key] || {};
+    var defs = [];
+    if (q) {
+      // Результаты поиска не группируются: порядок по релевантности
+      var found = list.filter(function (x) { return x.title.toLowerCase().indexOf(q) >= 0; });
+      if (found.length) sections.push({ name: 'Результаты поиска', showHeader: false, open: true, expanded: 'true', rows: found.map(function (x) { return row(x, true); }), isFilter: false, isPinnedCat: false, toggle: function () {}, pressStart: function () {}, openMenu: function () {} });
+    } else {
+      // 1) закреплённые — в порядке пользователя; секция-фильтр может повторять записи других секций
+      var pinnedOrd = st.pinned.filter(function (x) { return x.charAt(0) === 'f'; }).concat(st.pinned.filter(function (x) { return x.charAt(0) !== 'f'; }));
+      pinnedOrd.forEach(function (id) {
+        if (id.charAt(0) === 'f') {
+          var f = filters[id];
+          defs.push({ id: id, name: f.name, kind: 'filter', sub: 'Сохранённый фильтр · ' + f.summary, items: list.filter(f.match) });
+        } else {
+          var name = id.slice(2);
+          defs.push({ id: id, name: name, kind: 'pinnedCat', sub: 'Категория · закреплена', items: list.filter(function (x) { return x.root === name; }) });
+        }
+      });
+      // 2) остальные корневые категории — по свежести (список уже отсортирован по дате), «Без категории» — последней
+      var order = [], byRoot = {};
+      list.forEach(function (x) {
+        if (!byRoot[x.root]) { byRoot[x.root] = []; order.push(x.root); }
+        byRoot[x.root].push(x);
+      });
+      order = order.filter(function (r) { return st.pinned.indexOf('c:' + r) < 0; });
+      order.sort(function (a2, b2) { return (a2 === 'Без категории') - (b2 === 'Без категории'); });
+      order.forEach(function (r) { defs.push({ id: 'c:' + r, name: r, kind: 'cat', sub: 'Категория · по свежести', items: byRoot[r] }); });
+      var useTotals = section === 'feed' && st.tab === 'all';
+      var totals2 = { 'f:coffee': 9 };
+      sections = defs.filter(function (d) { return d.items.length > 0; }).map(function (d) {
+        var total = useTotals ? (totals2[d.id] || totals[d.name] || d.items.length) : d.items.length;
+        var open = !collapsed[d.id];
+        return {
+          name: d.name, showHeader: true, open: open, expanded: open ? 'true' : 'false',
+          isFilter: d.kind === 'filter', isPinnedCat: d.kind === 'pinnedCat',
+          chevron: open ? 'rotate(0deg)' : 'rotate(-90deg)', total: total,
+          rows: d.items.map(function (x) { return row(x, false, d.kind === 'filter'); }),
+          toggle: function () {
+            if (self.longPressed) { self.longPressed = false; return; }
+            var all2 = Object.assign({}, self.state.collapsed);
+            var cur = Object.assign({}, all2[key] || {});
+            if (cur[d.id]) delete cur[d.id]; else cur[d.id] = true;
+            all2[key] = cur;
+            self.setState({ collapsed: all2 });
+          },
+          pressStart: function () {
+            clearTimeout(self.press);
+            self.longPressed = false;
+            self.press = setTimeout(function () { self.longPressed = true; self.setState({ menuFor: d }); }, 450);
+          },
+          openMenu: function (e) { e.preventDefault(); self.longPressed = false; self.setState({ menuFor: d }); }
+        };
+      });
+    }
+    var m = st.menuFor;
+    var menuItems = [];
+    if (m) {
+      var pinnedNow = st.pinned.indexOf(m.id) >= 0;
+      var allIds = sections.length ? defs.filter(function (d) { return d.items.length > 0; }).map(function (d) { return d.id; }) : [];
+      var anyOpen = allIds.some(function (id) { return !collapsed[id]; });
+      var close = function (patch) { self.setState(Object.assign({ menuFor: null }, patch || {})); };
+      menuItems.push({ label: pinnedNow ? 'Открепить' : 'Закрепить вверху', isPin: true, href: '#', act: function (e) {
+        e.preventDefault();
+        var p2 = self.state.pinned.slice();
+        if (pinnedNow) p2 = p2.filter(function (x) { return x !== m.id; }); else p2.push(m.id);
+        close({ pinned: p2 });
+      } });
+      menuItems.push({ label: anyOpen ? 'Свернуть все' : 'Развернуть все', isFold: true, href: '#', act: function (e) {
+        e.preventDefault();
+        var all3 = Object.assign({}, self.state.collapsed), cur3 = {};
+        if (anyOpen) allIds.forEach(function (id) { cur3[id] = true; });
+        all3[key] = cur3;
+        close({ collapsed: all3 });
+      } });
+      if (m.kind === 'filter') menuItems.push({ label: 'Изменить фильтр', isEdit: true, href: 'Filters.dc.html', act: function () {} });
+      menuItems.push({ label: 'Порядок секций', isOrder: true, href: 'Sections.dc.html', act: function () {} });
+      menuItems = menuItems.map(function (it) { return Object.assign({ isPin: false, isFold: false, isEdit: false, isOrder: false }, it); });
+    }
+    function navItem(id, label, flag) {
+      var on = section === id;
+      var it = {
+        label: label, current: on ? 'page' : 'false',
+        bg: on ? c.chip : 'transparent', fg: on ? c.ink : c.muted, weight: on ? 700 : 600,
+        pick: function () { self.setState({ section: id }); },
+        isFeed: false, isFav: false
+      };
+      it[flag] = true;
+      return it;
+    }
+    var headings = { fav: 'Избранное', personal: 'Личное' };
+    var activeChips = st.active.map(function (a) {
+      return { label: a, removeLabel: 'Убрать фильтр ' + a, remove: function () { self.setState({ active: self.state.active.filter(function (x) { return x !== a; }) }); } };
+    });
+    var recent = st.recent.map(function (h) {
+      return {
+        text: h, removeLabel: 'Удалить «' + h + '» из истории',
+        pick: function () { self.setState({ query: h, focused: false }); },
+        remove: function () { self.setState({ recent: self.state.recent.filter(function (x) { return x !== h; }) }); }
+      };
+    });
+    var popularTags = ['#кофе', '#завтраки', '#сдетьми', '#недорого', '#центр', '#доставка'].map(function (t) {
+      return { label: t, pick: function () { if (self.state.active.indexOf(t) < 0) self.setState({ active: self.state.active.concat([t]), focused: false }); } };
+    });
+    var tabLabel = (tabDefs.filter(function (t) { return t.id === st.tab; })[0] || {}).label;
+    var loading = st.loading;
+    var skeleton = [70, 54, 86].map(function (w, i) {
+      return { w: w, rows: [[78, 46], [62, 52], [84, 38]].slice(0, 3 - (i === 2 ? 1 : 0)).map(function (r) { return { w1: r[0], w2: r[1] }; }) };
+    });
+    var isEmpty = !loading && sections.length === 0;
+    var emptyTitle, emptyText, emptyActions = [];
+    function act(label, href, primary, fn) {
+      return { label: label, href: href, act: fn || function () {}, bg: primary ? c.accent : c.surface, fg: primary ? '#FFFFFF' : c.ink, border: primary ? c.accent : c.line };
+    }
+    if (newUser) {
+      emptyTitle = 'Добро пожаловать в Podgon';
+      emptyText = 'Рекомендации живут в группах. Вступите по коду от друзей или создайте свою группу и пригласите их.';
+      emptyActions = [act('Вступить по коду', 'GroupsJoin.dc.html', true), act('Создать группу', 'GroupsNew.dc.html', false)];
+    } else if (q || st.active.length) {
+      emptyTitle = 'Ничего не нашлось';
+      emptyText = 'Попробуйте другой запрос или снимите фильтры.';
+      emptyActions = [act('Сбросить фильтры', '#', false, function (e) { e.preventDefault(); self.setState({ active: [], query: '' }); })];
+    } else if (section === 'feed' && st.tab !== 'all') {
+      emptyTitle = 'В группе «' + tabLabel + '» пока пусто';
+      emptyText = 'Добавьте первую рекомендацию или позовите тех, кому есть что посоветовать.';
+      emptyActions = [act('Добавить рекомендацию', 'ReviewForm.dc.html', true), act('Пригласить участников', 'GroupInvite.dc.html', false)];
+    } else {
+      emptyTitle = 'Здесь пока пусто';
+      emptyText = section === 'fav' ? 'Отмечайте сердечком рекомендации, к которым хотите вернуться.' : 'Добавьте первую рекомендацию кнопкой «+» внизу.';
+    }
+    var pull = st.refreshing ? 52 : Math.min(st.pull, 80);
+    var tm = st.tabMenu;
+    var tabInfo = { friends: ['12 участников', true], work: ['34 участника', false], family: ['5 участников', true], books: ['9 участников', false], run: ['21 участник', false], dacha: ['4 участника', true] };
+    return {
+      tabMenuOpen: !!tm, tabMenuTitle: tm ? tm.label : '', tabMenuLetter: tm ? tm.label.charAt(0) : '',
+      tabMenuSub: tm ? tabInfo[tm.id][0] + (tabInfo[tm.id][1] ? ' · вы админ' : '') : '', tabMenuAdmin: tm ? tabInfo[tm.id][1] : false,
+      closeTabMenu: function () { self.setState({ tabMenu: null }); },
+      hasActive: st.active.length > 0, activeCount: st.active.length, activeChips: activeChips,
+      filtersLabel: st.active.length ? 'Фильтры: активно ' + st.active.length : 'Фильтры',
+      showSuggest: st.focused && !st.query && !loading && !newUser, recent: recent, popularTags: popularTags,
+      tagsTitle: st.tab === 'all' ? 'Популярные теги' : 'Популярные теги в «' + tabLabel + '»',
+      keepFocus: function (e) { e.preventDefault(); },
+      loading: loading, skeleton: skeleton,
+      emptyActions: emptyActions, emptyTop: newUser ? 96 : 64,
+      pullH: pull, pullHidden: pull ? 'false' : 'true', pullAngle: st.pull * 4,
+      pullTransition: self.pulling ? 'none' : 'height 220ms', spinClass: st.refreshing ? 'pg-spin' : '',
+      guardClick: function (e) { if (self.swiped) { e.preventDefault(); self.swiped = false; } },
+      feedDown: function (e) {
+        if (e.button && e.button !== 0) return;
+        self.gesture = { x: e.clientX, y: e.clientY, top: e.currentTarget.scrollTop === 0 };
+        self.swiped = false;
+      },
+      feedMove: function (e) {
+        var g = self.gesture;
+        if (!g) return;
+        var dx = e.clientX - g.x, dy = e.clientY - g.y;
+        if (g.top && dy > 8 && Math.abs(dy) > Math.abs(dx) && !self.state.refreshing) {
+          self.pulling = true; self.swiped = true;
+          self.setState({ pull: Math.round(dy * 0.55) });
+        }
+      },
+      feedUp: function (e) {
+        var g = self.gesture;
+        self.gesture = null;
+        if (!g) return;
+        var dx = e.clientX - g.x, dy = e.clientY - g.y;
+        if (self.pulling) {
+          self.pulling = false;
+          if (self.state.pull > 60) {
+            self.setState({ pull: 0, refreshing: true });
+            setTimeout(function () { self.setState({ refreshing: false }); }, 1200);
+          } else self.setState({ pull: 0 });
+          return;
+        }
+        // И6: свайп по ленте влево-вправо — соседняя вкладка группы
+        if (self.state.section === 'feed' && Math.abs(dx) > 70 && Math.abs(dy) < 50) {
+          self.swiped = true;
+          var ids = tabDefs.map(function (t) { return t.id; });
+          var k = ids.indexOf(self.state.tab) + (dx < 0 ? 1 : -1);
+          if (k >= 0 && k < ids.length) self.setState({ tab: ids[k] });
+        }
+      },
+      c: c, tabs: tabs, sections: loading ? [] : sections, isEmpty: isEmpty,
+      menuOpen: !!m, menuTitle: m ? m.name : '', menuSub: m ? m.sub : '', menuItems: menuItems,
+      closeMenu: function () { self.setState({ menuFor: null }); },
+      pressEnd: function () { clearTimeout(self.press); },
+      emptyTitle: emptyTitle, emptyText: emptyText,
+      showTabs: section === 'feed' && !newUser, showHeading: section !== 'feed', heading: headings[section] || '',
+      navLeft: [navItem('feed', 'Лента', 'isFeed'), navItem('fav', 'Избранное', 'isFav')],
+      navRight: [navItem('personal', 'Личное', 'isKey')],
+      showLoupe: !this.state.focused && !this.state.query,
+      query: this.state.query,
+      fadeLeft: this.state.fadeLeft, fadeRight: this.state.fadeRight,
+      onQuery: function (e) { self.setState({ query: e.target.value }); },
+      onFocus: function () { self.setState({ focused: true }); },
+      onBlur: function () { self.setState({ focused: false }); },
+      onTabsWheel: function (e) {
+        var el = e.currentTarget;
+        if (Math.abs(e.deltaY) > Math.abs(e.deltaX)) el.scrollLeft += e.deltaY;
+      },
+      onTabsScroll: function (e) {
+        var el = e.currentTarget;
+        var l = el.scrollLeft > 2, r = el.scrollLeft + el.clientWidth < el.scrollWidth - 2;
+        if (l !== self.state.fadeLeft || r !== self.state.fadeRight) self.setState({ fadeLeft: l, fadeRight: r });
+      },
+      onDragStart: function (e) {
+        if (e.pointerType !== 'mouse') return;
+        self.drag = { x: e.clientX, left: e.currentTarget.scrollLeft };
+        self.dragMoved = false;
+      },
+      onDragMove: function (e) {
+        if (!self.drag) return;
+        var dx = e.clientX - self.drag.x;
+        if (Math.abs(dx) > 4) self.dragMoved = true;
+        e.currentTarget.scrollLeft = self.drag.left - dx;
+      },
+      onDragEnd: function () {
+        self.drag = null;
+        setTimeout(function () { self.dragMoved = false; }, 0);
+      }
+    };
+  }
+}
+</script>
+</body>
+</html>

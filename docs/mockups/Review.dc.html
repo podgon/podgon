@@ -1,0 +1,206 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<title>Podgon — просмотр рекомендации</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#D9532F}a:hover{color:#B8401F}
+.pg-scroll::-webkit-scrollbar{display:none}
+.pg-scroll>*{flex-shrink:0}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; position: relative; overflow: hidden; display: flex; flex-direction: column; background: {{c.bg}}; color: {{c.ink}}; font-family: 'Manrope', system-ui, sans-serif;">
+
+  <!-- Шапка поверх контента (и фото): назад · действия -->
+  <header style="position: absolute; z-index: 4; left: 0; right: 0; top: 0; display: flex; align-items: center; gap: 8px; padding: 18px 16px 10px; pointer-events: none;">
+    <a href="Main.dc.html" aria-label="Назад" title="Назад" style="pointer-events: auto; box-shadow: {{c.floatShadow}}; width: 44px; height: 44px; flex: none; border-radius: 22px; border: 1px solid {{c.line}}; background: {{c.surface}}; color: {{c.ink}}; display: flex; align-items: center; justify-content: center; box-sizing: border-box;">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 6-6 6 6 6"></path></svg>
+    </a>
+    <span style="flex: 1;"></span>
+    <div style="position: relative; pointer-events: auto;">
+    <button type="button" aria-label="Действия" title="Действия" aria-haspopup="menu" aria-expanded="{{menuExpanded}}" onClick="{{toggleMenu}}" style="box-shadow: {{c.floatShadow}}; width: 44px; height: 44px; flex: none; border-radius: 22px; border: 1px solid {{c.line}}; background: {{c.surface}}; color: {{c.ink}}; display: flex; align-items: center; justify-content: center; cursor: pointer; padding: 0;">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="6" cy="12" r="1.7"></circle><circle cx="12" cy="12" r="1.7"></circle><circle cx="18" cy="12" r="1.7"></circle></svg>
+    </button>
+    <sc-if value="{{menuOpen}}" hint-placeholder-val="{{false}}">
+      <div role="menu" style="position: absolute; right: 0; top: 52px; width: 220px; border-radius: 18px; background: {{c.surface}}; border: 1px solid {{c.line}}; box-shadow: {{c.popShadow}}; padding: 6px; box-sizing: border-box;">
+        <sc-for list="{{menu}}" as="m" hint-placeholder-count="3">
+          <button type="button" role="menuitem" onClick="{{closeMenu}}" style="width: 100%; min-height: 44px; border: none; border-radius: 12px; background: transparent; color: {{m.fg}}; font-family: inherit; font-size: 15px; font-weight: 600; display: flex; align-items: center; gap: 12px; padding: 0 12px; text-align: left; cursor: pointer;">
+            <sc-if value="{{m.isEdit}}" hint-placeholder-val="{{true}}"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16z"></path><path d="m13.5 6.5 4 4"></path></svg></sc-if>
+            <sc-if value="{{m.isShare}}" hint-placeholder-val="{{false}}"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 15V4M8 8l4-4 4 4"></path><path d="M5 12v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6"></path></svg></sc-if>
+            <sc-if value="{{m.isDelete}}" hint-placeholder-val="{{false}}"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 7h14M10 7V4.5h4V7M7 7l1 13h8l1-13"></path></svg></sc-if>
+            <sc-if value="{{m.isReport}}" hint-placeholder-val="{{false}}"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 21V4h11l-2 4 2 4H6"></path></svg></sc-if>
+            <span style="flex: 1;">{{m.label}}</span>
+            <span style="font-size: 12px; color: {{c.muted}};">{{m.note}}</span>
+          </button>
+        </sc-for>
+      </div>
+    </sc-if>
+    </div>
+  </header>
+
+  <main class="pg-scroll" style="flex: 1; min-height: 0; overflow-y: auto; scrollbar-width: none; padding: {{mainTop}} 16px 112px; display: flex; flex-direction: column; gap: 14px;">
+
+    <!-- Фото (в будущем): от верхнего края, кнопки шапки поверх -->
+    <sc-if value="{{hasPhoto}}" hint-placeholder-val="{{true}}">
+      <figure style="margin: 0 -16px; height: 225px; flex: none; border-radius: 0 0 28px 28px; background: {{c.photo}}; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; color: {{c.muted}};">
+        <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="4"></rect><circle cx="9" cy="10.5" r="1.6"></circle><path d="m4 17 5-4.5 4 3.5 3-2.5 4 3.5"></path></svg>
+        <figcaption style="font-size: 13px; font-weight: 600;">[Фото рекомендации]</figcaption>
+      </figure>
+    </sc-if>
+
+    <!-- Заголовок с сердцем справа; оценка и категория -->
+    <section style="display: flex; flex-direction: column; gap: 10px; padding: 2px 0 0 4px;">
+      <div style="display: flex; align-items: flex-start; gap: 8px;">
+        <h1 style="flex: 1; min-width: 0; margin: 0; padding-top: 4px; font-size: 25px; line-height: 1.2; font-weight: 800; letter-spacing: -0.4px;">Кофейня «Зерно» на Покровке</h1>
+        <button type="button" aria-label="{{favLabel}}" title="{{favLabel}}" aria-pressed="{{favPressed}}" onClick="{{toggleFav}}" style="width: 48px; height: 48px; flex: none; border: none; border-radius: 24px; background: transparent; color: {{heartColor}}; display: flex; align-items: center; justify-content: center; cursor: pointer; padding: 0;">
+          <svg width="30" height="30" viewBox="0 0 24 24" fill="{{heartFill}}" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round" aria-hidden="true"><path d="M12 20s-7.5-4.6-7.5-10.2A4.3 4.3 0 0 1 12 7.2a4.3 4.3 0 0 1 7.5 2.6C19.5 15.4 12 20 12 20z"></path></svg>
+        </button>
+      </div>
+      <div style="position: relative; display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+        <span style="height: 34px; padding: 0 12px; border-radius: 17px; background: {{c.accentSoft}}; color: {{c.accentInk}}; font-size: 15px; font-weight: 800; display: flex; align-items: center; gap: 5px;">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 3.2l2.6 5.6 6.1.7-4.5 4.2 1.2 6-5.4-3-5.4 3 1.2-6-4.5-4.2 6.1-.7z"></path></svg>9<span style="font-weight: 600; opacity: 0.8;">/10</span>
+        </span>
+        <button type="button" aria-label="Категория: Кофейни, показать полный путь" aria-expanded="{{pathExpanded}}" onClick="{{togglePath}}" style="height: 34px; padding: 0 12px; border: none; border-radius: 17px; background: {{c.chip}}; color: {{c.ink}}; font-family: inherit; font-size: 13px; font-weight: 700; display: flex; align-items: center; cursor: pointer;">Кофейни</button>
+        <!-- Полный путь: во всю ширину, длинный путь переносится по строкам -->
+        <sc-if value="{{pathOpen}}" hint-placeholder-val="{{false}}">
+            <span role="tooltip" onClick="{{togglePath}}" style="position: absolute; left: 0; right: 0; top: 42px; z-index: 6; padding: 10px 12px; overflow-wrap: anywhere; cursor: pointer; border-radius: 14px; background: {{c.ink}}; color: {{c.bg}}; box-shadow: {{c.popShadow}}; font-size: 14px; line-height: 1.4; font-weight: 600;">Рестораны › Кафе и кофейни › Кофейни</span>
+        </sc-if>
+      </div>
+    </section>
+
+    <!-- Описание -->
+    <section style="padding: 0 4px;">
+      <p style="margin: 0; font-size: 16px; line-height: 1.6;">Лучший флэт уайт в районе, обжаривают сами. Утром тихо, можно работать с ноутбуком; к обеду очередь. Сырники на завтрак — обязательно.</p>
+      <p style="margin: 12px 0 0; font-size: 16px; line-height: 1.6;">Есть розетки у окна и нормальный вайфай. По выходным открываются в 8:00.</p>
+    </section>
+
+    <!-- Теги -->
+    <section style="display: flex; flex-wrap: wrap; gap: 6px; padding: 0 4px;">
+      <a href="#" style="height: 32px; padding: 0 12px; border-radius: 16px; border: 1px solid {{c.line}}; background: {{c.surface}}; color: {{c.ink}}; font-size: 13px; font-weight: 700; display: flex; align-items: center; text-decoration: none;">#кофе</a>
+      <a href="#" style="height: 32px; padding: 0 12px; border-radius: 16px; border: 1px solid {{c.line}}; background: {{c.surface}}; color: {{c.ink}}; font-size: 13px; font-weight: 700; display: flex; align-items: center; text-decoration: none;">#завтраки</a>
+      <a href="#" style="height: 32px; padding: 0 12px; border-radius: 16px; border: 1px solid {{c.line}}; background: {{c.surface}}; color: {{c.ink}}; font-size: 13px; font-weight: 700; display: flex; align-items: center; text-decoration: none;">#центр</a>
+    </section>
+
+    <!-- Автор: только имя; даты и группы — под раскрывашкой -->
+    <section style="border-radius: 22px; background: {{c.surface}}; border: 1px solid {{c.line}}; box-shadow: {{c.shadow}}; overflow: hidden;">
+      <button type="button" aria-expanded="{{infoExpanded}}" onClick="{{toggleInfo}}" data-author="1" style="width: 100%; min-height: 44px; border: none; background: transparent; color: {{c.ink}}; font-family: inherit; display: flex; align-items: center; gap: 10px; padding: 5px 14px 5px 10px; text-align: left; cursor: pointer;">
+        <svg width="30" height="30" viewBox="0 0 48 48" aria-hidden="true" style="flex: none;"><circle cx="24" cy="24" r="24" fill="{{c.chip}}"></circle><circle cx="24" cy="19" r="7" fill="none" stroke="{{c.muted}}" stroke-width="2.6"></circle><path d="M11.5 38a13.5 13.5 0 0 1 25 0" fill="none" stroke="{{c.muted}}" stroke-width="2.6" stroke-linecap="round"></path></svg>
+        <span style="flex: 1; min-width: 0; font-size: 15px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{authorName}}</span>
+        <span style="font-size: 13px; color: {{c.muted}};">{{infoHint}}</span>
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="{{c.muted}}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex: none; transform: {{infoChevron}}; transition: transform 160ms;"><path d="m6 9 6 6 6-6"></path></svg>
+      </button>
+      <sc-if value="{{infoOpen}}" hint-placeholder-val="{{false}}">
+        <div style="border-top: 1px solid {{c.line}}; padding: 12px 14px 14px; display: flex; flex-direction: column; gap: 12px;">
+          <dl style="margin: 0; display: grid; grid-template-columns: auto minmax(0, 1fr); column-gap: 12px; row-gap: 6px; font-size: 13px;">
+            <dt style="color: {{c.muted}};">Роль</dt><dd style="margin: 0; font-weight: 600;">{{roleText}}</dd>
+            <dt style="color: {{c.muted}};">Создана</dt><dd style="margin: 0; font-weight: 600;">12 окт. в 09:15</dd>
+            <dt style="color: {{c.muted}};">Опубликована</dt><dd style="margin: 0; font-weight: 600;">в «Друзья» сегодня в 14:05</dd>
+          </dl>
+          <div style="display: flex; flex-direction: column; gap: 8px;">
+            <span style="font-size: 12px; font-weight: 700; color: {{c.muted}};">Опубликована в группах</span>
+            <div style="display: flex; flex-wrap: wrap; gap: 6px;">
+              <span style="height: 30px; padding: 0 12px; border-radius: 15px; background: {{c.chip}}; font-size: 13px; font-weight: 700; display: flex; align-items: center;">Друзья</span>
+              <span style="height: 30px; padding: 0 12px; border-radius: 15px; background: {{c.chip}}; font-size: 13px; font-weight: 700; display: flex; align-items: center;">Работа</span>
+            </div>
+          </div>
+        </div>
+      </sc-if>
+    </section>
+  </main>
+
+  <!-- Нижнее меню остаётся (раздел «Лента») -->
+  <nav aria-label="Основное меню" style="position: absolute; left: 16px; right: 16px; bottom: 22px; height: 68px; border-radius: 34px; background: {{c.surface}}; border: 1px solid {{c.line}}; box-shadow: {{c.barShadow}}; display: flex; align-items: center; justify-content: space-between; padding: 0 6px; box-sizing: border-box;">
+    <button type="button" aria-current="page" style="width: 68px; height: 54px; border: none; border-radius: 27px; background: {{c.chip}}; color: {{c.ink}}; font-family: inherit; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; cursor: pointer; padding: 0;">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="4" width="16" height="7" rx="3"></rect><path d="M4 15.5h16M4 19.5h10"></path></svg>
+      <span style="font-size: 11px; font-weight: 700;">Лента</span>
+    </button>
+    <button type="button" style="width: 68px; height: 54px; border: none; border-radius: 27px; background: transparent; color: {{c.muted}}; font-family: inherit; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; cursor: pointer; padding: 0;">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><path d="M12 20s-7.5-4.6-7.5-10.2A4.3 4.3 0 0 1 12 7.2a4.3 4.3 0 0 1 7.5 2.6C19.5 15.4 12 20 12 20z"></path></svg>
+      <span style="font-size: 11px; font-weight: 600;">Избранное</span>
+    </button>
+    <button type="button" aria-label="Новая рекомендация" title="Новая рекомендация" style="width: 54px; height: 54px; flex: none; border: none; border-radius: 27px; background: {{c.accent}}; color: #FFFFFF; display: flex; align-items: center; justify-content: center; cursor: pointer; box-shadow: 0 6px 16px {{c.accentGlow}};">
+      <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"></path></svg>
+    </button>
+    <button type="button" style="width: 68px; height: 54px; border: none; border-radius: 27px; background: transparent; color: {{c.muted}}; font-family: inherit; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; cursor: pointer; padding: 0;">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="8" cy="15" r="4.5"></circle><path d="M11.2 11.8 20 3M16.5 6.5l2.5 2.5M14 9l2 2"></path></svg>
+      <span style="font-size: 11px; font-weight: 600;">Личное</span>
+    </button>
+    <button type="button" style="width: 68px; height: 54px; border: none; border-radius: 27px; background: transparent; color: {{c.muted}}; font-family: inherit; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; cursor: pointer; padding: 0;">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12.2 2.5h-.4a1.8 1.8 0 0 0-1.8 1.8v.2a1.8 1.8 0 0 1-.9 1.5l-.4.2a1.8 1.8 0 0 1-1.8 0l-.1-.1a1.8 1.8 0 0 0-2.5.7l-.2.3a1.8 1.8 0 0 0 .7 2.5l.1.1a1.8 1.8 0 0 1 .9 1.5v.5a1.8 1.8 0 0 1-.9 1.6l-.1.1a1.8 1.8 0 0 0-.7 2.5l.2.3a1.8 1.8 0 0 0 2.5.7l.1-.1a1.8 1.8 0 0 1 1.8 0l.4.2a1.8 1.8 0 0 1 .9 1.5v.2a1.8 1.8 0 0 0 1.8 1.8h.4a1.8 1.8 0 0 0 1.8-1.8v-.2a1.8 1.8 0 0 1 .9-1.5l.4-.2a1.8 1.8 0 0 1 1.8 0l.1.1a1.8 1.8 0 0 0 2.5-.7l.2-.3a1.8 1.8 0 0 0-.7-2.5l-.1-.1a1.8 1.8 0 0 1-.9-1.6v-.4a1.8 1.8 0 0 1 .9-1.6l.1-.1a1.8 1.8 0 0 0 .7-2.5l-.2-.3a1.8 1.8 0 0 0-2.5-.7l-.1.1a1.8 1.8 0 0 1-1.8 0l-.4-.2a1.8 1.8 0 0 1-.9-1.5v-.2a1.8 1.8 0 0 0-1.8-1.8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+      <span style="font-size: 11px; font-weight: 600;">Настройки</span>
+    </button>
+  </nav>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"dark":{"editor":"boolean","default":false},"hasPhoto":{"editor":"boolean","default":true},"own":{"editor":"boolean","default":false},"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { fav: true, info: false, menu: false, path: false };
+  }
+  renderVals() {
+    var self = this;
+    var dark = !!this.props.dark;
+    var light = {
+      bg: '#F6F5F2', surface: '#FFFFFF', chip: '#ECEAE5', ink: '#1B1B1F', muted: '#5E5D66', line: '#E4E2DD',
+      accent: '#D9532F', accentGlow: 'rgba(217,83,47,0.35)', accentSoft: '#FBE4DC', accentInk: '#9A3415',
+      shadow: '0 4px 14px rgba(27,27,31,0.07)', barShadow: '0 10px 30px rgba(27,27,31,0.14)',
+      popShadow: '0 10px 28px rgba(27,27,31,0.16)', floatShadow: '0 2px 10px rgba(27,27,31,0.12)', photo: '#DDD9D2'
+    };
+    var night = {
+      bg: '#121214', surface: '#1E1E22', chip: '#2C2C31', ink: '#F2F1EE', muted: '#A9A8B0', line: '#2E2E34',
+      accent: '#F0673F', accentGlow: 'rgba(240,103,63,0.30)', accentSoft: '#3A2219', accentInk: '#FFB59C',
+      shadow: 'none', barShadow: '0 10px 30px rgba(0,0,0,0.5)',
+      popShadow: '0 10px 28px rgba(0,0,0,0.55)', floatShadow: '0 2px 10px rgba(0,0,0,0.4)', photo: '#2C2C31'
+    };
+    var c = dark ? night : light;
+    var fav = this.state.fav;
+    var own = !!this.props.own;
+    return {
+      c: c,
+      hasPhoto: this.props.hasPhoto ?? true,
+      favPressed: fav ? 'true' : 'false',
+      favLabel: fav ? 'Убрать из избранного' : 'В избранное',
+      heartFill: fav ? c.accent : 'none', heartColor: fav ? c.accent : c.muted,
+      toggleFav: function () { self.setState({ fav: !self.state.fav }); },
+      infoOpen: this.state.info, infoExpanded: this.state.info ? 'true' : 'false',
+      infoHint: this.state.info ? '' : 'сегодня',
+      infoChevron: this.state.info ? 'rotate(180deg)' : 'rotate(0deg)',
+      toggleInfo: function (e) {
+        var card = e.currentTarget.parentNode;
+        var opening = !self.state.info;
+        self.setState({ info: opening });
+        // Раскрытые сведения прокручиваются в видимую область
+        if (opening) setTimeout(function () { card.scrollIntoView({ block: 'end', behavior: 'smooth' }); }, 30);
+      },
+      mainTop: (this.props.hasPhoto ?? true) ? '0px' : '72px',
+      pathOpen: this.state.path, pathExpanded: this.state.path ? 'true' : 'false',
+      togglePath: function () { self.setState({ path: !self.state.path }); },
+      menuOpen: this.state.menu, menuExpanded: this.state.menu ? 'true' : 'false',
+      toggleMenu: function () { self.setState({ menu: !self.state.menu }); },
+      closeMenu: function () { self.setState({ menu: false }); },
+      authorName: own ? 'Вы' : 'Анна Смирнова',
+      roleText: own ? 'участник в «Друзья»' : 'админ в «Друзья»',
+      // «Изменить» и «Удалить» — только у своей рекомендации; у чужой — «Пожаловаться» (этап 9)
+      menu: (own ? [
+        { label: 'Изменить', isEdit: true, fg: c.ink, note: '' },
+        { label: 'Поделиться', isShare: true, fg: c.ink, note: 'позже' },
+        { label: 'Удалить', isDelete: true, fg: c.accentInk, note: '' }
+      ] : [
+        { label: 'Поделиться', isShare: true, fg: c.ink, note: 'позже' },
+        { label: 'Пожаловаться', isReport: true, fg: c.ink, note: 'этап 9' }
+      ]).map(function (m) { return Object.assign({ isEdit: false, isShare: false, isDelete: false, isReport: false }, m); })
+    };
+  }
+}
+</script>
+</body>
+</html>

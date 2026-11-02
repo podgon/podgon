@@ -1,0 +1,249 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<title>Podgon — новая рекомендация</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#D9532F}a:hover{color:#B8401F}
+.pg-scroll::-webkit-scrollbar{display:none}
+.pg-field:focus{outline:none}
+.pg-title::placeholder{color:#9A98A0;font-weight:600}
+.pg-scroll>*{flex-shrink:0}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; position: relative; overflow: hidden; display: flex; flex-direction: column; background: {{c.bg}}; color: {{c.ink}}; font-family: 'Manrope', system-ui, sans-serif;">
+
+  <!-- Шапка: закрыть · поле названия на месте заголовка · сохранить -->
+  <header style="display: flex; align-items: center; gap: 10px; padding: 18px 16px 10px; flex: none;">
+    <a href="Main.dc.html" aria-label="Закрыть без сохранения" title="Закрыть" style="width: 44px; height: 44px; flex: none; border-radius: 22px; border: 1px solid {{c.line}}; background: {{c.surface}}; color: {{c.ink}}; display: flex; align-items: center; justify-content: center; box-sizing: border-box;">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"></path></svg>
+    </a>
+    <textarea class="pg-field pg-title" rows="{{titleRows}}" aria-label="Название" placeholder="{{titlePlaceholder}}" value="{{title}}" onChange="{{onTitle}}" onFocus="{{onTitleFocus}}" onBlur="{{onTitleBlur}}" style="flex: 1; min-width: 0; min-height: 44px; border: 1px solid {{titleBorder}}; border-radius: 16px; background: {{c.surface}}; box-shadow: {{c.shadow}}; font-family: inherit; font-size: 19px; line-height: 1.3; font-weight: 800; letter-spacing: -0.2px; color: {{c.ink}}; padding: 9px 12px; box-sizing: border-box; resize: none; text-align: center; overflow: hidden;"></textarea>
+    <button type="button" aria-label="{{saveLabel}}" title="{{saveLabel}}" onClick="{{save}}" style="width: 44px; height: 44px; flex: none; border-radius: 22px; border: none; background: {{saveBg}}; color: #FFFFFF; display: flex; align-items: center; justify-content: center; cursor: pointer; padding: 0; box-shadow: {{saveShadow}};">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12.5 4.5 4.5L19 7.5"></path></svg>
+    </button>
+  </header>
+
+  <!-- Оценка, категория и теги, описание, видимость, фото -->
+  <main class="pg-scroll" style="flex: 1; min-height: 0; overflow-y: auto; scrollbar-width: none; padding: 4px 16px 32px; display: flex; flex-direction: column; gap: 12px;">
+
+    <!-- Оценка -->
+    <section style="border-radius: 22px; background: {{c.surface}}; border: 1px solid {{ratingBorder}}; box-shadow: {{c.shadow}}; padding: 12px 14px; display: flex; flex-direction: column; gap: 10px;">
+      <div style="display: flex; align-items: center; justify-content: space-between;">
+        <h2 style="margin: 0; font-size: 15px; font-weight: 800;">Оценка</h2>
+        <span style="font-size: 15px; font-weight: 800; font-variant-numeric: tabular-nums;">{{ratingText}}<span style="font-weight: 600; color: {{c.muted}};">/10</span></span>
+      </div>
+      <div role="radiogroup" aria-label="Оценка от 1 до 10" style="display: flex; justify-content: space-between;">
+        <sc-for list="{{scale}}" as="s" hint-placeholder-count="10">
+          <button type="button" role="radio" aria-checked="{{s.checked}}" aria-label="{{s.aria}}" onClick="{{s.pick}}" style="width: 30px; height: 36px; border: none; border-radius: 12px; background: {{s.bg}}; color: {{s.fg}}; font-family: inherit; font-size: 14px; font-weight: 800; cursor: pointer; padding: 0; font-variant-numeric: tabular-nums;">{{s.n}}</button>
+        </sc-for>
+      </div>
+    </section>
+
+    <!-- Категория и теги -->
+    <section style="border-radius: 22px; background: {{c.surface}}; border: 1px solid {{c.line}}; box-shadow: {{c.shadow}}; padding: 2px 14px; display: flex; flex-direction: column;">
+      <button type="button" style="border: none; border-bottom: 1px solid {{c.line}}; background: transparent; color: {{c.ink}}; font-family: inherit; display: flex; align-items: center; gap: 10px; padding: 10px 0; text-align: left; cursor: pointer;">
+        <span style="flex: 1; display: flex; flex-direction: column; gap: 3px;">
+          <span style="font-size: 12px; font-weight: 700; color: {{c.muted}};">Категория</span>
+          <span style="font-size: 15px; font-weight: 700;">Рестораны › Кофейни</span>
+        </span>
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="{{c.muted}}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 6 6 6-6 6"></path></svg>
+      </button>
+      <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 6px; padding: 10px 0 12px;">
+        <sc-for list="{{tags}}" as="t" hint-placeholder-count="3">
+          <span style="height: 32px; padding: 0 4px 0 12px; border-radius: 16px; background: {{c.chip}}; font-size: 13px; font-weight: 700; display: flex; align-items: center; gap: 2px;">{{t.label}}
+            <button type="button" aria-label="{{t.removeLabel}}" onClick="{{t.remove}}" style="width: 26px; height: 26px; border: none; border-radius: 13px; background: transparent; color: {{c.muted}}; display: flex; align-items: center; justify-content: center; cursor: pointer; padding: 0;">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M7 7l10 10M17 7 7 17"></path></svg>
+            </button>
+          </span>
+        </sc-for>
+        <input class="pg-field" type="text" aria-label="Новый тег" placeholder="#тег" style="flex: 1; min-width: 80px; height: 32px; border: none; background: transparent; font-family: inherit; font-size: 14px; color: {{c.ink}}; padding: 0 4px;">
+      </div>
+    </section>
+
+    <!-- Описание (необязательное) — выше видимости -->
+    <section style="border-radius: 22px; background: {{c.surface}}; border: 1px solid {{c.line}}; box-shadow: {{c.shadow}}; padding: 10px 14px 12px;">
+      <label style="display: flex; flex-direction: column; gap: 4px;">
+        <span style="font-size: 12px; font-weight: 700; color: {{c.muted}};">Описание</span>
+        <textarea class="pg-field" rows="9" placeholder="Что понравилось, что нет, полезные детали" style="border: none; background: transparent; font-family: inherit; font-size: 15px; line-height: 1.5; color: {{c.ink}}; padding: 0; resize: none;">Лучший флэт уайт в районе, обжаривают сами. Утром тихо, можно работать с ноутбуком; к обеду очередь. Сырники на завтрак — обязательно.</textarea>
+      </label>
+    </section>
+
+    <!-- Видимость: группы слева; замок и «+» — справа внизу -->
+    <section style="border-radius: 22px; background: {{c.surface}}; border: 1px solid {{c.line}}; box-shadow: {{c.shadow}}; padding: 12px 14px; display: flex; flex-direction: column; gap: 10px;">
+      <div style="display: flex; align-items: stretch; gap: 12px;">
+        <div style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 8px; padding-top: 2px;">
+          <span style="font-size: 12px; font-weight: 700; color: {{c.muted}};">Видимость</span>
+          <sc-if value="{{locked}}" hint-placeholder-val="{{false}}">
+            <span style="font-size: 15px; font-weight: 700;">Только мне · Личное</span>
+          </sc-if>
+          <sc-if value="{{unlocked}}" hint-placeholder-val="{{true}}">
+            <div style="display: flex; flex-wrap: wrap; gap: 6px;">
+              <sc-for list="{{groups}}" as="g" hint-placeholder-count="2">
+                <span style="height: 32px; padding: 0 4px 0 12px; border-radius: 16px; background: {{c.tabOnBg}}; color: {{c.tabOnFg}}; font-size: 13px; font-weight: 700; display: flex; align-items: center; gap: 2px;">{{g.name}}
+                  <button type="button" aria-label="{{g.removeLabel}}" onClick="{{g.remove}}" style="width: 26px; height: 26px; border: none; border-radius: 13px; background: transparent; color: {{c.tabOnFg}}; display: flex; align-items: center; justify-content: center; cursor: pointer; padding: 0; opacity: 0.75;">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M7 7l10 10M17 7 7 17"></path></svg>
+                  </button>
+                </span>
+              </sc-for>
+            </div>
+          </sc-if>
+        </div>
+        <div style="display: flex; flex-direction: column; justify-content: flex-end; gap: 8px; flex: none;">
+          <button type="button" aria-label="{{lockLabel}}" title="{{lockLabel}}" aria-pressed="{{lockPressed}}" onClick="{{toggleLock}}" style="width: 44px; height: 44px; flex: none; border-radius: 22px; border: 1px solid {{lockBorder}}; background: {{lockBg}}; color: {{lockFg}}; display: flex; align-items: center; justify-content: center; cursor: pointer; padding: 0;">
+            <sc-if value="{{locked}}" hint-placeholder-val="{{false}}">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="10.5" width="14" height="10" rx="3"></rect><path d="M8 10.5V8a4 4 0 0 1 8 0v2.5"></path></svg>
+            </sc-if>
+            <sc-if value="{{unlocked}}" hint-placeholder-val="{{true}}">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="10.5" width="14" height="10" rx="3"></rect><path d="M8 10.5V8a4 4 0 0 1 7.6-1.7"></path></svg>
+            </sc-if>
+          </button>
+          <sc-if value="{{unlocked}}" hint-placeholder-val="{{true}}">
+            <button type="button" aria-label="Выбрать группы" title="Выбрать группы" onClick="{{openPicker}}" style="width: 44px; height: 44px; border: none; border-radius: 22px; background: {{c.accentSoft}}; color: {{c.accentInk}}; display: flex; align-items: center; justify-content: center; cursor: pointer; padding: 0;">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"></path></svg>
+            </button>
+          </sc-if>
+        </div>
+      </div>
+      <sc-if value="{{showHint}}" hint-placeholder-val="{{false}}">
+        <p style="margin: 0; font-size: 13px; line-height: 1.45; color: {{hintColor}};">{{hint}}</p>
+      </sc-if>
+    </section>
+
+
+    <button type="button" style="height: 52px; flex: none; border-radius: 26px; border: 1.5px dashed {{c.lineStrong}}; background: transparent; color: {{c.ink}}; font-family: inherit; display: flex; align-items: center; justify-content: center; gap: 8px; cursor: pointer; font-size: 14px; font-weight: 700;">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="4"></rect><circle cx="9" cy="10.5" r="1.6"></circle><path d="m4 17 5-4.5 4 3.5 3-2.5 4 3.5"></path></svg>
+      Добавить фото<span style="font-weight: 600; color: {{c.muted}};">· скоро</span>
+    </button>
+  </main>
+
+  <!-- Выбор групп: нижний лист с флажками -->
+  <sc-if value="{{pickerOpen}}" hint-placeholder-val="{{false}}">
+    <div onClick="{{closePicker}}" style="position: absolute; inset: 0; z-index: 8; background: {{c.scrim}};"></div>
+    <div role="dialog" aria-label="Группы" style="position: absolute; z-index: 9; left: 8px; right: 8px; bottom: 8px; border-radius: 28px; background: {{c.surface}}; box-shadow: {{c.barShadow}}; padding: 8px 8px 12px; box-sizing: border-box;">
+      <div style="width: 36px; height: 4px; border-radius: 2px; background: {{c.line}}; margin: 2px auto 8px;"></div>
+      <div style="display: flex; align-items: center; padding: 0 6px 8px 14px;">
+        <span style="flex: 1; font-size: 16px; font-weight: 800;">Опубликовать в группах</span>
+        <button type="button" aria-label="Готово" title="Готово" onClick="{{closePicker}}" style="width: 44px; height: 44px; border: none; border-radius: 22px; background: {{c.accent}}; color: #FFFFFF; display: flex; align-items: center; justify-content: center; cursor: pointer; padding: 0;">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12.5 4.5 4.5L19 7.5"></path></svg>
+        </button>
+      </div>
+      <sc-for list="{{allGroups}}" as="g" hint-placeholder-count="6">
+        <button type="button" role="checkbox" aria-checked="{{g.checked}}" onClick="{{g.toggle}}" style="width: 100%; min-height: 52px; border: none; border-radius: 16px; background: transparent; color: {{c.ink}}; font-family: inherit; display: flex; align-items: center; gap: 12px; padding: 0 14px; cursor: pointer; text-align: left;">
+          <span style="width: 32px; height: 32px; flex: none; border-radius: 11px; background: {{c.chip}}; display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 800;">{{g.letter}}</span>
+          <span style="flex: 1; font-size: 15px; font-weight: 700;">{{g.name}}</span>
+          <span style="width: 24px; height: 24px; flex: none; border-radius: 8px; border: 2px solid {{g.boxBorder}}; background: {{g.boxBg}}; color: {{c.tabOnFg}}; display: flex; align-items: center; justify-content: center; box-sizing: border-box;">
+            <sc-if value="{{g.on}}" hint-placeholder-val="{{true}}"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12.5 4.5 4.5L19 7.5"></path></svg></sc-if>
+          </span>
+        </button>
+      </sc-for>
+    </div>
+  </sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"dark":{"editor":"boolean","default":false},"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { title: '', titleFocus: false, rating: 0, locked: false, groups: ['Друзья', 'Книжный клуб'], tags: ['кофе', 'завтраки', 'центр'], tried: false, picker: false };
+  }
+  renderVals() {
+    var self = this;
+    var dark = !!this.props.dark;
+    var light = {
+      bg: '#F6F5F2', surface: '#FFFFFF', chip: '#ECEAE5', ink: '#1B1B1F', muted: '#5E5D66', line: '#E4E2DD', lineStrong: '#B9B6AF',
+      accent: '#D9532F', accentGlow: 'rgba(217,83,47,0.35)', accentSoft: '#FBE4DC', accentInk: '#9A3415', disabled: '#C9C6C0',
+      shadow: '0 4px 14px rgba(27,27,31,0.07)', tabOnBg: '#1B1B1F', tabOnFg: '#FFFFFF',
+      barShadow: '0 10px 30px rgba(27,27,31,0.14)', scrim: 'rgba(27,27,31,0.32)'
+    };
+    var night = {
+      bg: '#121214', surface: '#1E1E22', chip: '#2C2C31', ink: '#F2F1EE', muted: '#A9A8B0', line: '#2E2E34', lineStrong: '#55555D',
+      accent: '#F0673F', accentGlow: 'rgba(240,103,63,0.30)', accentSoft: '#3A2219', accentInk: '#FFB59C', disabled: '#45454C',
+      shadow: 'none', tabOnBg: '#F2F1EE', tabOnFg: '#121214',
+      barShadow: '0 10px 30px rgba(0,0,0,0.5)', scrim: 'rgba(0,0,0,0.55)'
+    };
+    var c = dark ? night : light;
+    var st = this.state;
+    var scale = [];
+    for (var i = 1; i <= 10; i++) {
+      (function (n) {
+        var on = st.rating === n;
+        scale.push({
+          n: n, aria: 'Оценка ' + n, checked: on ? 'true' : 'false',
+          bg: on ? c.accent : c.chip, fg: on ? '#FFFFFF' : c.ink,
+          pick: function () { self.setState({ rating: n }); }
+        });
+      })(i);
+    }
+    var tags = st.tags.map(function (t) {
+      return {
+        label: '#' + t, removeLabel: 'Убрать тег ' + t,
+        remove: function () { self.setState({ tags: self.state.tags.filter(function (x) { return x !== t; }) }); }
+      };
+    });
+    var groups = st.groups.map(function (g) {
+      return {
+        name: g, removeLabel: 'Убрать группу ' + g,
+        remove: function () { self.setState({ groups: self.state.groups.filter(function (x) { return x !== g; }) }); }
+      };
+    });
+    // Все группы пользователя — для выбора в нижнем листе
+    var allGroups = ['Друзья', 'Работа', 'Семья', 'Книжный клуб', 'Бег', 'Дача'].map(function (g) {
+      var on = st.groups.indexOf(g) >= 0;
+      return {
+        name: g, letter: g.charAt(0), on: on, checked: on ? 'true' : 'false',
+        boxBg: on ? c.tabOnBg : 'transparent', boxBorder: on ? c.tabOnBg : c.muted,
+        toggle: function () {
+          var cur = self.state.groups;
+          self.setState({ groups: on ? cur.filter(function (x) { return x !== g; }) : cur.concat([g]) });
+        }
+      };
+    });
+    var locked = st.locked;
+    var noGroup = !locked && st.groups.length === 0;
+    // Обязательные: название, оценка, категория, группа (или закрытый замок)
+    var missing = [];
+    if (!st.title.trim()) missing.push('название');
+    if (!st.rating) missing.push('оценку');
+    if (noGroup) missing.push('группу');
+    var invalid = missing.length > 0;
+    var hint = locked ? 'Видна только вам. Чтобы поделиться, разблокируйте и выберите группы.'
+      : (noGroup ? 'Выберите группы или закройте замок.' : '');
+    return {
+      c: c, allGroups: allGroups, pickerOpen: st.picker,
+      openPicker: function () { self.setState({ picker: true }); },
+      closePicker: function () { self.setState({ picker: false }); },
+      scale: scale, tags: tags, groups: groups, title: st.title,
+      ratingText: st.rating ? st.rating : '—',
+      ratingBorder: st.tried && !st.rating ? c.accent : c.line,
+      locked: locked, unlocked: !locked,
+      lockLabel: locked ? 'Личная — открыть замок, чтобы выбрать группы' : 'В группах — закрыть замок, сделать личной',
+      lockPressed: locked ? 'true' : 'false',
+      lockBg: locked ? c.tabOnBg : c.surface, lockFg: locked ? c.tabOnFg : c.ink, lockBorder: locked ? c.tabOnBg : c.line,
+      showHint: !!hint, hint: hint, hintColor: noGroup ? c.accentInk : c.muted,
+      saveBg: invalid ? c.disabled : c.accent, saveShadow: invalid ? 'none' : '0 6px 16px ' + c.accentGlow,
+      saveLabel: invalid ? 'Сохранить: укажите ' + missing.join(', ') : 'Сохранить',
+      save: function () { self.setState({ tried: true }); },
+      onTitle: function (e) { self.setState({ title: e.target.value }); },
+      // Подсказка видна до первого нажатия в поле
+      // Поле растёт по строкам (до 3), текст по центру по горизонтали и вертикали
+      titleRows: Math.min(3, Math.max(1, Math.ceil(st.title.length / 18))),
+      titlePlaceholder: st.titleFocus ? '' : 'Введите название',
+      titleBorder: st.titleFocus ? c.ink : (st.tried && !st.title.trim() ? c.accent : c.line),
+      onTitleFocus: function () { self.setState({ titleFocus: true }); },
+      onTitleBlur: function () { self.setState({ titleFocus: false }); },
+      toggleLock: function () { self.setState({ locked: !self.state.locked, groups: [] }); }
+    };
+  }
+}
+</script>
+</body>
+</html>

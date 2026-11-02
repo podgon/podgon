@@ -1,0 +1,165 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<title>Podgon — вступление в группу</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#D9532F}a:hover{color:#B8401F}
+.pg-scroll::-webkit-scrollbar{display:none}
+.pg-scroll>*{flex-shrink:0}
+.pg-field:focus{outline:none}
+.pg-field::placeholder{color:#9A98A0}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; position: relative; overflow: hidden; display: flex; flex-direction: column; background: {{c.bg}}; color: {{c.ink}}; font-family: 'Manrope', system-ui, sans-serif;">
+  <header style="display: flex; align-items: center; gap: 8px; padding: 18px 16px 10px; flex: none;">
+    <a href="GroupsJoin.dc.html" aria-label="Назад" title="Назад" style="width: 44px; height: 44px; flex: none; border-radius: 22px; border: 1px solid {{c.line}}; background: {{c.surface}}; color: {{c.ink}}; display: flex; align-items: center; justify-content: center; box-sizing: border-box;">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 6-6 6 6 6"></path></svg>
+    </a>
+    <span style="flex: 1; text-align: center; font-size: 17px; font-weight: 800; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Приглашение</span>
+    <span style="width: 44px; flex: none;"></span>
+  </header>
+
+  <main class="pg-scroll" style="flex: 1; min-height: 0; overflow-y: auto; scrollbar-width: none; padding: 4px 16px 24px; display: flex; flex-direction: column; gap: 10px;">
+    <div style="border-radius: 22px; background: {{c.surface}}; border: 1px solid {{c.line}}; box-shadow: {{c.shadow}}; padding: 18px 16px; display: flex; flex-direction: column; align-items: center; gap: 6px; text-align: center;">
+      <span style="width: 64px; height: 64px; border-radius: 22px; background: {{c.chip}}; display: flex; align-items: center; justify-content: center; font-size: 26px; font-weight: 800; margin-bottom: 4px;">Д</span>
+      <span style="font-size: 20px; font-weight: 800; letter-spacing: -0.2px;">Вас приглашают в «Друзья»</span>
+      <span style="font-size: 13px; color: {{c.muted}};">Приглашение от Максима Петрова · 12 участников</span>
+    </div>
+
+    <h2 style="margin: 8px 4px 0; font-size: 13px; font-weight: 800; color: {{c.muted}};">Поделиться моими рекомендациями</h2>
+
+    <p style="margin: -4px 4px 0; font-size: 13px; line-height: 1.45; color: {{c.muted}};">Ваши рекомендации из других групп можно сразу опубликовать здесь. Личные не переносятся.</p>
+    <div style="border-radius: 22px; background: {{c.surface}}; border: 1px solid {{c.line}}; box-shadow: {{c.shadow}}; padding: 6px 14px; display: flex; flex-direction: column;">
+      <sc-for list="{{modes}}" as="m" hint-placeholder-count="6">
+        <button type="button" role="radio" aria-checked="{{m.checked}}" onClick="{{m.pick}}" style="border: none; border-bottom: 1px solid {{c.line}}; background: transparent; color: {{c.ink}}; font-family: inherit; display: flex; align-items: center; gap: 12px; padding: 11px 0; text-align: left; cursor: pointer;">
+          <span style="width: 22px; height: 22px; flex: none; border-radius: 11px; border: 2px solid {{m.ring}}; display: flex; align-items: center; justify-content: center; box-sizing: border-box;"><span style="width: 10px; height: 10px; border-radius: 5px; background: {{m.dot}};"></span></span>
+          <span style="font-size: 15px; font-weight: {{m.weight}};">{{m.label}}</span>
+        </button>
+      </sc-for>
+      <!-- Выбор категорий или тегов для режимов «только / кроме» -->
+      <sc-if value="{{needsPick}}" hint-placeholder-val="{{false}}">
+        <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 5px; padding: 12px 0 10px;">
+          <sc-for list="{{picked}}" as="p" hint-placeholder-count="2">
+            <span style="height: 30px; padding: 0 3px 0 11px; border-radius: 15px; background: {{c.tabOnBg}}; color: {{c.tabOnFg}}; font-size: 13px; font-weight: 700; display: flex; align-items: center; gap: 1px;">{{p.label}}
+              <button type="button" aria-label="{{p.removeLabel}}" onClick="{{p.remove}}" style="width: 24px; height: 24px; border: none; border-radius: 12px; background: transparent; color: {{c.tabOnFg}}; opacity: 0.75; display: flex; align-items: center; justify-content: center; cursor: pointer; padding: 0;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" aria-hidden="true"><path d="M7 7l10 10M17 7 7 17"></path></svg></button>
+            </span>
+          </sc-for>
+          <sc-for list="{{offer}}" as="o" hint-placeholder-count="3">
+            <button type="button" onClick="{{o.add}}" style="height: 30px; padding: 0 11px; border: 1px dashed {{c.lineStrong}}; border-radius: 15px; background: transparent; color: {{c.ink}}; font-family: inherit; font-size: 13px; font-weight: 700; cursor: pointer;">+ {{o.label}}</button>
+          </sc-for>
+        </div>
+      </sc-if>
+    </div>
+
+    <!-- Что будет опубликовано -->
+    <div style="border-radius: 22px; background: {{c.surface}}; border: 1px solid {{c.line}}; box-shadow: {{c.shadow}}; overflow: hidden;">
+      <button type="button" onClick="{{togglePreview}}" style="width: 100%; min-height: 56px; border: none; background: transparent; color: {{c.ink}}; font-family: inherit; display: flex; align-items: center; gap: 10px; padding: 8px 14px; cursor: pointer; text-align: left;">
+        <span style="flex: 1; display: flex; flex-direction: column; gap: 2px;">
+          <span style="font-size: 15px; font-weight: 700;">{{previewTitle}}</span>
+          <span style="font-size: 12px; color: {{c.muted}};">из 29 ваших групповых</span>
+        </span>
+        <span style="font-size: 13px; font-weight: 700; color: {{c.accentInk}};">{{previewAction}}</span>
+      </button>
+      <sc-if value="{{previewOpen}}" hint-placeholder-val="{{false}}">
+        <sc-for list="{{previewRows}}" as="r" hint-placeholder-count="4">
+          <div style="border-top: 1px solid {{c.line}}; padding: 10px 14px; display: flex; gap: 8px; font-size: 14px;">
+            <span style="flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-weight: 600;">{{r.title}}</span>
+            <span style="flex: none; color: {{c.muted}};">{{r.cat}}</span>
+          </div>
+        </sc-for>
+        <sc-if value="{{hasMore}}" hint-placeholder-val="{{true}}">
+          <div style="border-top: 1px solid {{c.line}}; padding: 10px 14px; font-size: 13px; color: {{c.muted}};">{{moreText}}</div>
+        </sc-if>
+      </sc-if>
+    </div>
+  </main>
+
+  <div style="padding: 8px 16px 30px; flex: none;">
+    <a href="Main.dc.html" style="height: 54px; border-radius: 27px; background: {{c.accent}}; color: #FFFFFF; text-decoration: none; font-size: 16px; font-weight: 800; display: flex; align-items: center; justify-content: center; box-shadow: 0 8px 20px {{c.accentGlow}};">Вступить в группу</a>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"dark":{"editor":"boolean","default":false},"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { mode: 'cats', cats: ['Рестораны', 'Книги'], tags: ['кофе'], preview: false };
+  }
+  renderVals() {
+    var self = this;
+    var dark = !!this.props.dark;
+    var light = {
+      bg: '#F6F5F2', surface: '#FFFFFF', chip: '#ECEAE5', ink: '#1B1B1F', muted: '#5E5D66', line: '#E4E2DD', lineStrong: '#B9B6AF',
+      accent: '#D9532F', accentGlow: 'rgba(217,83,47,0.35)', accentSoft: '#FBE4DC', accentInk: '#9A3415', disabled: '#C9C6C0',
+      danger: '#C0352B', dangerSoft: '#FBE3E0',
+      shadow: '0 4px 14px rgba(27,27,31,0.07)', barShadow: '0 10px 30px rgba(27,27,31,0.14)',
+      tabOnBg: '#1B1B1F', tabOnFg: '#FFFFFF', segOn: '#FFFFFF', segShadow: '0 1px 4px rgba(27,27,31,0.12)', scrim: 'rgba(27,27,31,0.32)'
+    };
+    var night = {
+      bg: '#121214', surface: '#1E1E22', chip: '#2C2C31', ink: '#F2F1EE', muted: '#A9A8B0', line: '#2E2E34', lineStrong: '#55555D',
+      accent: '#F0673F', accentGlow: 'rgba(240,103,63,0.30)', accentSoft: '#3A2219', accentInk: '#FFB59C', disabled: '#45454C',
+      danger: '#FF8A7A', dangerSoft: '#3A1F1C',
+      shadow: 'none', barShadow: '0 10px 30px rgba(0,0,0,0.5)',
+      tabOnBg: '#F2F1EE', tabOnFg: '#121214', segOn: '#45454C', segShadow: 'none', scrim: 'rgba(0,0,0,0.55)'
+    };
+    var c = dark ? night : light;
+    var st = this.state;
+    var defs = [
+      ['none', 'Ничего'], ['all', 'Все мои групповые'], ['cats', 'Только из выбранных категорий'],
+      ['catsExcept', 'Все, кроме выбранных категорий'], ['tags', 'Только с выбранными тегами'], ['tagsExcept', 'Все, кроме выбранных тегов']
+    ];
+    var modes = defs.map(function (d) {
+      var on = st.mode === d[0];
+      return { label: d[1], checked: on ? 'true' : 'false', ring: on ? c.ink : c.muted, dot: on ? c.ink : 'transparent', weight: on ? 700 : 600, pick: function () { self.setState({ mode: d[0] }); } };
+    });
+    var byTags = st.mode === 'tags' || st.mode === 'tagsExcept';
+    var byCats = st.mode === 'cats' || st.mode === 'catsExcept';
+    var key = byTags ? 'tags' : 'cats';
+    var chosen = st[key];
+    var pool = byTags ? ['кофе', 'завтраки', 'сдетьми', 'недорого'] : ['Рестораны', 'Книги', 'Фильмы', 'Путешествия', 'Услуги'];
+    function fmt(x) { return byTags ? '#' + x : x; }
+    var picked = chosen.map(function (x) {
+      return { label: fmt(x), removeLabel: 'Убрать ' + fmt(x), remove: function () { var p = {}; p[key] = self.state[key].filter(function (y) { return y !== x; }); self.setState(p); } };
+    });
+    var offer = pool.filter(function (x) { return chosen.indexOf(x) < 0; }).slice(0, 3).map(function (x) {
+      return { label: fmt(x), add: function () { var p = {}; p[key] = self.state[key].concat([x]); self.setState(p); } };
+    });
+    var mine = [
+      ['Кофейня «Зерно» на Покровке', 'Рестораны', ['кофе']], ['Грузинский ресторан «Сакартвело»', 'Рестораны', []],
+      ['Сыроварня в Истре', 'Рестораны', ['сдетьми']], ['Проект «Аве Мария», Энди Вейер', 'Книги', []],
+      ['Стоунер, Джон Уильямс', 'Книги', []], ['Бассейн «Чайка»', 'Спорт', ['сдетьми']],
+      ['Ремонт обуви у метро Сокол', 'Услуги', ['недорого']], ['Дюна: Часть вторая', 'Фильмы', []]
+    ];
+    var scale = 29 / mine.length;
+    var hit = mine.filter(function (r) {
+      if (st.mode === 'none') return false;
+      if (st.mode === 'all') return true;
+      if (st.mode === 'cats') return st.cats.indexOf(r[1]) >= 0;
+      if (st.mode === 'catsExcept') return st.cats.indexOf(r[1]) < 0;
+      var t = r[2].some(function (x) { return st.tags.indexOf(x) >= 0; });
+      return st.mode === 'tags' ? t : !t;
+    });
+    var total = Math.round(hit.length * scale);
+    var rows = hit.slice(0, 4).map(function (r) { return { title: r[0], cat: r[1] }; });
+    return {
+      c: c, modes: modes, needsPick: byTags || byCats, picked: picked, offer: offer,
+      previewTitle: total ? 'Будет опубликовано: ' + total : 'Ничего не будет опубликовано',
+      previewAction: total ? (st.preview ? 'Скрыть' : 'Показать') : '',
+      previewOpen: st.preview && total > 0, previewRows: rows,
+      hasMore: total > rows.length, moreText: 'и ещё ' + (total - rows.length),
+      togglePreview: function () { self.setState({ preview: !self.state.preview }); }
+    };
+  }
+}
+</script>
+</body>
+</html>

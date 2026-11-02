@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<title>Podgon — нужно обновление</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#D9532F}a:hover{color:#B8401F}
+.pg-scroll::-webkit-scrollbar{display:none}
+.pg-scroll>*{flex-shrink:0}
+.pg-field:focus{outline:none}
+.pg-field::placeholder{color:#9A98A0}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; position: relative; overflow: hidden; display: flex; flex-direction: column; background: {{c.bg}}; color: {{c.ink}}; font-family: 'Manrope', system-ui, sans-serif;">
+  <!-- Сервер ответил 426: версия клиента больше не поддерживается -->
+  <main style="flex: 1; padding: 0 32px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; text-align: center;">
+    <span style="width: 88px; height: 88px; border-radius: 30px; background: {{c.accentSoft}}; color: {{c.accentInk}}; display: flex; align-items: center; justify-content: center; margin-bottom: 6px;">
+      <svg width="42" height="42" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11M7.5 10.5 12 15l4.5-4.5"></path><path d="M5 19.5h14"></path></svg>
+    </span>
+    <h1 style="margin: 0; font-size: 24px; font-weight: 800; letter-spacing: -0.3px;">Нужно обновить приложение</h1>
+    <p style="margin: 0; font-size: 15px; line-height: 1.5; color: {{c.muted}};">Эта версия Podgon устарела и больше не работает с сервером. Установите новую версию, чтобы продолжить.</p>
+  </main>
+  <div style="padding: 8px 24px 34px; flex: none;">
+    <button type="button" style="width: 100%; height: 54px; border: none; border-radius: 27px; background: {{c.accent}}; color: #FFFFFF; font-family: inherit; font-size: 16px; font-weight: 800; cursor: pointer; box-shadow: 0 8px 20px {{c.accentGlow}};">Обновить</button>
+    <p style="margin: 12px 0 0; font-size: 12px; color: {{c.muted}}; text-align: center;">Открывает страницу приложения в магазине</p>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"dark":{"editor":"boolean","default":false},"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  renderVals() {
+    var dark = !!this.props.dark;
+    var light = {
+      bg: '#F6F5F2', surface: '#FFFFFF', chip: '#ECEAE5', ink: '#1B1B1F', muted: '#5E5D66', line: '#E4E2DD', lineStrong: '#B9B6AF',
+      accent: '#D9532F', accentGlow: 'rgba(217,83,47,0.35)', accentSoft: '#FBE4DC', accentInk: '#9A3415', disabled: '#C9C6C0',
+      danger: '#C0352B', dangerSoft: '#FBE3E0',
+      shadow: '0 4px 14px rgba(27,27,31,0.07)', barShadow: '0 10px 30px rgba(27,27,31,0.14)',
+      tabOnBg: '#1B1B1F', tabOnFg: '#FFFFFF', segOn: '#FFFFFF', segShadow: '0 1px 4px rgba(27,27,31,0.12)', scrim: 'rgba(27,27,31,0.32)'
+    };
+    var night = {
+      bg: '#121214', surface: '#1E1E22', chip: '#2C2C31', ink: '#F2F1EE', muted: '#A9A8B0', line: '#2E2E34', lineStrong: '#55555D',
+      accent: '#F0673F', accentGlow: 'rgba(240,103,63,0.30)', accentSoft: '#3A2219', accentInk: '#FFB59C', disabled: '#45454C',
+      danger: '#FF8A7A', dangerSoft: '#3A1F1C',
+      shadow: 'none', barShadow: '0 10px 30px rgba(0,0,0,0.5)',
+      tabOnBg: '#F2F1EE', tabOnFg: '#121214', segOn: '#45454C', segShadow: 'none', scrim: 'rgba(0,0,0,0.55)'
+    };
+    var c = dark ? night : light;
+    return { c: c };
+  }
+}
+</script>
+</body>
+</html>

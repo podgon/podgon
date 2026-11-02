@@ -1,0 +1,139 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<title>Podgon — настройки</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#D9532F}a:hover{color:#B8401F}
+.pg-scroll::-webkit-scrollbar{display:none}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; position: relative; overflow: hidden; display: flex; flex-direction: column; background: {{c.bg}}; color: {{c.ink}}; font-family: 'Manrope', system-ui, sans-serif;">
+
+  <!-- Верхняя строка (как на главном) -->
+  <header style="display: flex; align-items: center; justify-content: space-between; padding: 18px 12px 6px 20px; flex: none;">
+    <div style="display: flex; align-items: center; gap: 10px;">
+      <svg width="34" height="34" viewBox="0 0 34 34" aria-hidden="true">
+        <rect x="1" y="1" width="32" height="32" rx="11" fill="{{c.accent}}"></rect>
+        <path d="M12 25V10h6.2a4.8 4.8 0 0 1 0 9.6H12" fill="none" stroke="#FFFFFF" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"></path>
+        <circle cx="23.5" cy="24.5" r="1.9" fill="#FFFFFF"></circle>
+      </svg>
+      <span style="font-size: 21px; font-weight: 800; letter-spacing: -0.4px;">Podgon</span>
+    </div>
+    <div style="display: flex; align-items: center; gap: 4px;">
+      <button type="button" aria-label="Уведомления" title="Уведомления" style="width: 44px; height: 44px; border: none; border-radius: 22px; background: transparent; color: {{c.ink}}; display: flex; align-items: center; justify-content: center; cursor: pointer;">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 16.5V11a6 6 0 0 1 12 0v5.5l1.5 2h-15z"></path><path d="M10 21h4"></path></svg>
+      </button>
+      <a href="Profile.dc.html" aria-label="Профиль" title="Профиль" style="width: 52px; height: 52px; border-radius: 26px; display: flex; align-items: center; justify-content: center;">
+        <svg width="44" height="44" viewBox="0 0 48 48" aria-hidden="true"><circle cx="24" cy="24" r="24" fill="{{c.chip}}"></circle><circle cx="24" cy="19" r="7" fill="none" stroke="{{c.muted}}" stroke-width="2.4"></circle><path d="M11.5 38a13.5 13.5 0 0 1 25 0" fill="none" stroke="{{c.muted}}" stroke-width="2.4" stroke-linecap="round"></path></svg>
+      </a>
+    </div>
+  </header>
+
+
+  <h1 style="margin: 0; padding: 8px 20px 4px; font-size: 22px; font-weight: 800; letter-spacing: -0.3px; flex: none;">Настройки</h1>
+
+  <!-- Только работающие пункты; нереализованное появится, когда будет сделано -->
+  <main class="pg-scroll" style="flex: 1; min-height: 0; overflow-y: auto; scrollbar-width: none; padding: 12px 16px 112px; display: flex; flex-direction: column; gap: 10px;">
+    <div style="border-radius: 22px; background: {{c.surface}}; border: 1px solid {{c.line}}; box-shadow: {{c.shadow}}; overflow: hidden;">
+      <a href="Groups.dc.html" style="min-height: 64px; border-bottom: 1px solid {{c.line}}; color: {{c.ink}}; text-decoration: none; display: flex; align-items: center; gap: 12px; padding: 10px 14px; box-sizing: border-box;">
+        <span style="width: 38px; height: 38px; flex: none; border-radius: 13px; background: {{c.chip}}; color: {{c.ink}}; display: flex; align-items: center; justify-content: center;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="9" r="3.2"></circle><path d="M3.5 19a5.5 5.5 0 0 1 11 0"></path><circle cx="16.5" cy="8" r="2.6"></circle><path d="M15.5 13.6A4.6 4.6 0 0 1 21 18"></path></svg></span>
+        <span style="flex: 1; font-size: 15px; font-weight: 700;">Группы</span>
+        <span style="font-size: 14px; color: {{c.muted}}; font-variant-numeric: tabular-nums;">5</span>
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="{{c.muted}}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex: none;"><path d="m9 6 6 6-6 6"></path></svg>
+      </a>
+      <a href="Sections.dc.html" style="min-height: 64px; border-bottom: 1px solid {{c.line}}; color: {{c.ink}}; text-decoration: none; display: flex; align-items: center; gap: 12px; padding: 10px 14px; box-sizing: border-box;">
+        <span style="width: 38px; height: 38px; flex: none; border-radius: 13px; background: {{c.chip}}; color: {{c.ink}}; display: flex; align-items: center; justify-content: center;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6h11M9 12h11M9 18h11"></path><path d="M4 5l1.5 1.5L4 8M4 11l1.5 1.5L4 14M4 17l1.5 1.5L4 20"></path></svg></span>
+        <span style="flex: 1; display: flex; flex-direction: column; gap: 2px;"><span style="font-size: 15px; font-weight: 700;">Секции ленты</span><span style="font-size: 13px; color: {{c.muted}};">Закреплено: 2</span></span>
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="{{c.muted}}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex: none;"><path d="m9 6 6 6-6 6"></path></svg>
+      </a>
+      <div style="min-height: 64px; display: flex; align-items: center; gap: 12px; padding: 10px 14px; box-sizing: border-box;">
+        <span style="width: 38px; height: 38px; flex: none; border-radius: 13px; background: {{c.chip}}; color: {{c.ink}}; display: flex; align-items: center; justify-content: center;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="8.5"></circle><path d="M12 3.5v17a8.5 8.5 0 0 0 0-17z" fill="currentColor" stroke="none"></path></svg></span>
+        <span style="flex: 1; font-size: 15px; font-weight: 700;">Тема</span>
+        <div role="radiogroup" aria-label="Тема" style="display: flex; gap: 2px; padding: 3px; border-radius: 19px; background: {{c.chip}};">
+          <sc-for list="{{themes}}" as="t" hint-placeholder-count="3">
+            <button type="button" role="radio" aria-checked="{{t.checked}}" aria-label="{{t.label}}" title="{{t.label}}" onClick="{{t.pick}}" style="width: 40px; height: 32px; border: none; border-radius: 16px; background: {{t.bg}}; color: {{t.fg}}; box-shadow: {{t.shadow}}; display: flex; align-items: center; justify-content: center; cursor: pointer; padding: 0;">
+              <sc-if value="{{t.isAuto}}" hint-placeholder-val="{{true}}"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4.5" width="18" height="12" rx="2.5"></rect><path d="M9 20h6M12 16.5V20"></path></svg></sc-if>
+              <sc-if value="{{t.isLight}}" hint-placeholder-val="{{false}}"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="4"></circle><path d="M12 2.5v2M12 19.5v2M2.5 12h2M19.5 12h2M5.3 5.3l1.4 1.4M17.3 17.3l1.4 1.4M5.3 18.7l1.4-1.4M17.3 6.7l1.4-1.4"></path></svg></sc-if>
+              <sc-if value="{{t.isDark}}" hint-placeholder-val="{{false}}"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19.5 14.5A8 8 0 0 1 9.5 4.5a8 8 0 1 0 10 10z"></path></svg></sc-if>
+            </button>
+          </sc-for>
+        </div>
+      </div>
+    </div>
+    <p style="margin: 6px 0 0; text-align: center; font-size: 12px; color: {{c.muted}};">Podgon 0.9 (сборка 42)</p>
+  </main>
+
+  <!-- Нижнее меню: активны Настройки -->
+  <nav aria-label="Основное меню" style="position: absolute; left: 16px; right: 16px; bottom: 22px; height: 68px; border-radius: 34px; background: {{c.surface}}; border: 1px solid {{c.line}}; box-shadow: {{c.barShadow}}; display: flex; align-items: center; justify-content: space-between; padding: 0 6px; box-sizing: border-box;">
+    <a href="Main.dc.html" style="width: 68px; height: 54px; border-radius: 27px; color: {{c.muted}}; text-decoration: none; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px;">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="4" width="16" height="7" rx="3"></rect><path d="M4 15.5h16M4 19.5h10"></path></svg>
+      <span style="font-size: 11px; font-weight: 600;">Лента</span>
+    </a>
+    <button type="button" style="width: 68px; height: 54px; border: none; border-radius: 27px; background: transparent; color: {{c.muted}}; font-family: inherit; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; cursor: pointer; padding: 0;">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><path d="M12 20s-7.5-4.6-7.5-10.2A4.3 4.3 0 0 1 12 7.2a4.3 4.3 0 0 1 7.5 2.6C19.5 15.4 12 20 12 20z"></path></svg>
+      <span style="font-size: 11px; font-weight: 600;">Избранное</span>
+    </button>
+    <button type="button" aria-label="Новая рекомендация" title="Новая рекомендация" style="width: 54px; height: 54px; flex: none; border: none; border-radius: 27px; background: {{c.accent}}; color: #FFFFFF; display: flex; align-items: center; justify-content: center; cursor: pointer; box-shadow: 0 6px 16px {{c.accentGlow}};">
+      <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"></path></svg>
+    </button>
+    <button type="button" style="width: 68px; height: 54px; border: none; border-radius: 27px; background: transparent; color: {{c.muted}}; font-family: inherit; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; cursor: pointer; padding: 0;">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="8" cy="15" r="4.5"></circle><path d="M11.2 11.8 20 3M16.5 6.5l2.5 2.5M14 9l2 2"></path></svg>
+      <span style="font-size: 11px; font-weight: 600;">Личное</span>
+    </button>
+    <button type="button" aria-current="page" style="width: 68px; height: 54px; border: none; border-radius: 27px; background: {{c.chip}}; color: {{c.ink}}; font-family: inherit; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; cursor: pointer; padding: 0;">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12.2 2.5h-.4a1.8 1.8 0 0 0-1.8 1.8v.2a1.8 1.8 0 0 1-.9 1.5l-.4.2a1.8 1.8 0 0 1-1.8 0l-.1-.1a1.8 1.8 0 0 0-2.5.7l-.2.3a1.8 1.8 0 0 0 .7 2.5l.1.1a1.8 1.8 0 0 1 .9 1.5v.5a1.8 1.8 0 0 1-.9 1.6l-.1.1a1.8 1.8 0 0 0-.7 2.5l.2.3a1.8 1.8 0 0 0 2.5.7l.1-.1a1.8 1.8 0 0 1 1.8 0l.4.2a1.8 1.8 0 0 1 .9 1.5v.2a1.8 1.8 0 0 0 1.8 1.8h.4a1.8 1.8 0 0 0 1.8-1.8v-.2a1.8 1.8 0 0 1 .9-1.5l.4-.2a1.8 1.8 0 0 1 1.8 0l.1.1a1.8 1.8 0 0 0 2.5-.7l.2-.3a1.8 1.8 0 0 0-.7-2.5l-.1-.1a1.8 1.8 0 0 1-.9-1.6v-.4a1.8 1.8 0 0 1 .9-1.6l.1-.1a1.8 1.8 0 0 0 .7-2.5l-.2-.3a1.8 1.8 0 0 0-2.5-.7l-.1.1a1.8 1.8 0 0 1-1.8 0l-.4-.2a1.8 1.8 0 0 1-.9-1.5v-.2a1.8 1.8 0 0 0-1.8-1.8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+      <span style="font-size: 11px; font-weight: 700;">Настройки</span>
+    </button>
+  </nav>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"dark":{"editor":"boolean","default":false},"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { theme: 'system' };
+  }
+  renderVals() {
+    var self = this;
+    var theme = this.state.theme;
+    var dark = theme === 'dark' || (theme === 'system' && !!this.props.dark);
+    var light = {
+      bg: '#F6F5F2', surface: '#FFFFFF', chip: '#ECEAE5', ink: '#1B1B1F', muted: '#5E5D66', line: '#E4E2DD',
+      accent: '#D9532F', accentGlow: 'rgba(217,83,47,0.35)', accentSoft: '#FBE4DC', accentInk: '#9A3415',
+      shadow: '0 4px 14px rgba(27,27,31,0.07)', barShadow: '0 10px 30px rgba(27,27,31,0.14)',
+      tabOnBg: '#1B1B1F', tabOnFg: '#FFFFFF', segOn: '#FFFFFF', segShadow: '0 1px 4px rgba(27,27,31,0.12)'
+    };
+    var night = {
+      bg: '#121214', surface: '#1E1E22', chip: '#2C2C31', ink: '#F2F1EE', muted: '#A9A8B0', line: '#2E2E34',
+      accent: '#F0673F', accentGlow: 'rgba(240,103,63,0.30)', accentSoft: '#3A2219', accentInk: '#FFB59C',
+      shadow: 'none', barShadow: '0 10px 30px rgba(0,0,0,0.5)',
+      tabOnBg: '#F2F1EE', tabOnFg: '#121214', segOn: '#45454C', segShadow: 'none'
+    };
+    var c = dark ? night : light;
+    var themes = [
+      { id: 'system', label: 'Как в системе' }, { id: 'light', label: 'Светлая' }, { id: 'dark', label: 'Тёмная' }
+    ].map(function (t) {
+      var on = theme === t.id;
+      return {
+        label: t.label, checked: on ? 'true' : 'false',
+        isAuto: t.id === 'system', isLight: t.id === 'light', isDark: t.id === 'dark',
+        bg: on ? c.segOn : 'transparent', fg: on ? c.ink : c.muted,
+        shadow: on ? c.segShadow : 'none',
+        pick: function () { self.setState({ theme: t.id }); }
+      };
+    });
+    return { c: c, themes: themes };
+  }
+}
+</script>
+</body>
+</html>

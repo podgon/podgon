@@ -1,0 +1,202 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<title>Podgon — секции ленты</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#D9532F}a:hover{color:#B8401F}
+.pg-scroll::-webkit-scrollbar{display:none}
+.pg-scroll>*{flex-shrink:0}
+.pg-handle{cursor:grab;touch-action:none}
+.pg-handle:active{cursor:grabbing}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; position: relative; overflow: hidden; display: flex; flex-direction: column; background: {{c.bg}}; color: {{c.ink}}; font-family: 'Manrope', system-ui, sans-serif;">
+
+  <!-- Шапка подэкрана: назад · заголовок -->
+  <header style="display: flex; align-items: center; gap: 8px; padding: 18px 16px 10px; flex: none;">
+    <a href="Settings.dc.html" aria-label="Назад" title="Назад" style="width: 44px; height: 44px; flex: none; border-radius: 22px; border: 1px solid {{c.line}}; background: {{c.surface}}; color: {{c.ink}}; display: flex; align-items: center; justify-content: center; box-sizing: border-box;">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 6-6 6 6 6"></path></svg>
+    </a>
+    <span style="flex: 1; text-align: center; font-size: 17px; font-weight: 800;">Секции ленты</span>
+    <span style="width: 44px; flex: none;"></span>
+  </header>
+
+  <main class="pg-scroll" style="flex: 1; min-height: 0; overflow-y: auto; scrollbar-width: none; padding: 4px 16px 112px; display: flex; flex-direction: column; gap: 10px;">
+    <p style="margin: 0 4px; font-size: 13px; line-height: 1.45; color: {{c.muted}};">Вверху ленты — сначала закреплённые фильтры, затем закреплённые категории, в этом порядке и на всех вкладках. Остальные категории — ниже, сначала те, где есть свежие рекомендации.</p>
+
+    <!-- Закреплённые: перетаскивание за ручку -->
+    <h2 style="margin: 6px 4px 0; font-size: 13px; font-weight: 800; color: {{c.muted}};">Вверху ленты</h2>
+    <div style="border-radius: 22px; background: {{c.surface}}; border: 1px solid {{c.line}}; box-shadow: {{c.shadow}}; overflow: hidden;">
+      <sc-for list="{{pinned}}" as="p" hint-placeholder-count="3">
+        <div style="height: 64px; border-bottom: 1px solid {{c.line}}; background: {{p.bg}}; display: flex; align-items: center; gap: 10px; padding: 0 6px 0 4px; box-sizing: border-box;">
+          <span class="pg-handle" role="button" aria-label="{{p.dragLabel}}" title="Перетащите, чтобы изменить порядок" onPointerDown="{{p.dragStart}}" onPointerMove="{{dragMove}}" onPointerUp="{{dragEnd}}" onPointerCancel="{{dragEnd}}" style="width: 36px; height: 52px; flex: none; display: flex; align-items: center; justify-content: center; color: {{c.muted}};">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="9" cy="6" r="1.6"></circle><circle cx="15" cy="6" r="1.6"></circle><circle cx="9" cy="12" r="1.6"></circle><circle cx="15" cy="12" r="1.6"></circle><circle cx="9" cy="18" r="1.6"></circle><circle cx="15" cy="18" r="1.6"></circle></svg>
+          </span>
+          <span style="width: 34px; height: 34px; flex: none; border-radius: 12px; background: {{c.accentSoft}}; color: {{c.accentInk}}; display: flex; align-items: center; justify-content: center;">
+            <sc-if value="{{p.isFilter}}" hint-placeholder-val="{{true}}"><svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><path d="M6.5 4h11v16.5L12 16.8l-5.5 3.7z"></path></svg></sc-if>
+            <sc-if value="{{p.isCat}}" hint-placeholder-val="{{false}}"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="4" width="7" height="7" rx="2"></rect><rect x="13" y="4" width="7" height="7" rx="2"></rect><rect x="4" y="13" width="7" height="7" rx="2"></rect><rect x="13" y="13" width="7" height="7" rx="2"></rect></svg></sc-if>
+          </span>
+          <span style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px;">
+            <span style="font-size: 15px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{p.name}}</span>
+            <span style="font-size: 12px; color: {{c.muted}}; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{p.sub}}</span>
+          </span>
+          <button type="button" aria-label="{{p.unpinLabel}}" title="Открепить" onClick="{{p.unpin}}" style="width: 44px; height: 44px; flex: none; border: none; border-radius: 22px; background: transparent; color: {{c.muted}}; display: flex; align-items: center; justify-content: center; cursor: pointer; padding: 0;">
+            <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 3.5h6l-1 6 3.5 3.5h-11L10 9.5z"></path><path d="M12 13v7.5M4 4l16 16"></path></svg>
+          </button>
+        </div>
+      </sc-for>
+      <sc-if value="{{noPinned}}" hint-placeholder-val="{{false}}">
+        <p style="margin: 0; padding: 16px; font-size: 14px; color: {{c.muted}};">Ничего не закреплено — лента идёт по свежести.</p>
+      </sc-if>
+    </div>
+
+    <!-- Что можно закрепить -->
+    <h2 style="margin: 10px 4px 0; font-size: 13px; font-weight: 800; color: {{c.muted}};">Сохранённые фильтры</h2>
+    <div style="border-radius: 22px; background: {{c.surface}}; border: 1px solid {{c.line}}; box-shadow: {{c.shadow}}; overflow: hidden;">
+      <sc-for list="{{freeFilters}}" as="f" hint-placeholder-count="2">
+        <div style="min-height: 56px; border-bottom: 1px solid {{c.line}}; display: flex; align-items: center; gap: 10px; padding: 6px 6px 6px 14px; box-sizing: border-box;">
+          <span style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px;">
+            <span style="font-size: 15px; font-weight: 700;">{{f.name}}</span>
+            <span style="font-size: 12px; color: {{c.muted}};">{{f.sub}}</span>
+          </span>
+          <button type="button" aria-label="{{f.pinLabel}}" title="Закрепить вверху" onClick="{{f.pin}}" style="width: 44px; height: 44px; flex: none; border: none; border-radius: 22px; background: transparent; color: {{c.accentInk}}; display: flex; align-items: center; justify-content: center; cursor: pointer; padding: 0;">
+            <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 3.5h6l-1 6 3.5 3.5h-11L10 9.5z"></path><path d="M12 13v7.5"></path></svg>
+          </button>
+        </div>
+      </sc-for>
+      <sc-if value="{{noFreeFilters}}" hint-placeholder-val="{{false}}">
+        <p style="margin: 0; padding: 14px 16px; font-size: 13px; color: {{c.muted}};">Все сохранённые фильтры уже закреплены. Новый фильтр сохраняется в панели фильтров.</p>
+      </sc-if>
+    </div>
+
+    <h2 style="margin: 10px 4px 0; font-size: 13px; font-weight: 800; color: {{c.muted}};">Категории</h2>
+    <div style="display: flex; flex-wrap: wrap; gap: 6px;">
+      <sc-for list="{{freeCats}}" as="k" hint-placeholder-count="6">
+        <button type="button" aria-label="{{k.pinLabel}}" onClick="{{k.pin}}" style="height: 34px; padding: 0 12px 0 10px; border: 1px solid {{c.line}}; border-radius: 17px; background: {{c.surface}}; color: {{c.ink}}; font-family: inherit; font-size: 13px; font-weight: 700; display: flex; align-items: center; gap: 5px; cursor: pointer;">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="{{c.muted}}" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 3.5h6l-1 6 3.5 3.5h-11L10 9.5z"></path><path d="M12 13v7.5"></path></svg>{{k.name}}
+        </button>
+      </sc-for>
+    </div>
+  </main>
+
+  <!-- Нижнее меню: активны Настройки -->
+  <nav aria-label="Основное меню" style="position: absolute; z-index: 5; left: 16px; right: 16px; bottom: 22px; height: 68px; border-radius: 34px; background: {{c.surface}}; border: 1px solid {{c.line}}; box-shadow: {{c.barShadow}}; display: flex; align-items: center; justify-content: space-between; padding: 0 6px; box-sizing: border-box;">
+    <a href="Main.dc.html" style="width: 68px; height: 54px; border-radius: 27px; color: {{c.muted}}; text-decoration: none; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px;">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="4" width="16" height="7" rx="3"></rect><path d="M4 15.5h16M4 19.5h10"></path></svg>
+      <span style="font-size: 11px; font-weight: 600;">Лента</span>
+    </a>
+    <button type="button" style="width: 68px; height: 54px; border: none; border-radius: 27px; background: transparent; color: {{c.muted}}; font-family: inherit; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; cursor: pointer; padding: 0;">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><path d="M12 20s-7.5-4.6-7.5-10.2A4.3 4.3 0 0 1 12 7.2a4.3 4.3 0 0 1 7.5 2.6C19.5 15.4 12 20 12 20z"></path></svg>
+      <span style="font-size: 11px; font-weight: 600;">Избранное</span>
+    </button>
+    <a href="ReviewForm.dc.html" aria-label="Новая рекомендация" title="Новая рекомендация" style="width: 54px; height: 54px; flex: none; border-radius: 27px; background: {{c.accent}}; color: #FFFFFF; display: flex; align-items: center; justify-content: center; box-shadow: 0 6px 16px {{c.accentGlow}};">
+      <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"></path></svg>
+    </a>
+    <button type="button" style="width: 68px; height: 54px; border: none; border-radius: 27px; background: transparent; color: {{c.muted}}; font-family: inherit; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; cursor: pointer; padding: 0;">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="8" cy="15" r="4.5"></circle><path d="M11.2 11.8 20 3M16.5 6.5l2.5 2.5M14 9l2 2"></path></svg>
+      <span style="font-size: 11px; font-weight: 600;">Личное</span>
+    </button>
+    <a href="Settings.dc.html" aria-current="page" style="width: 68px; height: 54px; border-radius: 27px; background: {{c.chip}}; color: {{c.ink}}; text-decoration: none; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px;">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12.2 2.5h-.4a1.8 1.8 0 0 0-1.8 1.8v.2a1.8 1.8 0 0 1-.9 1.5l-.4.2a1.8 1.8 0 0 1-1.8 0l-.1-.1a1.8 1.8 0 0 0-2.5.7l-.2.3a1.8 1.8 0 0 0 .7 2.5l.1.1a1.8 1.8 0 0 1 .9 1.5v.5a1.8 1.8 0 0 1-.9 1.6l-.1.1a1.8 1.8 0 0 0-.7 2.5l.2.3a1.8 1.8 0 0 0 2.5.7l.1-.1a1.8 1.8 0 0 1 1.8 0l.4.2a1.8 1.8 0 0 1 .9 1.5v.2a1.8 1.8 0 0 0 1.8 1.8h.4a1.8 1.8 0 0 0 1.8-1.8v-.2a1.8 1.8 0 0 1 .9-1.5l.4-.2a1.8 1.8 0 0 1 1.8 0l.1.1a1.8 1.8 0 0 0 2.5-.7l.2-.3a1.8 1.8 0 0 0-.7-2.5l-.1-.1a1.8 1.8 0 0 1-.9-1.6v-.4a1.8 1.8 0 0 1 .9-1.6l.1-.1a1.8 1.8 0 0 0 .7-2.5l-.2-.3a1.8 1.8 0 0 0-2.5-.7l-.1.1a1.8 1.8 0 0 1-1.8 0l-.4-.2a1.8 1.8 0 0 1-.9-1.5v-.2a1.8 1.8 0 0 0-1.8-1.8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+      <span style="font-size: 11px; font-weight: 700;">Настройки</span>
+    </a>
+  </nav>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"dark":{"editor":"boolean","default":false},"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { pinned: ['f:coffee', 'f:kids', 'c:Книги'], dragging: null };
+    this.drag = null;
+  }
+  renderVals() {
+    var self = this;
+    var dark = !!this.props.dark;
+    var light = {
+      bg: '#F6F5F2', surface: '#FFFFFF', chip: '#ECEAE5', ink: '#1B1B1F', muted: '#5E5D66', line: '#E4E2DD',
+      accent: '#D9532F', accentGlow: 'rgba(217,83,47,0.35)', accentSoft: '#FBE4DC', accentInk: '#9A3415',
+      shadow: '0 4px 14px rgba(27,27,31,0.07)', barShadow: '0 10px 30px rgba(27,27,31,0.14)', dragBg: '#FBF3EF'
+    };
+    var night = {
+      bg: '#121214', surface: '#1E1E22', chip: '#2C2C31', ink: '#F2F1EE', muted: '#A9A8B0', line: '#2E2E34',
+      accent: '#F0673F', accentGlow: 'rgba(240,103,63,0.30)', accentSoft: '#3A2219', accentInk: '#FFB59C',
+      shadow: 'none', barShadow: '0 10px 30px rgba(0,0,0,0.5)', dragBg: '#2A211D'
+    };
+    var c = dark ? night : light;
+    var st = this.state;
+    // Сохранённые фильтры пользователя (пример) и корневые категории справочника
+    var filters = {
+      'f:coffee': { name: 'Кофе 9–10', sub: 'Кофейни · оценка 9–10' },
+      'f:kids': { name: 'С детьми', sub: '#сдетьми' },
+      'f:dima': { name: 'Книги от Дмитрия', sub: 'Книги · Дмитрий' },
+      'f:bars': { name: 'Бары на вечер', sub: 'Бары · #работаетночью · оценка 7–10' }
+    };
+    var cats = ['Рестораны', 'Фильмы', 'Сериалы', 'Книги', 'Путешествия', 'Услуги', 'Здоровье', 'Спорт', 'Хобби'];
+    function setPinned(p) { self.setState({ pinned: p }); }
+    var ROW = 64;
+    function isF(id) { return id.charAt(0) === 'f'; }
+    // Сначала фильтры, затем категории; каждая группа — в своём порядке
+    function ordered(p) { return p.filter(isF).concat(p.filter(function (x) { return !isF(x); })); }
+    var pinned = ordered(st.pinned).map(function (id, i) {
+      var isFilter = id.charAt(0) === 'f';
+      var name = isFilter ? filters[id].name : id.slice(2);
+      return {
+        name: name, isFilter: isFilter, isCat: !isFilter,
+        sub: isFilter ? 'Фильтр · ' + filters[id].sub : 'Категория',
+        bg: st.dragging === id ? c.dragBg : 'transparent',
+        dragLabel: 'Переместить «' + name + '»', unpinLabel: 'Открепить «' + name + '»',
+        unpin: function () { setPinned(self.state.pinned.filter(function (x) { return x !== id; })); },
+        dragStart: function (e) {
+          if (e.currentTarget.setPointerCapture) e.currentTarget.setPointerCapture(e.pointerId);
+          self.drag = { id: id, y: e.clientY };
+          self.setState({ dragging: id });
+        }
+      };
+    });
+    var freeFilters = Object.keys(filters).filter(function (id) { return st.pinned.indexOf(id) < 0; }).map(function (id) {
+      return {
+        name: filters[id].name, sub: filters[id].sub, pinLabel: 'Закрепить «' + filters[id].name + '»',
+        pin: function () { setPinned(self.state.pinned.concat([id])); }
+      };
+    });
+    var freeCats = cats.filter(function (n) { return st.pinned.indexOf('c:' + n) < 0; }).map(function (n) {
+      return { name: n, pinLabel: 'Закрепить категорию «' + n + '»', pin: function () { setPinned(self.state.pinned.concat(['c:' + n])); } };
+    });
+    return {
+      c: c, pinned: pinned, noPinned: pinned.length === 0,
+      freeFilters: freeFilters, noFreeFilters: freeFilters.length === 0, freeCats: freeCats,
+      // Перетаскивание: строка меняется местами с соседней, когда палец сдвинулся на высоту строки
+      dragMove: function (e) {
+        var d = self.drag;
+        if (!d) return;
+        // Перемещение — только среди своих: фильтры между фильтрами, категории между категориями
+        var kind = isF(d.id);
+        var p = self.state.pinned.filter(function (x) { return isF(x) === kind; });
+        var rest = self.state.pinned.filter(function (x) { return isF(x) !== kind; });
+        var i = p.indexOf(d.id);
+        var steps = Math.trunc((e.clientY - d.y) / ROW);
+        if (!steps) return;
+        var j = Math.max(0, Math.min(p.length - 1, i + steps));
+        if (j === i) return;
+        p.splice(i, 1);
+        p.splice(j, 0, d.id);
+        d.y += (j - i) * ROW;
+        setPinned(ordered(p.concat(rest)));
+      },
+      dragEnd: function () { self.drag = null; self.setState({ dragging: null }); }
+    };
+  }
+}
+</script>
+</body>
+</html>

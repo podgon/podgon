@@ -1,0 +1,351 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<title>Podgon — страница группы</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#D9532F}a:hover{color:#B8401F}
+.pg-scroll::-webkit-scrollbar{display:none}
+.pg-scroll>*{flex-shrink:0}
+.pg-field:focus{outline:none}
+.pg-field::placeholder{color:#9A98A0}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; position: relative; overflow: hidden; display: flex; flex-direction: column; background: {{c.bg}}; color: {{c.ink}}; font-family: 'Manrope', system-ui, sans-serif;">
+  <header style="display: flex; align-items: center; gap: 8px; padding: 18px 16px 10px; flex: none;">
+    <a href="Groups.dc.html" aria-label="Назад" title="Назад" style="width: 44px; height: 44px; flex: none; border-radius: 22px; border: 1px solid {{c.line}}; background: {{c.surface}}; color: {{c.ink}}; display: flex; align-items: center; justify-content: center; box-sizing: border-box;">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 6-6 6 6 6"></path></svg>
+    </a>
+    <span style="flex: 1; text-align: center; font-size: 17px; font-weight: 800; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Друзья</span>
+    <span style="width: 44px; flex: none;"></span>
+  </header>
+
+  <main class="pg-scroll" style="flex: 1; min-height: 0; overflow-y: auto; scrollbar-width: none; padding: 4px 16px 112px; display: flex; flex-direction: column; gap: 10px;">
+    <!-- Шапка группы -->
+    <div style="border-radius: 22px; background: {{c.surface}}; border: 1px solid {{c.line}}; box-shadow: {{c.shadow}}; padding: 16px; display: flex; flex-direction: column; gap: 12px;">
+      <div style="display: flex; align-items: center; gap: 14px;">
+        <span style="width: 56px; height: 56px; flex: none; border-radius: 19px; background: {{c.chip}}; display: flex; align-items: center; justify-content: center; font-size: 22px; font-weight: 800;">Д</span>
+        <span style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px;">
+          <span style="font-size: 20px; font-weight: 800; letter-spacing: -0.2px;">Друзья</span>
+          <span style="font-size: 13px; color: {{c.muted}};">12 участников · 148 рекомендаций</span>
+        </span>
+      </div>
+      <p style="margin: 0; font-size: 14px; line-height: 1.5;">Рестораны, книги и всё, что советуем друг другу.</p>
+      <div style="display: flex; align-items: center; gap: 8px;">
+        <span style="height: 24px; padding: 0 10px; border-radius: 12px; font-size: 12px; font-weight: 700; display: flex; align-items: center; flex: none; white-space: nowrap; background: {{c.accentSoft}}; color: {{c.accentInk}};">Вы — администратор</span>
+        <span style="flex: 1;"></span>
+        <button type="button" onClick="{{openInvite}}" style="height: 40px; border: none; border-radius: 20px; background: {{c.accent}}; color: #FFFFFF; font-family: inherit; font-size: 14px; font-weight: 700; display: flex; align-items: center; gap: 8px; padding: 0 16px 0 12px; cursor: pointer; box-shadow: 0 6px 16px {{c.accentGlow}};"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="9" r="3.2"></circle><path d="M3.5 19a5.5 5.5 0 0 1 9-4.2"></path><path d="M18 13v7M14.5 16.5h7"></path></svg>Пригласить</button>
+      </div>
+    </div>
+
+    <h2 style="margin: 8px 4px 0; font-size: 13px; font-weight: 800; color: {{c.muted}};">Участники · 12</h2>
+
+    <div style="border-radius: 22px; background: {{c.surface}}; border: 1px solid {{c.line}}; box-shadow: {{c.shadow}}; overflow: hidden;">
+      <sc-for list="{{members}}" as="m" hint-placeholder-count="5">
+        <button type="button" onClick="{{m.open}}" style="min-height: 56px; border-bottom: 1px solid {{c.line}}; color: {{c.ink}}; display: flex; align-items: center; gap: 12px; padding: 8px 14px; box-sizing: border-box;width: 100%; border: none; background: transparent; font-family: inherit; text-align: left; cursor: pointer;">
+          <svg width="36" height="36" viewBox="0 0 48 48" aria-hidden="true" style="flex: none;"><circle cx="24" cy="24" r="24" fill="{{c.chip}}"></circle><circle cx="24" cy="19" r="7" fill="none" stroke="{{c.muted}}" stroke-width="2.4"></circle><path d="M11.5 38a13.5 13.5 0 0 1 25 0" fill="none" stroke="{{c.muted}}" stroke-width="2.4" stroke-linecap="round"></path></svg>
+          <span style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px;">
+            <span style="font-size: 15px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{m.name}}</span>
+            <span style="font-size: 12px; color: {{c.muted}};">{{m.user}}</span>
+          </span>
+          <span style="height: 24px; padding: 0 10px; border-radius: 12px; font-size: 12px; font-weight: 700; display: flex; align-items: center; flex: none; white-space: nowrap; background: {{m.roleBg}}; color: {{m.roleFg}};">{{m.role}}</span>
+        </button>
+      </sc-for>
+      <button type="button" style="width: 100%; height: 48px; border: none; background: transparent; color: {{c.accentInk}}; font-family: inherit; font-size: 14px; font-weight: 700; cursor: pointer;">Показать всех (12)</button>
+    </div>
+
+    <h2 style="margin: 8px 4px 0; font-size: 13px; font-weight: 800; color: {{c.muted}};">Роли</h2>
+
+    <div style="border-radius: 22px; background: {{c.surface}}; border: 1px solid {{c.line}}; box-shadow: {{c.shadow}}; overflow: hidden;">
+      <sc-for list="{{roles}}" as="r" hint-placeholder-count="3">
+        <button type="button" onClick="{{r.open}}" style="min-height: 56px; border-bottom: 1px solid {{c.line}}; color: {{c.ink}}; display: flex; align-items: center; gap: 12px; padding: 8px 14px; box-sizing: border-box;width: 100%; border: none; background: transparent; font-family: inherit; text-align: left; cursor: pointer;">
+          <span style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px;">
+            <span style="font-size: 15px; font-weight: 700;">{{r.name}}</span>
+            <span style="font-size: 12px; color: {{c.muted}};">{{r.sub}}</span>
+          </span>
+          <span style="font-size: 13px; color: {{c.muted}}; font-variant-numeric: tabular-nums;">{{r.count}}</span>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="{{c.muted}}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex: none;"><path d="m9 6 6 6-6 6"></path></svg>
+        </button>
+      </sc-for>
+      <button type="button" onClick="{{newRole}}" style="width: 100%; height: 52px; border: none; background: transparent; color: {{c.accentInk}}; font-family: inherit; font-size: 14px; font-weight: 700; display: flex; align-items: center; gap: 10px; padding: 0 16px; cursor: pointer;">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"></path></svg>Новая роль
+      </button>
+    </div>
+
+    <h2 style="margin: 8px 4px 0; font-size: 13px; font-weight: 800; color: {{c.muted}};">Приглашения</h2>
+
+    <div style="border-radius: 22px; background: {{c.surface}}; border: 1px solid {{c.line}}; box-shadow: {{c.shadow}}; overflow: hidden;">
+      <sc-for list="{{invites}}" as="i" hint-placeholder-count="3">
+        <div style="min-height: 56px; border-bottom: 1px solid {{c.line}}; color: {{c.ink}}; display: flex; align-items: center; gap: 12px; padding: 8px 14px; box-sizing: border-box;">
+          <span style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px;">
+            <span style="font-size: 15px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: {{i.fg}};">{{i.title}}</span>
+            <span style="font-size: 12px; color: {{c.muted}};">{{i.sub}}</span>
+          </span>
+          <span style="height: 24px; padding: 0 10px; border-radius: 12px; font-size: 12px; font-weight: 700; display: flex; align-items: center; flex: none; white-space: nowrap; background: {{i.stBg}}; color: {{i.stFg}};">{{i.status}}</span>
+          <sc-if value="{{i.active}}" hint-placeholder-val="{{true}}">
+            <button type="button" aria-label="{{i.revokeLabel}}" title="Отозвать" onClick="{{i.revoke}}" style="width: 40px; height: 40px; flex: none; border: none; border-radius: 20px; background: transparent; color: {{c.muted}}; display: flex; align-items: center; justify-content: center; cursor: pointer; padding: 0;"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M7 7l10 10M17 7 7 17"></path></svg></button>
+          </sc-if>
+        </div>
+      </sc-for>
+    </div>
+
+    <div style="border-radius: 22px; background: {{c.surface}}; border: 1px solid {{c.line}}; box-shadow: {{c.shadow}}; overflow: hidden; margin-top: 8px;">
+      <button type="button" onClick="{{openLeave}}" style="min-height: 56px; border-bottom: 1px solid {{c.line}}; color: {{c.ink}}; display: flex; align-items: center; gap: 12px; padding: 8px 14px; box-sizing: border-box;width: 100%; border: none; background: transparent; font-family: inherit; text-align: left; cursor: pointer;">
+        <span style="width: 24px; display: flex; justify-content: center;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 4H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h4"></path><path d="M20.5 12H9M16 8l4.5 4-4.5 4"></path></svg></span>
+        <span style="flex: 1; font-size: 15px; font-weight: 700;">Покинуть группу</span>
+      </button>
+      <button type="button" onClick="{{openDelete}}" style="min-height: 56px; border-bottom: 1px solid {{c.line}}; color: {{c.ink}}; display: flex; align-items: center; gap: 12px; padding: 8px 14px; box-sizing: border-box;width: 100%; border: none; background: transparent; font-family: inherit; text-align: left; cursor: pointer; border-bottom: none; color: {{c.danger}};">
+        <span style="width: 24px; display: flex; justify-content: center;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4.5 7h15M10 11v6M14 11v6M6.5 7l1 12.5a1.5 1.5 0 0 0 1.5 1.5h6a1.5 1.5 0 0 0 1.5-1.5l1-12.5M9.5 7V4.5h5V7"></path></svg></span>
+        <span style="flex: 1; font-size: 15px; font-weight: 700;">Удалить группу</span>
+      </button>
+    </div>
+  </main>
+
+  <nav aria-label="Основное меню" style="position: absolute; z-index: 5; left: 16px; right: 16px; bottom: 22px; height: 68px; border-radius: 34px; background: {{c.surface}}; border: 1px solid {{c.line}}; box-shadow: {{c.barShadow}}; display: flex; align-items: center; justify-content: space-between; padding: 0 6px; box-sizing: border-box;">
+    <a href="Main.dc.html" style="text-decoration: none; width: 68px; height: 54px; border-radius: 27px; background: transparent; color: {{c.muted}}; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px;">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="4" width="16" height="7" rx="3"></rect><path d="M4 15.5h16M4 19.5h10"></path></svg>
+      <span style="font-size: 11px; font-weight: 600;">Лента</span>
+    </a>
+    <button type="button" style="border: none; font-family: inherit; cursor: pointer; padding: 0; width: 68px; height: 54px; border-radius: 27px; background: transparent; color: {{c.muted}}; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px;">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20s-7.5-4.6-7.5-10.2A4.3 4.3 0 0 1 12 7.2a4.3 4.3 0 0 1 7.5 2.6C19.5 15.4 12 20 12 20z"></path></svg>
+      <span style="font-size: 11px; font-weight: 600;">Избранное</span>
+    </button>
+    <a href="ReviewForm.dc.html" aria-label="Новая рекомендация" title="Новая рекомендация" style="width: 54px; height: 54px; flex: none; border-radius: 27px; background: {{c.accent}}; color: #FFFFFF; display: flex; align-items: center; justify-content: center; box-shadow: 0 6px 16px {{c.accentGlow}};">
+      <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"></path></svg>
+    </a>
+    <button type="button" style="border: none; font-family: inherit; cursor: pointer; padding: 0; width: 68px; height: 54px; border-radius: 27px; background: transparent; color: {{c.muted}}; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px;">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="8" cy="15" r="4.5"></circle><path d="M11.2 11.8 20 3M16.5 6.5l2.5 2.5M14 9l2 2"></path></svg>
+      <span style="font-size: 11px; font-weight: 600;">Личное</span>
+    </button>
+    <a href="Settings.dc.html" aria-current="page" style="text-decoration: none; width: 68px; height: 54px; border-radius: 27px; background: {{c.chip}}; color: {{c.ink}}; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px;">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12.2 2.5h-.4a1.8 1.8 0 0 0-1.8 1.8v.2a1.8 1.8 0 0 1-.9 1.5l-.4.2a1.8 1.8 0 0 1-1.8 0l-.1-.1a1.8 1.8 0 0 0-2.5.7l-.2.3a1.8 1.8 0 0 0 .7 2.5l.1.1a1.8 1.8 0 0 1 .9 1.5v.5a1.8 1.8 0 0 1-.9 1.6l-.1.1a1.8 1.8 0 0 0-.7 2.5l.2.3a1.8 1.8 0 0 0 2.5.7l.1-.1a1.8 1.8 0 0 1 1.8 0l.4.2a1.8 1.8 0 0 1 .9 1.5v.2a1.8 1.8 0 0 0 1.8 1.8h.4a1.8 1.8 0 0 0 1.8-1.8v-.2a1.8 1.8 0 0 1 .9-1.5l.4-.2a1.8 1.8 0 0 1 1.8 0l.1.1a1.8 1.8 0 0 0 2.5-.7l.2-.3a1.8 1.8 0 0 0-.7-2.5l-.1-.1a1.8 1.8 0 0 1-.9-1.6v-.4a1.8 1.8 0 0 1 .9-1.6l.1-.1a1.8 1.8 0 0 0 .7-2.5l-.2-.3a1.8 1.8 0 0 0-2.5-.7l-.1.1a1.8 1.8 0 0 1-1.8 0l-.4-.2a1.8 1.8 0 0 1-.9-1.5v-.2a1.8 1.8 0 0 0-1.8-1.8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+      <span style="font-size: 11px; font-weight: 700;">Настройки</span>
+    </a>
+  </nav>
+  <sc-if value="{{inviteOpen}}" hint-placeholder-val="{{false}}">
+    <div onClick="{{closeSheet}}" style="position: absolute; inset: 0; z-index: 8; background: {{c.scrim}};"></div>
+    <div role="dialog" aria-label="Новое приглашение" style="position: absolute; z-index: 9; left: 8px; right: 8px; bottom: 8px; border-radius: 28px; background: {{c.surface}}; box-shadow: {{c.barShadow}}; padding: 8px 16px 16px; box-sizing: border-box; display: flex; flex-direction: column; gap: 12px;">
+      <div style="width: 36px; height: 4px; border-radius: 2px; background: {{c.line}}; margin: 2px auto 0;"></div>
+      <sc-if value="{{inviteForm}}" hint-placeholder-val="{{true}}">
+        <h3 style="margin: 0; font-size: 19px; font-weight: 800;">Новое приглашение</h3>
+        <label style="display: flex; flex-direction: column; gap: 6px;">
+          <span style="font-size: 12px; font-weight: 700; color: {{c.muted}}; padding: 0 4px;">Email (необязательно)</span>
+          <input class="pg-field" type="email" placeholder="name@example.com" value="{{invEmail}}" onChange="{{onInvEmail}}" style="height: 50px; border: 1px solid {{c.line}}; border-radius: 16px; background: {{c.bg}}; font-family: inherit; font-size: 16px; font-weight: 600; color: {{c.ink}}; padding: 0 14px; box-sizing: border-box; width: 100%;">
+          <span style="font-size: 12px; line-height: 1.4; color: {{c.muted}}; padding: 0 4px;">С email код уйдёт письмом, и вступить сможет только владелец адреса.</span>
+        </label>
+        <div style="display: flex; align-items: center; gap: 10px; padding: 2px 0;">
+          <span style="flex: 1; font-size: 15px; font-weight: 700;">Сколько человек может вступить</span>
+          <div style="display: flex; align-items: center; gap: 2px; padding: 3px; border-radius: 21px; background: {{c.chip}};">
+            <button type="button" aria-label="Меньше" onClick="{{usesMinus}}" style="width: 36px; height: 36px; border: none; border-radius: 18px; background: transparent; color: {{c.ink}}; font-size: 20px; font-weight: 700; cursor: pointer;">−</button>
+            <span style="min-width: 28px; text-align: center; font-size: 16px; font-weight: 800; font-variant-numeric: tabular-nums;">{{uses}}</span>
+            <button type="button" aria-label="Больше" onClick="{{usesPlus}}" style="width: 36px; height: 36px; border: none; border-radius: 18px; background: transparent; color: {{c.ink}}; font-size: 20px; font-weight: 700; cursor: pointer;">+</button>
+          </div>
+        </div>
+        <button type="button" onClick="{{createInvite}}" style="height: 50px; border: none; border-radius: 25px; background: {{c.accent}}; color: #FFFFFF; font-family: inherit; font-size: 15px; font-weight: 800; cursor: pointer; box-shadow: 0 6px 16px {{c.accentGlow}};">Создать приглашение</button>
+      </sc-if>
+      <sc-if value="{{inviteDone}}" hint-placeholder-val="{{false}}">
+        <h3 style="margin: 0; font-size: 19px; font-weight: 800;">Приглашение создано</h3>
+        <div style="height: 72px; border-radius: 20px; background: {{c.bg}}; border: 1px dashed {{c.lineStrong}}; display: flex; align-items: center; justify-content: center; font-family: ui-monospace, Menlo, monospace; font-size: 28px; font-weight: 700; letter-spacing: 3px;">KX7-4MQ-92D</div>
+        <p style="margin: 0; font-size: 13px; line-height: 1.45; color: {{c.muted}};">{{doneHint}}</p>
+        <div style="display: flex; gap: 8px;">
+          <button type="button" onClick="{{copy}}" style="flex: 1; height: 48px; border-radius: 24px; border: 1px solid {{c.line}}; background: transparent; color: {{c.ink}}; font-family: inherit; font-size: 15px; font-weight: 700; cursor: pointer;">{{copyLabel}}</button>
+          <button type="button" style="flex: 1; height: 48px; border-radius: 24px; border: 1px solid {{c.line}}; background: transparent; color: {{c.muted}}; font-family: inherit; font-size: 15px; font-weight: 700; cursor: pointer;">Поделиться · скоро</button>
+        </div>
+        <button type="button" onClick="{{closeSheet}}" style="height: 48px; border: none; border-radius: 24px; background: {{c.accent}}; color: #FFFFFF; font-family: inherit; font-size: 15px; font-weight: 800; cursor: pointer;">Готово</button>
+      </sc-if>
+    </div>
+  </sc-if>
+  <sc-if value="{{leaveOpen}}" hint-placeholder-val="{{false}}">
+    <div onClick="{{closeSheet}}" style="position: absolute; inset: 0; z-index: 8; background: {{c.scrim}};"></div>
+    <div role="dialog" aria-label="Покинуть группу" style="position: absolute; z-index: 9; left: 8px; right: 8px; bottom: 8px; border-radius: 28px; background: {{c.surface}}; box-shadow: {{c.barShadow}}; padding: 8px 16px 16px; box-sizing: border-box; display: flex; flex-direction: column; gap: 12px;">
+      <div style="width: 36px; height: 4px; border-radius: 2px; background: {{c.line}}; margin: 2px auto 0;"></div>
+      <h3 style="margin: 0; font-size: 19px; font-weight: 800;">Покинуть «Друзья»?</h3>
+      <p style="margin: 0; font-size: 14px; line-height: 1.5; color: {{c.muted}};">Вы потеряете доступ к группе. Чтобы вернуться, понадобится новое приглашение. Администраторов в группе останется: 1.</p>
+      <button type="button" role="checkbox" aria-checked="{{delMineAria}}" onClick="{{toggleDelMine}}" style="border: none; background: transparent; color: {{c.ink}}; font-family: inherit; display: flex; align-items: flex-start; gap: 12px; padding: 4px 0; text-align: left; cursor: pointer;">
+        <span style="width: 24px; height: 24px; flex: none; border-radius: 8px; border: 2px solid {{delMineBorder}}; background: {{delMineBg}}; color: {{c.tabOnFg}}; display: flex; align-items: center; justify-content: center; box-sizing: border-box;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12.5 4.5 4.5L19 7.5"></path></svg></span>
+        <span style="font-size: 14px; line-height: 1.45;">Убрать и мои публикации из этой группы (7). Иначе они останутся в группе.</span>
+      </button>
+      <div style="display: flex; gap: 8px; margin-top: 4px;">
+        <button type="button" onClick="{{closeSheet}}" style="flex: 1; height: 48px; border-radius: 24px; border: 1px solid {{c.line}}; background: transparent; color: {{c.ink}}; font-family: inherit; font-size: 15px; font-weight: 700; cursor: pointer;">Отмена</button>
+        <button type="button" onClick="{{leave}}" style="flex: 1; height: 48px; border-radius: 24px; border: none; background: {{c.danger}}; color: #FFFFFF; font-family: inherit; font-size: 15px; font-weight: 700; cursor: pointer;">Покинуть</button>
+      </div>
+    </div>
+  </sc-if>
+  <sc-if value="{{deleteOpen}}" hint-placeholder-val="{{false}}">
+    <div onClick="{{closeSheet}}" style="position: absolute; inset: 0; z-index: 8; background: {{c.scrim}};"></div>
+    <div role="dialog" aria-label="Удалить группу" style="position: absolute; z-index: 9; left: 8px; right: 8px; bottom: 8px; border-radius: 28px; background: {{c.surface}}; box-shadow: {{c.barShadow}}; padding: 8px 16px 16px; box-sizing: border-box; display: flex; flex-direction: column; gap: 12px;">
+      <div style="width: 36px; height: 4px; border-radius: 2px; background: {{c.line}}; margin: 2px auto 0;"></div>
+      <h3 style="margin: 0; font-size: 19px; font-weight: 800;">Удалить «Друзья»?</h3>
+      <p style="margin: 0; font-size: 14px; line-height: 1.5; color: {{c.muted}};">Группа, участники, роли и приглашения удаляются навсегда. 23 рекомендации опубликованы только здесь — что с ними сделать?</p>
+      <sc-for list="{{fates}}" as="f" hint-placeholder-count="2">
+        <button type="button" role="radio" aria-checked="{{f.checked}}" onClick="{{f.pick}}" style="border: none; background: transparent; color: {{c.ink}}; font-family: inherit; display: flex; align-items: center; gap: 12px; padding: 7px 0; text-align: left; cursor: pointer;">
+          <span style="width: 22px; height: 22px; flex: none; border-radius: 11px; border: 2px solid {{f.ring}}; display: flex; align-items: center; justify-content: center; box-sizing: border-box;"><span style="width: 10px; height: 10px; border-radius: 5px; background: {{f.dot}};"></span></span>
+          <span style="display: flex; flex-direction: column; gap: 1px;"><span style="font-size: 15px; font-weight: 700;">{{f.label}}</span><span style="font-size: 12px; color: {{c.muted}};">{{f.sub}}</span></span>
+        </button>
+      </sc-for>
+      <div style="display: flex; gap: 8px; margin-top: 4px;">
+        <button type="button" onClick="{{closeSheet}}" style="flex: 1; height: 48px; border-radius: 24px; border: 1px solid {{c.line}}; background: transparent; color: {{c.ink}}; font-family: inherit; font-size: 15px; font-weight: 700; cursor: pointer;">Отмена</button>
+        <button type="button" onClick="{{removeGroup}}" style="flex: 1; height: 48px; border-radius: 24px; border: none; background: {{c.danger}}; color: #FFFFFF; font-family: inherit; font-size: 15px; font-weight: 700; cursor: pointer;">Удалить группу</button>
+      </div>
+    </div>
+  </sc-if>
+  <sc-if value="{{roleOpen}}" hint-placeholder-val="{{false}}">
+    <div onClick="{{closeSheet}}" style="position: absolute; inset: 0; z-index: 8; background: {{c.scrim}};"></div>
+    <div role="dialog" aria-label="Роль" style="position: absolute; z-index: 9; left: 8px; right: 8px; bottom: 8px; border-radius: 28px; background: {{c.surface}}; box-shadow: {{c.barShadow}}; padding: 8px 16px 16px; box-sizing: border-box; display: flex; flex-direction: column; gap: 12px;">
+      <div style="width: 36px; height: 4px; border-radius: 2px; background: {{c.line}}; margin: 2px auto 0;"></div>
+      <h3 style="margin: 0; font-size: 19px; font-weight: 800;">{{roleTitle}}</h3>
+      <input class="pg-field" type="text" placeholder="Название роли" aria-label="Название роли" value="{{roleName}}" onChange="{{onRoleName}}" style="height: 50px; border: 1px solid {{c.line}}; border-radius: 16px; background: {{c.bg}}; font-family: inherit; font-size: 16px; font-weight: 600; color: {{c.ink}}; padding: 0 14px; box-sizing: border-box; width: 100%;">
+      <input class="pg-field" type="text" placeholder="Описание (необязательно)" aria-label="Описание" value="{{roleDesc}}" onChange="{{onRoleDesc}}" style="height: 50px; border: 1px solid {{c.line}}; border-radius: 16px; background: {{c.bg}}; font-family: inherit; font-size: 16px; font-weight: 600; color: {{c.ink}}; padding: 0 14px; box-sizing: border-box; width: 100%; font-weight: 500;">
+      <button type="button" role="checkbox" aria-checked="{{roleAdminAria}}" onClick="{{toggleRoleAdmin}}" style="border: none; background: transparent; color: {{c.ink}}; font-family: inherit; display: flex; align-items: flex-start; gap: 12px; padding: 4px 0; text-align: left; cursor: pointer;">
+        <span style="width: 24px; height: 24px; flex: none; border-radius: 8px; border: 2px solid {{roleAdminBorder}}; background: {{roleAdminBg}}; color: {{c.tabOnFg}}; display: flex; align-items: center; justify-content: center; box-sizing: border-box;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12.5 4.5 4.5L19 7.5"></path></svg></span>
+        <span style="font-size: 14px; line-height: 1.45;">Права администратора: приглашения, роли, удаление участников</span>
+      </button>
+      <div style="display: flex; gap: 8px; margin-top: 4px;">
+        <button type="button" onClick="{{closeSheet}}" style="flex: 1; height: 48px; border-radius: 24px; border: 1px solid {{c.line}}; background: transparent; color: {{c.ink}}; font-family: inherit; font-size: 15px; font-weight: 700; cursor: pointer;">Отмена</button>
+        <button type="button" onClick="{{closeSheet}}" style="flex: 1; height: 48px; border-radius: 24px; border: none; background: {{c.accent}}; color: #FFFFFF; font-family: inherit; font-size: 15px; font-weight: 700; cursor: pointer;">Сохранить</button>
+      </div>
+    </div>
+  </sc-if>
+  <sc-if value="{{memberOpen}}" hint-placeholder-val="{{false}}">
+    <div onClick="{{closeSheet}}" style="position: absolute; inset: 0; z-index: 8; background: {{c.scrim}};"></div>
+    <div role="dialog" aria-label="Участник" style="position: absolute; z-index: 9; left: 8px; right: 8px; bottom: 8px; border-radius: 28px; background: {{c.surface}}; box-shadow: {{c.barShadow}}; padding: 8px 16px 16px; box-sizing: border-box; display: flex; flex-direction: column; gap: 12px;">
+      <div style="width: 36px; height: 4px; border-radius: 2px; background: {{c.line}}; margin: 2px auto 0;"></div>
+      <div style="display: flex; align-items: center; gap: 12px;"><svg width="44" height="44" viewBox="0 0 48 48" aria-hidden="true" style="flex: none;"><circle cx="24" cy="24" r="24" fill="{{c.chip}}"></circle><circle cx="24" cy="19" r="7" fill="none" stroke="{{c.muted}}" stroke-width="2.4"></circle><path d="M11.5 38a13.5 13.5 0 0 1 25 0" fill="none" stroke="{{c.muted}}" stroke-width="2.4" stroke-linecap="round"></path></svg>
+        <span style="display: flex; flex-direction: column; gap: 1px;"><span style="font-size: 17px; font-weight: 800;">{{memberName}}</span><span style="font-size: 13px; color: {{c.muted}};">{{memberUser}}</span></span>
+      </div>
+      <span style="font-size: 12px; font-weight: 800; color: {{c.muted}};">Роль</span>
+      <sc-for list="{{memberRoles}}" as="q" hint-placeholder-count="2">
+        <button type="button" role="radio" aria-checked="{{q.checked}}" onClick="{{q.pick}}" style="border: none; background: transparent; color: {{c.ink}}; font-family: inherit; display: flex; align-items: center; gap: 12px; padding: 7px 0; text-align: left; cursor: pointer;">
+          <span style="width: 22px; height: 22px; flex: none; border-radius: 11px; border: 2px solid {{q.ring}}; display: flex; align-items: center; justify-content: center; box-sizing: border-box;"><span style="width: 10px; height: 10px; border-radius: 5px; background: {{q.dot}};"></span></span>
+          <span style="display: flex; flex-direction: column; gap: 1px;"><span style="font-size: 15px; font-weight: 700;">{{q.label}}</span><span style="font-size: 12px; color: {{c.muted}};">{{q.sub}}</span></span>
+        </button>
+      </sc-for>
+      <button type="button" onClick="{{removeMember}}" style="height: 48px; border-radius: 24px; border: 1px solid {{c.dangerSoft}}; background: {{c.dangerSoft}}; color: {{c.danger}}; font-family: inherit; font-size: 15px; font-weight: 700; cursor: pointer;">Удалить из группы</button>
+    </div>
+  </sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"dark":{"editor":"boolean","default":false},"sheet":{"editor":"enum","options":["none","invite","leave","delete"],"default":"none"},"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    var s = props.sheet && props.sheet !== 'none' ? props.sheet : null;
+    this.state = { sheet: s, invStep: 'form', invEmail: '', uses: 1, copied: false, delMine: false, fate: 'keep', revoked: {}, removed: {},
+      member: null, roles: {}, roleName: '', roleDesc: '', roleAdmin: false, roleTitle: 'Новая роль' };
+  }
+  renderVals() {
+    var self = this;
+    var dark = !!this.props.dark;
+    var light = {
+      bg: '#F6F5F2', surface: '#FFFFFF', chip: '#ECEAE5', ink: '#1B1B1F', muted: '#5E5D66', line: '#E4E2DD', lineStrong: '#B9B6AF',
+      accent: '#D9532F', accentGlow: 'rgba(217,83,47,0.35)', accentSoft: '#FBE4DC', accentInk: '#9A3415', disabled: '#C9C6C0',
+      danger: '#C0352B', dangerSoft: '#FBE3E0',
+      shadow: '0 4px 14px rgba(27,27,31,0.07)', barShadow: '0 10px 30px rgba(27,27,31,0.14)',
+      tabOnBg: '#1B1B1F', tabOnFg: '#FFFFFF', segOn: '#FFFFFF', segShadow: '0 1px 4px rgba(27,27,31,0.12)', scrim: 'rgba(27,27,31,0.32)'
+    };
+    var night = {
+      bg: '#121214', surface: '#1E1E22', chip: '#2C2C31', ink: '#F2F1EE', muted: '#A9A8B0', line: '#2E2E34', lineStrong: '#55555D',
+      accent: '#F0673F', accentGlow: 'rgba(240,103,63,0.30)', accentSoft: '#3A2219', accentInk: '#FFB59C', disabled: '#45454C',
+      danger: '#FF8A7A', dangerSoft: '#3A1F1C',
+      shadow: 'none', barShadow: '0 10px 30px rgba(0,0,0,0.5)',
+      tabOnBg: '#F2F1EE', tabOnFg: '#121214', segOn: '#45454C', segShadow: 'none', scrim: 'rgba(0,0,0,0.55)'
+    };
+    var c = dark ? night : light;
+    var st = this.state;
+    function open(s, patch) { return function () { self.setState(Object.assign({ sheet: s }, patch || {})); }; }
+    var roleDefs = [
+      { id: 'admin', name: 'Администратор', sub: 'встроенная · права администратора', admin: true },
+      { id: 'member', name: 'Участник', sub: 'встроенная' },
+      { id: 'host', name: 'Организатор встреч', sub: 'Собирает нас в новых местах' }
+    ];
+    var people = [
+      { id: 'me', name: 'Анна Смирнова (вы)', user: '@anna.s', role: 'admin' },
+      { id: 'mp', name: 'Максим Петров', user: '@maxpetrov', role: 'admin' },
+      { id: 'ok', name: 'Олег', user: '@oleg', role: 'host' },
+      { id: 'ik', name: 'Ирина Ковалёва', user: '@irina.k', role: 'member' },
+      { id: 'dm', name: 'Дмитрий', user: '@dima', role: 'member' }
+    ].filter(function (p) { return !st.removed[p.id]; });
+    function roleOf(p) { return st.roles[p.id] || p.role; }
+    var members = people.map(function (p) {
+      var r = roleOf(p), def = roleDefs.filter(function (d) { return d.id === r; })[0];
+      return {
+        name: p.name, user: p.user, role: def.name === 'Администратор' ? 'Админ' : def.name,
+        roleBg: r === 'admin' ? c.accentSoft : c.chip, roleFg: r === 'admin' ? c.accentInk : c.muted,
+        open: open('member', { member: p })
+      };
+    });
+    var roles = roleDefs.map(function (d) {
+      var n = people.filter(function (p) { return roleOf(p) === d.id; }).length;
+      return { name: d.name, sub: d.sub, count: n, open: open('role', { roleTitle: 'Роль «' + d.name + '»', roleName: d.name, roleDesc: d.id === 'host' ? d.sub : '', roleAdmin: !!d.admin }) };
+    });
+    var invites = [
+      { id: 'a', title: 'По коду · для всех', sub: 'Создал Максим Петров · до 9 ноября · использовано 3 из 10', status: 'Активно' },
+      { id: 'b', title: 'Для olga@mail.ru', sub: 'Создали вы · использовано 0 из 1', status: 'Активно' },
+      { id: 'c', title: 'По коду · для всех', sub: 'Использовано 5 из 5', status: 'Использовано' }
+    ].map(function (i) {
+      var status = st.revoked[i.id] ? 'Отозвано' : i.status;
+      var active = status === 'Активно';
+      return {
+        title: i.title, sub: i.sub, status: status, active: active, fg: active ? c.ink : c.muted,
+        stBg: active ? c.accentSoft : c.chip, stFg: active ? c.accentInk : c.muted,
+        revokeLabel: 'Отозвать приглашение: ' + i.title,
+        revoke: function () { var r = Object.assign({}, self.state.revoked); r[i.id] = true; self.setState({ revoked: r }); }
+      };
+    });
+    var fates = [
+      { id: 'keep', label: 'Оставить авторам', sub: 'Станут их личными рекомендациями' },
+      { id: 'drop', label: 'Удалить', sub: 'Исчезнут насовсем' }
+    ].map(function (f) {
+      var on = st.fate === f.id;
+      return { label: f.label, sub: f.sub, checked: on ? 'true' : 'false', ring: on ? c.ink : c.muted, dot: on ? c.ink : 'transparent', pick: function () { self.setState({ fate: f.id }); } };
+    });
+    var m = st.member;
+    var memberRoles = roleDefs.map(function (d) {
+      var on = m && roleOf(m) === d.id;
+      return {
+        label: d.name, sub: d.sub, checked: on ? 'true' : 'false', ring: on ? c.ink : c.muted, dot: on ? c.ink : 'transparent',
+        pick: function () { var r = Object.assign({}, self.state.roles); r[m.id] = d.id; self.setState({ roles: r }); }
+      };
+    });
+    function box(on) { return { aria: on ? 'true' : 'false', bg: on ? c.tabOnBg : 'transparent', border: on ? c.tabOnBg : c.muted }; }
+    var b1 = box(st.delMine), b2 = box(st.roleAdmin);
+    return {
+      c: c, members: members, roles: roles, invites: invites, fates: fates, memberRoles: memberRoles,
+      openInvite: open('invite', { invStep: 'form', invEmail: '', uses: 1, copied: false }),
+      openLeave: open('leave'), openDelete: open('delete'),
+      newRole: open('role', { roleTitle: 'Новая роль', roleName: '', roleDesc: '', roleAdmin: false }),
+      closeSheet: function () { self.setState({ sheet: null }); },
+      inviteOpen: st.sheet === 'invite', inviteForm: st.invStep === 'form', inviteDone: st.invStep === 'done',
+      invEmail: st.invEmail, onInvEmail: function (e) { self.setState({ invEmail: e.target.value.trim() }); },
+      uses: st.uses,
+      usesMinus: function () { self.setState({ uses: Math.max(1, self.state.uses - 1) }); },
+      usesPlus: function () { self.setState({ uses: Math.min(100, self.state.uses + 1) }); },
+      createInvite: function () { self.setState({ invStep: 'done' }); },
+      doneHint: st.invEmail ? 'Код отправлен на ' + st.invEmail + '. Вступить сможет только владелец этого адреса.' : 'Скопируйте код сейчас — он показывается один раз. Вступить смогут ' + st.uses + ' чел.',
+      copyLabel: st.copied ? 'Скопировано' : 'Копировать', copy: function () { self.setState({ copied: true }); },
+      leaveOpen: st.sheet === 'leave', deleteOpen: st.sheet === 'delete', roleOpen: st.sheet === 'role', memberOpen: st.sheet === 'member' && !!m,
+      delMineAria: b1.aria, delMineBg: b1.bg, delMineBorder: b1.border,
+      toggleDelMine: function () { self.setState({ delMine: !self.state.delMine }); },
+      leave: function () { self.setState({ sheet: null }); },
+      removeGroup: function () { self.setState({ sheet: null }); },
+      roleTitle: st.roleTitle, roleName: st.roleName, roleDesc: st.roleDesc,
+      onRoleName: function (e) { self.setState({ roleName: e.target.value }); },
+      onRoleDesc: function (e) { self.setState({ roleDesc: e.target.value }); },
+      roleAdminAria: b2.aria, roleAdminBg: b2.bg, roleAdminBorder: b2.border,
+      toggleRoleAdmin: function () { self.setState({ roleAdmin: !self.state.roleAdmin }); },
+      memberName: m ? m.name : '', memberUser: m ? m.user : '',
+      removeMember: function () { var r = Object.assign({}, self.state.removed); r[m.id] = true; self.setState({ removed: r, sheet: null }); }
+    };
+  }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,185 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<title>Podgon — профиль</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#D9532F}a:hover{color:#B8401F}
+.pg-scroll::-webkit-scrollbar{display:none}
+.pg-scroll>*{flex-shrink:0}
+.pg-field:focus{outline:none}
+.pg-field::placeholder{color:#9A98A0}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; position: relative; overflow: hidden; display: flex; flex-direction: column; background: {{c.bg}}; color: {{c.ink}}; font-family: 'Manrope', system-ui, sans-serif;">
+  <header style="display: flex; align-items: center; gap: 8px; padding: 18px 16px 10px; flex: none;">
+    <a href="Main.dc.html" aria-label="Назад" title="Назад" style="width: 44px; height: 44px; flex: none; border-radius: 22px; border: 1px solid {{c.line}}; background: {{c.surface}}; color: {{c.ink}}; display: flex; align-items: center; justify-content: center; box-sizing: border-box;">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 6-6 6 6 6"></path></svg>
+    </a>
+    <span style="flex: 1; text-align: center; font-size: 17px; font-weight: 800; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Профиль</span>
+    <span style="width: 44px; flex: none;"></span>
+  </header>
+
+  <main class="pg-scroll" style="flex: 1; min-height: 0; overflow-y: auto; scrollbar-width: none; padding: 4px 16px 112px; display: flex; flex-direction: column; gap: 10px;">
+    <div style="display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 6px 0 10px;">
+      <svg width="88" height="88" viewBox="0 0 48 48" aria-hidden="true" style="flex: none;"><circle cx="24" cy="24" r="24" fill="{{c.chip}}"></circle><circle cx="24" cy="19" r="7" fill="none" stroke="{{c.muted}}" stroke-width="2.4"></circle><path d="M11.5 38a13.5 13.5 0 0 1 25 0" fill="none" stroke="{{c.muted}}" stroke-width="2.4" stroke-linecap="round"></path></svg>
+      <span style="margin-top: 8px; font-size: 22px; font-weight: 800; letter-spacing: -0.3px;">Анна Смирнова</span>
+      <span style="font-size: 14px; color: {{c.muted}};">@anna.s · anna@example.com</span>
+    </div>
+
+    <div style="border-radius: 22px; background: {{c.surface}}; border: 1px solid {{c.line}}; box-shadow: {{c.shadow}}; overflow: hidden;">
+      <a href="MyReviews.dc.html" style="min-height: 56px; border-bottom: 1px solid {{c.line}}; color: {{c.ink}}; text-decoration: none; display: flex; align-items: center; gap: 12px; padding: 8px 14px; box-sizing: border-box; border-bottom: none;">
+        <span style="width: 38px; height: 38px; flex: none; border-radius: 13px; background: {{c.chip}}; display: flex; align-items: center; justify-content: center;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="4" width="16" height="7" rx="3"></rect><path d="M4 15.5h16M4 19.5h10"></path></svg></span>
+        <span style="flex: 1; display: flex; flex-direction: column; gap: 2px;"><span style="font-size: 15px; font-weight: 700;">Мои рекомендации</span><span style="font-size: 13px; color: {{c.muted}};">Опубликованные в группах</span></span>
+        <span style="font-size: 14px; color: {{c.muted}}; font-variant-numeric: tabular-nums;">29</span>
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="{{c.muted}}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex: none;"><path d="m9 6 6 6-6 6"></path></svg>
+      </a>
+    </div>
+
+    <h2 style="margin: 8px 4px 0; font-size: 13px; font-weight: 800; color: {{c.muted}};">Устройства</h2>
+
+    <div style="border-radius: 22px; background: {{c.surface}}; border: 1px solid {{c.line}}; box-shadow: {{c.shadow}}; overflow: hidden;">
+      <sc-for list="{{sessions}}" as="s" hint-placeholder-count="3">
+        <div style="min-height: 56px; border-bottom: 1px solid {{c.line}}; color: {{c.ink}}; text-decoration: none; display: flex; align-items: center; gap: 12px; padding: 8px 14px; box-sizing: border-box;">
+          <span style="width: 38px; height: 38px; flex: none; border-radius: 13px; background: {{c.chip}}; display: flex; align-items: center; justify-content: center;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="7" y="2.5" width="10" height="19" rx="2.5"></rect><path d="M11 18.5h2"></path></svg></span>
+          <span style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px;">
+            <span style="font-size: 15px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{s.name}}</span>
+            <span style="font-size: 13px; color: {{c.muted}};">{{s.when}}</span>
+          </span>
+          <sc-if value="{{s.current}}" hint-placeholder-val="{{false}}">
+            <span style="flex: none; height: 24px; padding: 0 10px; border-radius: 12px; background: {{c.accentSoft}}; color: {{c.accentInk}}; font-size: 12px; font-weight: 700; display: flex; align-items: center;">Это устройство</span>
+          </sc-if>
+          <sc-if value="{{s.other}}" hint-placeholder-val="{{true}}">
+            <button type="button" aria-label="{{s.revokeLabel}}" title="Завершить сеанс" onClick="{{s.revoke}}" style="width: 44px; height: 44px; flex: none; border: none; border-radius: 22px; background: transparent; color: {{c.muted}}; display: flex; align-items: center; justify-content: center; cursor: pointer; padding: 0;">
+              <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 4H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h4"></path><path d="M20.5 12H9M16 8l4.5 4-4.5 4"></path></svg>
+            </button>
+          </sc-if>
+        </div>
+      </sc-for>
+    </div>
+
+    <div style="border-radius: 22px; background: {{c.surface}}; border: 1px solid {{c.line}}; box-shadow: {{c.shadow}}; overflow: hidden; margin-top: 8px;">
+      <a href="Auth.dc.html" style="min-height: 56px; border-bottom: 1px solid {{c.line}}; color: {{c.ink}}; text-decoration: none; display: flex; align-items: center; gap: 12px; padding: 8px 14px; box-sizing: border-box;">
+        <span style="width: 38px; display: flex; justify-content: center; color: {{c.ink}};"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 4H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h4"></path><path d="M20.5 12H9M16 8l4.5 4-4.5 4"></path></svg></span>
+        <span style="flex: 1; font-size: 15px; font-weight: 700;">Выйти из аккаунта</span>
+      </a>
+      <button type="button" onClick="{{openDelete}}" style="min-height: 56px; border-bottom: 1px solid {{c.line}}; color: {{c.ink}}; text-decoration: none; display: flex; align-items: center; gap: 12px; padding: 8px 14px; box-sizing: border-box; width: 100%; border: none; background: transparent; font-family: inherit; text-align: left; cursor: pointer; color: {{c.danger}};">
+        <span style="width: 38px; display: flex; justify-content: center;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4.5 7h15M10 11v6M14 11v6M6.5 7l1 12.5a1.5 1.5 0 0 0 1.5 1.5h6a1.5 1.5 0 0 0 1.5-1.5l1-12.5M9.5 7V4.5h5V7"></path></svg></span>
+        <span style="flex: 1; font-size: 15px; font-weight: 700;">Удалить аккаунт</span>
+      </button>
+    </div>
+  </main>
+
+  <nav aria-label="Основное меню" style="position: absolute; z-index: 5; left: 16px; right: 16px; bottom: 22px; height: 68px; border-radius: 34px; background: {{c.surface}}; border: 1px solid {{c.line}}; box-shadow: {{c.barShadow}}; display: flex; align-items: center; justify-content: space-between; padding: 0 6px; box-sizing: border-box;">
+    <a href="Main.dc.html" aria-current="page" style="text-decoration: none; width: 68px; height: 54px; border-radius: 27px; background: {{c.chip}}; color: {{c.ink}}; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px;">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="4" width="16" height="7" rx="3"></rect><path d="M4 15.5h16M4 19.5h10"></path></svg>
+      <span style="font-size: 11px; font-weight: 700;">Лента</span>
+    </a>
+    <button type="button" style="border: none; font-family: inherit; cursor: pointer; padding: 0; width: 68px; height: 54px; border-radius: 27px; background: transparent; color: {{c.muted}}; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px;">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20s-7.5-4.6-7.5-10.2A4.3 4.3 0 0 1 12 7.2a4.3 4.3 0 0 1 7.5 2.6C19.5 15.4 12 20 12 20z"></path></svg>
+      <span style="font-size: 11px; font-weight: 600;">Избранное</span>
+    </button>
+    <a href="ReviewForm.dc.html" aria-label="Новая рекомендация" title="Новая рекомендация" style="width: 54px; height: 54px; flex: none; border-radius: 27px; background: {{c.accent}}; color: #FFFFFF; display: flex; align-items: center; justify-content: center; box-shadow: 0 6px 16px {{c.accentGlow}};">
+      <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"></path></svg>
+    </a>
+    <button type="button" style="border: none; font-family: inherit; cursor: pointer; padding: 0; width: 68px; height: 54px; border-radius: 27px; background: transparent; color: {{c.muted}}; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px;">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="8" cy="15" r="4.5"></circle><path d="M11.2 11.8 20 3M16.5 6.5l2.5 2.5M14 9l2 2"></path></svg>
+      <span style="font-size: 11px; font-weight: 600;">Личное</span>
+    </button>
+    <a href="Settings.dc.html" style="text-decoration: none; width: 68px; height: 54px; border-radius: 27px; background: transparent; color: {{c.muted}}; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px;">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12.2 2.5h-.4a1.8 1.8 0 0 0-1.8 1.8v.2a1.8 1.8 0 0 1-.9 1.5l-.4.2a1.8 1.8 0 0 1-1.8 0l-.1-.1a1.8 1.8 0 0 0-2.5.7l-.2.3a1.8 1.8 0 0 0 .7 2.5l.1.1a1.8 1.8 0 0 1 .9 1.5v.5a1.8 1.8 0 0 1-.9 1.6l-.1.1a1.8 1.8 0 0 0-.7 2.5l.2.3a1.8 1.8 0 0 0 2.5.7l.1-.1a1.8 1.8 0 0 1 1.8 0l.4.2a1.8 1.8 0 0 1 .9 1.5v.2a1.8 1.8 0 0 0 1.8 1.8h.4a1.8 1.8 0 0 0 1.8-1.8v-.2a1.8 1.8 0 0 1 .9-1.5l.4-.2a1.8 1.8 0 0 1 1.8 0l.1.1a1.8 1.8 0 0 0 2.5-.7l.2-.3a1.8 1.8 0 0 0-.7-2.5l-.1-.1a1.8 1.8 0 0 1-.9-1.6v-.4a1.8 1.8 0 0 1 .9-1.6l.1-.1a1.8 1.8 0 0 0 .7-2.5l-.2-.3a1.8 1.8 0 0 0-2.5-.7l-.1.1a1.8 1.8 0 0 1-1.8 0l-.4-.2a1.8 1.8 0 0 1-.9-1.5v-.2a1.8 1.8 0 0 0-1.8-1.8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+      <span style="font-size: 11px; font-weight: 600;">Настройки</span>
+    </a>
+  </nav>
+  <sc-if value="{{delOpen}}" hint-placeholder-val="{{false}}">
+    <div onClick="{{closeDelete}}" style="position: absolute; inset: 0; z-index: 8; background: {{c.scrim}};"></div>
+    <div role="dialog" aria-label="Удаление аккаунта" style="position: absolute; z-index: 9; left: 8px; right: 8px; bottom: 8px; border-radius: 28px; background: {{c.surface}}; box-shadow: {{c.barShadow}}; padding: 8px 16px 16px; box-sizing: border-box; display: flex; flex-direction: column; gap: 12px;">
+      <div style="width: 36px; height: 4px; border-radius: 2px; background: {{c.line}}; margin: 2px auto 0;"></div>
+      <h3 style="margin: 0; font-size: 19px; font-weight: 800;">Удалить аккаунт?</h3>
+      <sc-if value="{{delConfirm}}" hint-placeholder-val="{{true}}">
+        <p style="margin: 0; font-size: 14px; line-height: 1.5; color: {{c.muted}};">Аккаунт удаляется навсегда: профиль, участие в группах и сеансы на устройствах. У вас 37 рекомендаций, 29 из них опубликованы в группах.</p>
+      <button type="button" role="checkbox" aria-checked="{{withReviewsAria}}" onClick="{{toggleWithReviews}}" style="border: none; background: transparent; color: {{c.ink}}; font-family: inherit; display: flex; align-items: flex-start; gap: 12px; padding: 4px 0; text-align: left; cursor: pointer;">
+        <span style="width: 24px; height: 24px; flex: none; border-radius: 8px; border: 2px solid {{withReviewsBorder}}; background: {{withReviewsBg}}; color: {{c.tabOnFg}}; display: flex; align-items: center; justify-content: center; box-sizing: border-box;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12.5 4.5 4.5L19 7.5"></path></svg></span>
+        <span style="font-size: 14px; line-height: 1.45;">Удалить и все мои рекомендации. Иначе опубликованные останутся в группах от имени «Удалённый пользователь».</span>
+      </button>
+        <div style="display: flex; gap: 8px; margin-top: 4px;">
+          <button type="button" onClick="{{closeDelete}}" style="flex: 1; height: 48px; border-radius: 24px; border: 1px solid {{c.line}}; background: transparent; color: {{c.ink}}; font-family: inherit; font-size: 15px; font-weight: 700; cursor: pointer;">Отмена</button>
+          <button type="button" onClick="{{sendCode}}" style="flex: 1.4; height: 48px; border-radius: 24px; border: none; background: {{c.danger}}; color: #FFFFFF; font-family: inherit; font-size: 15px; font-weight: 700; cursor: pointer;">Прислать код</button>
+        </div>
+      </sc-if>
+      <sc-if value="{{delCode}}" hint-placeholder-val="{{false}}">
+        <p style="margin: 0; font-size: 14px; line-height: 1.5; color: {{c.muted}};">Мы отправили код подтверждения на anna@example.com. {{delSummary}}</p>
+        <input class="pg-field" type="text" inputmode="numeric" maxlength="6" placeholder="Код из письма" aria-label="Код из письма" value="{{dcode}}" onChange="{{onDcode}}" style="height: 52px; border: 1px solid {{c.line}}; border-radius: 18px; background: {{c.bg}}; font-family: inherit; font-size: 20px; font-weight: 800; letter-spacing: 6px; text-align: center; color: {{c.ink}}; box-sizing: border-box;">
+        <div style="display: flex; gap: 8px;">
+          <button type="button" onClick="{{closeDelete}}" style="flex: 1; height: 48px; border-radius: 24px; border: 1px solid {{c.line}}; background: transparent; color: {{c.ink}}; font-family: inherit; font-size: 15px; font-weight: 700; cursor: pointer;">Отмена</button>
+          <a href="{{finalHref}}" onClick="{{final}}" style="flex: 1.4; height: 48px; border-radius: 24px; background: {{finalBg}}; color: #FFFFFF; text-decoration: none; font-size: 15px; font-weight: 700; display: flex; align-items: center; justify-content: center;">Удалить навсегда</a>
+        </div>
+      </sc-if>
+    </div>
+  </sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"dark":{"editor":"boolean","default":false},"sheet":{"editor":"enum","options":["none","delete"],"default":"none"},"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { del: props.sheet === 'delete' ? 'confirm' : null, withReviews: false, dcode: '', revoked: {} };
+  }
+  renderVals() {
+    var self = this;
+    var dark = !!this.props.dark;
+    var light = {
+      bg: '#F6F5F2', surface: '#FFFFFF', chip: '#ECEAE5', ink: '#1B1B1F', muted: '#5E5D66', line: '#E4E2DD', lineStrong: '#B9B6AF',
+      accent: '#D9532F', accentGlow: 'rgba(217,83,47,0.35)', accentSoft: '#FBE4DC', accentInk: '#9A3415', disabled: '#C9C6C0',
+      danger: '#C0352B', dangerSoft: '#FBE3E0',
+      shadow: '0 4px 14px rgba(27,27,31,0.07)', barShadow: '0 10px 30px rgba(27,27,31,0.14)',
+      tabOnBg: '#1B1B1F', tabOnFg: '#FFFFFF', segOn: '#FFFFFF', segShadow: '0 1px 4px rgba(27,27,31,0.12)', scrim: 'rgba(27,27,31,0.32)'
+    };
+    var night = {
+      bg: '#121214', surface: '#1E1E22', chip: '#2C2C31', ink: '#F2F1EE', muted: '#A9A8B0', line: '#2E2E34', lineStrong: '#55555D',
+      accent: '#F0673F', accentGlow: 'rgba(240,103,63,0.30)', accentSoft: '#3A2219', accentInk: '#FFB59C', disabled: '#45454C',
+      danger: '#FF8A7A', dangerSoft: '#3A1F1C',
+      shadow: 'none', barShadow: '0 10px 30px rgba(0,0,0,0.5)',
+      tabOnBg: '#F2F1EE', tabOnFg: '#121214', segOn: '#45454C', segShadow: 'none', scrim: 'rgba(0,0,0,0.55)'
+    };
+    var c = dark ? night : light;
+    var st = this.state;
+    var sessions = [
+      { id: 'a', name: 'realme RMX3393 · Android 14', when: 'Сейчас', current: true },
+      { id: 'b', name: 'iPhone 15 · iOS 27', when: 'Последний вход 31 окт., 09:12' },
+      { id: 'c', name: 'Pixel 8 · Android 16', when: 'Последний вход 12 окт., 21:40' }
+    ].filter(function (s) { return !st.revoked[s.id]; }).map(function (s) {
+      return {
+        name: s.name, when: s.when, current: !!s.current, other: !s.current,
+        revokeLabel: 'Завершить сеанс на ' + s.name,
+        revoke: function () { var r = Object.assign({}, self.state.revoked); r[s.id] = true; self.setState({ revoked: r }); }
+      };
+    });
+    var ok = st.dcode.length === 6;
+    return {
+      c: c, sessions: sessions,
+      delOpen: !!st.del, delConfirm: st.del === 'confirm', delCode: st.del === 'code',
+      openDelete: function () { self.setState({ del: 'confirm' }); },
+      closeDelete: function () { self.setState({ del: null, dcode: '' }); },
+      withReviewsAria: st.withReviews ? 'true' : 'false',
+      withReviewsBg: st.withReviews ? c.tabOnBg : 'transparent', withReviewsBorder: st.withReviews ? c.tabOnBg : c.muted,
+      toggleWithReviews: function () { self.setState({ withReviews: !self.state.withReviews }); },
+      sendCode: function () { self.setState({ del: 'code' }); },
+      delSummary: st.withReviews ? 'Удалятся аккаунт и все 37 рекомендаций.' : 'Удалится аккаунт; 29 опубликованных рекомендаций останутся в группах.',
+      dcode: st.dcode, onDcode: function (e) { self.setState({ dcode: e.target.value.replace(/\D/g, '').slice(0, 6) }); },
+      finalHref: ok ? 'Auth.dc.html' : '#', finalBg: ok ? c.danger : c.disabled,
+      final: function (e) { if (!ok) e.preventDefault(); }
+    };
+  }
+}
+</script>
+</body>
+</html>
