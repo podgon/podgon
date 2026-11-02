@@ -75,8 +75,9 @@ jobs:
         run: ./gradlew --no-daemon :mobile:shared:check :mobile:androidApp:ktlintCheck :mobile:androidApp:assembleDebug
 
   # Обратная совместимость контракта (ADR-005, замечание R7 ревью): изменение, ломающее уже выпущенных
-  # клиентов (удалённое поле, новый обязательный параметр и т. п.), роняет сборку. Сравнение — с базовой
-  # веткой MR либо с предыдущим состоянием ветки при push.
+  # клиентов (удалённое поле, новый обязательный параметр и т. п.), роняет сборку. Сравнение — с последним
+  # тегом релиза `v*`. До первого релиза выпущенных клиентов нет: сравнение с базовой веткой MR либо
+  # с предыдущим состоянием ветки при push, несовместимости только выводятся, сборка не падает (этап 8.2).
   contract:
     name: Контракт API (обратная совместимость)
     runs-on: ubuntu-latest
@@ -88,12 +89,19 @@ jobs:
         env:
           BASE_REF: ${{ github.event_name == 'pull_request' && format('origin/{0}', github.base_ref) || github.event.before }}
         run: |
+          FAIL_ON="--fail-on ERR"
+          RELEASE_TAG=$(git tag --list 'v*' --sort=-v:refname | head -n 1)
+          if [ -n "$RELEASE_TAG" ]; then
+            BASE_REF="$RELEASE_TAG"
+          else
+            echo "Релизов ещё нет — несовместимости только выводятся"; FAIL_ON=""
+          fi
           if [ -z "$BASE_REF" ] || [ "$BASE_REF" = "0000000000000000000000000000000000000000" ] \
              || ! git cat-file -e "$BASE_REF:api/openapi.yaml" 2>/dev/null; then
             echo "Нет базовой версии контракта — сравнивать не с чем"; exit 0
           fi
           git show "$BASE_REF:api/openapi.yaml" > base-openapi.yaml
           docker run --rm -v "$PWD:/w" -w /w tufin/oasdiff:v1.33.0 \
-            breaking base-openapi.yaml api/openapi.yaml --fail-on ERR
+            breaking base-openapi.yaml api/openapi.yaml $FAIL_ON
 
   # docker: сборка образа backend в CI — этап 10 (локально образ собирает docker compose)
