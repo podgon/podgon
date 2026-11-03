@@ -11,6 +11,7 @@ import app.podgon.mobile.core.settings.LanguageSettings
 import app.podgon.mobile.core.settings.ThemeSettings
 import app.podgon.mobile.core.settings.systemLanguage
 import app.podgon.mobile.designsystem.ThemeMode
+import app.podgon.mobile.feature.reviews.CategoryRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -29,6 +30,7 @@ class SettingsViewModel(
     private val theme: ThemeSettings,
     private val languages: LanguageSettings,
     private val me: MeApi,
+    private val categories: CategoryRepository? = null,
 ) : ViewModel() {
     private val _state = MutableStateFlow(SettingsState())
     val state: StateFlow<SettingsState> = _state.asStateFlow()
@@ -62,6 +64,8 @@ class SettingsViewModel(
             val code = language.code ?: if (systemLanguage() == "ru") "ru" else "en"
             me.update(UpdateProfileRequest(locale = code))
             languages.set(language)
+            // названия категорий — на языке профиля: открытые экраны получат новый набор
+            categories?.set()
         }
     }
 }

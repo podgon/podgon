@@ -13,6 +13,7 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -67,6 +68,9 @@ import coil3.compose.setSingletonImageLoaderFactory
 import coil3.network.ktor3.KtorNetworkFetcherFactory
 import coil3.request.crossfade
 import io.ktor.client.HttpClient
+import io.ktor.client.plugins.defaultRequest
+import io.ktor.client.request.header
+import io.ktor.http.HttpHeaders
 import kotlinx.serialization.Serializable
 import org.koin.compose.koinInject
 import org.koin.compose.viewmodel.koinViewModel
@@ -141,11 +145,13 @@ fun App() {
         session.restore()
     }
     val client = koinInject<HttpClient>(AUTHORIZED_CLIENT)
+    // тот же клиент (токен, запасные адреса), но просит картинку: по умолчанию API-клиент шлёт Accept JSON
+    val imageClient = remember(client) { client.config { defaultRequest { header(HttpHeaders.Accept, "image/*") } } }
     setSingletonImageLoaderFactory { context ->
         // картинки — через клиент с авторизацией: фото и аватары доступны только вошедшим
         ImageLoader
             .Builder(context)
-            .components { add(KtorNetworkFetcherFactory(httpClient = { client })) }
+            .components { add(KtorNetworkFetcherFactory(httpClient = { imageClient })) }
             .crossfade(true)
             .build()
     }

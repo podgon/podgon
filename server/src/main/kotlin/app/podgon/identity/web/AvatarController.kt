@@ -37,7 +37,7 @@ class AvatarController(
         @AuthenticationPrincipal user: AuthenticatedUser,
     ): UserProfile = avatars.remove(user.userId)
 
-    @GetMapping("/users/{userId}/avatar", produces = ["image/jpeg"])
+    @GetMapping("/users/{userId}/avatar")
     fun avatar(
         @AuthenticationPrincipal user: AuthenticatedUser,
         @PathVariable userId: String,

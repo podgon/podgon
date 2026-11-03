@@ -128,7 +128,8 @@ class Images(
 
 /**
  * Ответ с картинкой. Адрес содержит идентификатор файла (`?v=`), при замене картинки он меняется, поэтому
- * кэшировать можно надолго, но только на устройстве (`private`: картинки доступны не всем).
+ * кэшировать можно надолго, но только на устройстве (`private`: картинки доступны не всем). Тип задан явно,
+ * а `produces` у методов нет: клиент API шлёт `Accept: application/json`, и картинка всё равно должна прийти.
  */
 fun imageResponse(bytes: ByteArray): org.springframework.http.ResponseEntity<ByteArray> =
     org.springframework.http.ResponseEntity

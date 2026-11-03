@@ -19,12 +19,15 @@ import app.podgon.mobile.testing.GroupsFixture
 import app.podgon.mobile.testing.TestConfig
 import app.podgon.mobile.testing.json
 import io.ktor.client.engine.mock.MockEngine
+import io.ktor.client.engine.mock.respond
 import io.ktor.client.request.HttpRequestData
 import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpMethod
+import io.ktor.http.HttpStatusCode
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
@@ -80,6 +83,29 @@ class Stage83SmallTest {
             assertEquals("/api/v1/me", patch.url.encodedPath)
             assertTrue((patch.body as io.ktor.http.content.TextContent).text.contains("\"locale\":\"en\""))
             assertEquals(AppLanguage.EN, LanguageSettings(store).language.value, "выбор переживает перезапуск")
+        }
+
+    @Test
+    fun `после смены языка открытые экраны получают новый набор категорий`() =
+        runTest(dispatcher) {
+            var version = "ru1"
+            val fixture =
+                GroupsFixture { r ->
+                    if (r.headers[HttpHeaders.IfNoneMatch] == "\"$version\"") {
+                        respond("", HttpStatusCode.NotModified)
+                    } else {
+                        json("""{"version":"$version","items":[]}""")
+                    }
+                }
+            val updates = mutableListOf<String>()
+            val job = launch { fixture.categories.updates.collect { updates += it.version } }
+            fixture.categories.set()
+            fixture.categories.set()
+            version = "en1"
+            fixture.categories.set()
+            testScheduler.advanceUntilIdle()
+            job.cancel()
+            assertEquals(listOf("en1"), updates, "первая загрузка и 304 — не обновление")
         }
 
     @Test

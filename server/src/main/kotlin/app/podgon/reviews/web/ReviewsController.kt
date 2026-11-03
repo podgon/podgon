@@ -77,7 +77,7 @@ class ReviewsController(
         @PathVariable reviewId: String,
     ): ReviewDetails = reviews.removePhoto(user.userId, reviewId.uuid())
 
-    @GetMapping("/reviews/{reviewId}/photo", produces = ["image/jpeg"])
+    @GetMapping("/reviews/{reviewId}/photo")
     fun photo(
         @AuthenticationPrincipal user: AuthenticatedUser,
         @PathVariable reviewId: String,

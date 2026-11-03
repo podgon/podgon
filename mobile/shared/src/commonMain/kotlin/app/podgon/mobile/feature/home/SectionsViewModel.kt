@@ -49,6 +49,11 @@ class SectionsViewModel(
             _state.update { it.copy(categories = set?.items ?: it.categories) }
             load()
         }
+        viewModelScope.launch {
+            categorySet.updates.collect { set ->
+                _state.update { it.copy(categories = set.items) }
+            }
+        }
     }
 
     private suspend fun load() {

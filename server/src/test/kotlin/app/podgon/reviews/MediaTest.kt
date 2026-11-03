@@ -157,6 +157,18 @@ class MediaTest : GroupsTestBase() {
         val avatarId = body(profile)["avatarId"].asString()
         val authorId = userId(author)
         val img = decoded(get("/users/$authorId/avatar?v=$avatarId", member))
+        // старый клиент слал Accept: application/json (вне контракта) — картинка всё равно приходит
+        val asJsonClient =
+            invalidRequests {
+                mockMvc
+                    .perform(
+                        request(HttpMethod.GET, "/api/v1/users/$authorId/avatar")
+                            .header("Authorization", "Bearer $member")
+                            .header("Accept", "application/json"),
+                    ).andReturn()
+            }
+        assertEquals(200, status(asJsonClient))
+        assertEquals("image/jpeg", asJsonClient.response.contentType)
         assertEquals(256, img.width)
         assertEquals(256, img.height)
         assertEquals(avatarId, body(get("/reviews/$id", member))["author"]["avatarId"].asString())

@@ -4,6 +4,9 @@ import app.podgon.contract.Category
 import app.podgon.contract.CategorySet
 import app.podgon.mobile.core.cache.ResponseCache
 import app.podgon.mobile.core.network.CategoriesApi
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.flow.asSharedFlow
 
 /** Категория в дереве: [depth] 0 — корень, 1 — подкатегория. */
 data class CategoryNode(
@@ -28,11 +31,19 @@ class CategoryRepository(
     private val api: CategoriesApi,
     private val cache: ResponseCache,
 ) {
+    private val _updates = MutableSharedFlow<CategorySet>(extraBufferCapacity = 1)
+
+    /** Новый набор с сервера (например, после смены языка): открытые экраны обновляют названия. */
+    val updates: SharedFlow<CategorySet> = _updates.asSharedFlow()
+
     suspend fun set(): Result<CategorySet> {
         val saved = cache.read<CategorySet>(KEY)
         return api.categorySet(saved?.version).fold(
             onSuccess = { fresh ->
-                fresh?.let { cache.write(KEY, it) }
+                fresh?.let {
+                    cache.write(KEY, it)
+                    if (saved != null && saved.version != it.version) _updates.emit(it)
+                }
                 // 304 приходит, только если версия передана, то есть набор сохранён
                 Result.success(fresh ?: saved!!)
             },

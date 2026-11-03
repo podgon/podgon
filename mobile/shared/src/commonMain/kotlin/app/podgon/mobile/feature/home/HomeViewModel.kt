@@ -130,6 +130,11 @@ class HomeViewModel(
             reload()
         }
         viewModelScope.launch { repository.favoriteChanges.collect { markFavorite(it.reviewId, it.favorite) } }
+        viewModelScope.launch {
+            categorySet.updates.collect { set ->
+                _state.update { it.copy(categories = set.items.associateBy { c -> c.id }) }
+            }
+        }
     }
 
     /**

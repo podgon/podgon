@@ -103,7 +103,7 @@ val appModule =
         viewModel { SectionsViewModel(get(), get()) }
         viewModel { (groupId: String?, filter: ReviewFilter) -> FiltersViewModel(groupId, filter, get(), get(), get()) }
         viewModel { (area: HomeArea) -> HomeViewModel(area, get(), get(), get(), get(), get(), get()) }
-        viewModel { SettingsViewModel(get(), get(), get(), get(), get()) }
+        viewModel { SettingsViewModel(get(), get(), get(), get(), get(), get()) }
         viewModel { NotificationsViewModel(get(), get()) }
         viewModel { NotificationSettingsViewModel(get()) }
         viewModel { JoinGroupViewModel(get(), get()) }
