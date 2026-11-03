@@ -63,9 +63,12 @@ import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -199,7 +202,7 @@ fun Avatar(
                     ).sp,
             )
         } else {
-            Icon(PodgonIcons.Group, null, tint = c.muted, modifier = Modifier.size(size * 0.5f))
+            Icon(PodgonIcons.Person, null, tint = c.muted, modifier = Modifier.size(size * 0.6f))
         }
     }
 }
@@ -218,7 +221,7 @@ fun PodgonTopBar(
 ) {
     val c = podgonColors
     Row(
-        modifier.fillMaxWidth().padding(start = 20.dp, end = 12.dp, top = 12.dp, bottom = 6.dp),
+        modifier.fillMaxWidth().padding(start = 20.dp, end = 12.dp, top = 8.dp, bottom = 6.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         PodgonLogo()
@@ -461,17 +464,22 @@ fun SectionHeader(
                     )
                 SectionMark.NONE -> Unit
             }
-            Text(
-                name,
-                fontSize = 13.sp,
-                fontWeight = FontWeight.ExtraBold,
-                color = c.ink,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.weight(1f, fill = false),
-            )
-            CountBadge(count)
-            Spacer(Modifier.weight(1f))
+            Row(
+                Modifier.weight(1f),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+            ) {
+                Text(
+                    name,
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.ExtraBold,
+                    color = c.ink,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f, fill = false),
+                )
+                CountBadge(count)
+            }
             Icon(
                 PodgonIcons.ChevronDown,
                 null,
@@ -583,8 +591,13 @@ fun RatingLabel(
     val c = podgonColors
     Row(modifier, verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(3.dp)) {
         Icon(PodgonIcons.Star, null, tint = c.accent, modifier = Modifier.size(14.dp))
-        Text("$rating", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = c.ink)
-        Text("/10", fontSize = 13.sp, fontWeight = FontWeight.Medium, color = c.muted)
+        Text(
+            buildAnnotatedString {
+                withStyle(SpanStyle(fontWeight = FontWeight.Bold, color = c.ink)) { append("$rating") }
+                withStyle(SpanStyle(fontWeight = FontWeight.Medium, color = c.muted)) { append("/10") }
+            },
+            fontSize = 13.sp,
+        )
     }
 }
 
@@ -770,7 +783,7 @@ fun PodgonBottomBar(
             .padding(start = 16.dp, end = 16.dp, bottom = 22.dp)
             .height(68.dp)
             .podgonElevation(RoundedCornerShape(34.dp), 12.dp)
-            .padding(horizontal = 6.dp),
+            .padding(horizontal = 4.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween,
     ) {
@@ -806,7 +819,8 @@ private fun RowScope.NavItem(
     val on = tab == current
     Column(
         Modifier
-            .size(width = 68.dp, height = 54.dp)
+            .weight(1f)
+            .height(54.dp)
             .clip(RoundedCornerShape(27.dp))
             .background(if (on) c.chip else Color.Transparent)
             .combinedClickable(role = Role.Tab, onClick = { onSelect(tab) })
@@ -819,8 +833,11 @@ private fun RowScope.NavItem(
         Text(
             label,
             fontSize = 11.sp,
-            fontWeight = if (on) FontWeight.ExtraBold else FontWeight.SemiBold,
+            fontWeight = if (on) FontWeight.Bold else FontWeight.SemiBold,
+            letterSpacing = (-0.3).sp,
             color = if (on) c.ink else c.muted,
+            maxLines = 1,
+            softWrap = false,
         )
     }
 }

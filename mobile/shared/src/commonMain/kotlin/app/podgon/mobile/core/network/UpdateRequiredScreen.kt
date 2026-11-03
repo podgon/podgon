@@ -24,12 +24,18 @@ import org.jetbrains.compose.resources.stringResource
 @Composable
 fun UpdateRequiredScreen(updateUrl: String) {
     val uriHandler = LocalUriHandler.current
-    Surface(Modifier.fillMaxSize()) {
+    Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
         Column(
             Modifier.fillMaxSize().padding(24.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp, Alignment.CenterVertically),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
+            androidx.compose.material3.Icon(
+                app.podgon.mobile.designsystem.PodgonIcons.Refresh,
+                null,
+                tint = app.podgon.mobile.designsystem.podgonColors.accent,
+                modifier = Modifier.padding(bottom = 8.dp),
+            )
             Text(stringResource(Res.string.update_title), style = MaterialTheme.typography.headlineSmall)
             Text(stringResource(Res.string.update_text), textAlign = TextAlign.Center)
             if (updateUrl.isNotBlank()) {

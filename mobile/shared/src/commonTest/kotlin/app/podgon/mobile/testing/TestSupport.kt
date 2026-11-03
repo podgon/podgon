@@ -108,10 +108,13 @@ class GroupsFixture(
      * Строки вида `GET /api/v1/groups` в порядке поступления. MockEngine отвечает на своём потоке,
      * поэтому при гонке с записью снимок повторяется.
      */
-    fun calls(): List<String> {
+    fun calls(): List<String> = snapshot().map { "${it.method.value} ${it.url.encodedPath}" }
+
+    /** Копия списка запросов; MockEngine дописывает его на своём потоке, поэтому при гонке снимок повторяется. */
+    fun snapshot(): List<HttpRequestData> {
         repeat(SNAPSHOT_RETRIES) {
             try {
-                return requests.toList().map { "${it.method.value} ${it.url.encodedPath}" }
+                return requests.toList()
             } catch (
                 @Suppress("SwallowedException") e: ConcurrentModificationException,
             ) {

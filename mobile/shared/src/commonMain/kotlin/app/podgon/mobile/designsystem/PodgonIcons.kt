@@ -171,5 +171,16 @@ object PodgonIcons {
     val Refresh by lazy { icon("refresh", 2.4f, Part("M20 12a8 8 0 1 1-2.3-5.7"), Part("M20 4v4.5h-4.5")) }
     val Empty by lazy { icon("empty", 1.4f, rect(4.0, 4.0, 16.0, 16.0, 5.0), Part("M9 12h6M12 9v6")) }
     val History by lazy { icon("history", 1.9f, circle(12.0, 12.0, 8.5), Part("M12 7.5V12l3 2")) }
+    val Check by lazy { icon("check", 2.6f, Part("M5 12.5l4.5 4.5L19 7.5")) }
+    val More by lazy {
+        icon(
+            "more",
+            1f,
+            circle(6.0, 12.0, 1.7, filled = true),
+            circle(12.0, 12.0, 1.7, filled = true),
+            circle(18.0, 12.0, 1.7, filled = true),
+        )
+    }
+    val Person by lazy { icon("person", 1.9f, circle(12.0, 8.5, 4.0), Part("M4.5 20.5a7.5 7.5 0 0 1 15 0")) }
     val ChevronRight by lazy { icon("chevronRight", 2f, Part("m9 6 6 6-6 6")) }
 }

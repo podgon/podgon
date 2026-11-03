@@ -112,7 +112,7 @@ class ReviewsViewModelsTest {
             kotlinx.coroutines.yield()
             assertEquals(
                 listOf("GET /api/v1/groups/g1/reviews", "GET /api/v1/groups/g1/reviews"),
-                fixture.calls(),
+                fixture.calls().filter { it.endsWith("/reviews") },
                 "после последней страницы запросов больше нет",
             )
         }
@@ -140,7 +140,7 @@ class ReviewsViewModelsTest {
                         json(details())
                     }
                 }
-            val vmMine = ReviewViewModel("r1", mine.reviewsRepository, mine.me, mine.api)
+            val vmMine = ReviewViewModel("r1", mine.reviewsRepository, mine.me, mine.api, mine.categories)
             assertTrue(vmMine.state.first { !it.loading && it.myUserId != null }.isAuthor)
 
             val foreign =
@@ -153,7 +153,8 @@ class ReviewsViewModelsTest {
                         json(details(author = other))
                     }
                 }
-            val vmForeign = ReviewViewModel("r1", foreign.reviewsRepository, foreign.me, foreign.api)
+            val vmForeign =
+                ReviewViewModel("r1", foreign.reviewsRepository, foreign.me, foreign.api, foreign.categories)
             assertEquals(false, vmForeign.state.first { !it.loading && it.myUserId != null }.isAuthor)
         }
 
@@ -211,7 +212,7 @@ class ReviewsViewModelsTest {
                         else -> json(details())
                     }
                 }
-            val vm = ReviewViewModel("r1", fixture.reviewsRepository, fixture.me, fixture.api)
+            val vm = ReviewViewModel("r1", fixture.reviewsRepository, fixture.me, fixture.api, fixture.categories)
             assertTrue(vm.state.first { !it.loading && it.myUserId != null }.isAuthor)
 
             offline = true
@@ -393,6 +394,7 @@ class ReviewsViewModelsTest {
             val vm = ReviewFormViewModel(null, "g1", fixture.reviews, fixture.api, fixture.categories)
             vm.state.first { !it.loading }
             vm.setTitle("Дюна")
+            vm.setRating(9)
             vm.setCategory("c1")
             vm.setTagsText("#SciFi")
             var saved: String? = null
@@ -449,12 +451,13 @@ class ReviewsViewModelsTest {
             assertEquals(listOf(0, 1), loaded.choices.map { it.depth })
 
             vm.setTitle("Заметка")
+            vm.setRating(5)
             vm.setCategory("c-none")
             vm.save()
             assertTrue(vm.state.value.categoryMissing, "«Без категории» с группой не отправляется")
             assertTrue(fixture.calls().none { it.startsWith("POST") })
 
-            vm.toggleGroup("g1")
+            vm.setLockOpen(false)
             assertEquals(
                 listOf("c1", "c2", "c-none"),
                 vm.state.value.choices
@@ -527,7 +530,7 @@ class ReviewsViewModelsTest {
                 }
             val vm = ReviewFormViewModel("r1", null, fixture.reviews, fixture.api, fixture.categories)
             vm.state.first { !it.loading && it.title.isNotEmpty() }
-            vm.toggleGroup("g1")
+            vm.setLockOpen(false)
             vm.setCategory("c-none")
             var saved: String? = null
             val job = launchCollect(vm) { saved = it }

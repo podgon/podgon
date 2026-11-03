@@ -10,7 +10,6 @@ import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
@@ -64,7 +63,6 @@ fun ShareSection(
     viewModel: JoinGroupViewModel,
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        HorizontalDivider(Modifier.padding(vertical = 8.dp))
         Text(stringResource(Res.string.share_title), style = MaterialTheme.typography.titleMedium)
         Text(stringResource(Res.string.share_personal_note), style = MaterialTheme.typography.bodySmall)
         modeLabels.forEach { mode ->

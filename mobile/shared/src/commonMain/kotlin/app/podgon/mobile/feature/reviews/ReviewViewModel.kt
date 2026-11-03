@@ -2,6 +2,7 @@ package app.podgon.mobile.feature.reviews
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import app.podgon.contract.Category
 import app.podgon.contract.ReviewDetails
 import app.podgon.mobile.core.error.AppError
 import app.podgon.mobile.core.error.appError
@@ -23,8 +24,17 @@ data class ReviewState(
     val offline: Boolean = false,
     /** Названия моих групп по идентификатору: подписи публикаций. */
     val groupNames: Map<String, String> = emptyMap(),
+    val categories: Map<String, Category> = emptyMap(),
     val error: AppError? = null,
 ) {
+    /** Полный путь категории — по нажатию на чип («Рестораны › Кофейни»). */
+    val categoryPath: String?
+        get() =
+            review?.let { r ->
+                val cat = categories[r.categoryId] ?: return null
+                listOfNotNull(cat.parentId?.let { categories[it]?.name }, cat.name).joinToString(" › ")
+            }
+
     val isAuthor: Boolean get() = review != null && review.author.id == myUserId && !offline
 }
 
@@ -39,6 +49,7 @@ class ReviewViewModel(
     private val repository: ReviewsRepository,
     private val me: MeApi,
     private val groups: GroupsApi,
+    private val categorySet: CategoryRepository,
 ) : ViewModel() {
     private val _state = MutableStateFlow(ReviewState())
     val state: StateFlow<ReviewState> = _state.asStateFlow()
@@ -56,6 +67,7 @@ class ReviewViewModel(
             val review = repository.review(reviewId)
             val profile = me.me()
             val myGroups = groups.list()
+            val set = categorySet.set().getOrNull()
             _state.update {
                 it.copy(
                     loading = false,
@@ -63,6 +75,7 @@ class ReviewViewModel(
                     offline = review.getOrNull()?.fromCache ?: it.offline,
                     myUserId = profile.getOrNull()?.id ?: it.myUserId,
                     groupNames = myGroups.getOrNull()?.associate { g -> g.id to g.name } ?: it.groupNames,
+                    categories = set?.items?.associateBy { c -> c.id } ?: it.categories,
                     error = review.appError(),
                 )
             }

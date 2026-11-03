@@ -2,20 +2,23 @@ package app.podgon.mobile
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.navigationBarsPadding
-import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.unit.dp
+import androidx.lifecycle.ViewModelStoreOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewmodel.compose.LocalViewModelStoreOwner
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
@@ -28,7 +31,6 @@ import app.podgon.mobile.core.network.ApiConfig
 import app.podgon.mobile.core.network.UpdateGate
 import app.podgon.mobile.core.network.UpdateRequiredScreen
 import app.podgon.mobile.core.settings.ThemeSettings
-import app.podgon.mobile.designsystem.EmptyState
 import app.podgon.mobile.designsystem.MainTab
 import app.podgon.mobile.designsystem.PodgonBottomBar
 import app.podgon.mobile.designsystem.PodgonTheme
@@ -42,19 +44,19 @@ import app.podgon.mobile.feature.groups.GroupsScreen
 import app.podgon.mobile.feature.groups.InvitationsScreen
 import app.podgon.mobile.feature.groups.JoinGroupScreen
 import app.podgon.mobile.feature.groups.RolesScreen
+import app.podgon.mobile.feature.home.HomeActions
+import app.podgon.mobile.feature.home.HomeArea
+import app.podgon.mobile.feature.home.HomeScreen
+import app.podgon.mobile.feature.home.SectionsScreen
 import app.podgon.mobile.feature.main.MainNavState
 import app.podgon.mobile.feature.main.MainNavigationViewModel
 import app.podgon.mobile.feature.profile.ProfileScreen
 import app.podgon.mobile.feature.reviews.FeedScope
-import app.podgon.mobile.feature.reviews.FeedScreen
+import app.podgon.mobile.feature.reviews.MyReviewsScreen
 import app.podgon.mobile.feature.reviews.ReviewFormScreen
 import app.podgon.mobile.feature.reviews.ReviewScreen
 import app.podgon.mobile.feature.settings.SettingsScreen
-import app.podgon.mobile.resources.Res
-import app.podgon.mobile.resources.favorites_stub_text
-import app.podgon.mobile.resources.favorites_stub_title
 import kotlinx.serialization.Serializable
-import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.koinInject
 import org.koin.compose.viewmodel.koinViewModel
 import org.koin.core.parameter.parametersOf
@@ -81,8 +83,11 @@ private data object GroupsRoute
 @Serializable
 private data object CreateGroupRoute
 
+/** Вступление: [token] — код, введённый в окне «Присоединиться» (сразу проверяется). */
 @Serializable
-private data object JoinGroupRoute
+private data class JoinGroupRoute(
+    val token: String? = null,
+)
 
 @Serializable
 private data class GroupRoute(
@@ -92,13 +97,6 @@ private data class GroupRoute(
 @Serializable
 private data class RolesRoute(
     val groupId: String,
-)
-
-/** Лента: группа (`groupId`), мои рекомендации (`groupId == null`) или поиск по всем группам (`all`). */
-@Serializable
-private data class FeedRoute(
-    val groupId: String?,
-    val all: Boolean = false,
 )
 
 @Serializable
@@ -153,6 +151,7 @@ private fun SignedOutNavigation() {
             CodeScreen(
                 koinViewModel(parameters = { parametersOf(route.email) }),
                 onRegistrationRequired = { token -> nav.navigate(RegisterRoute(token)) },
+                onChangeEmail = { nav.popBackStack() },
             )
         }
         composable<RegisterRoute> { entry ->
@@ -168,12 +167,23 @@ private data object MainRoute
 @Serializable
 private data object SettingsRoute
 
+/** Главный экран раздела: лента (`groupId == null`), «Личное» или «Избранное» (id системной группы). */
 @Serializable
-private data object FavoritesRoute
+private data class HomeRoute(
+    val groupId: String?,
+    val favorites: Boolean,
+)
 
 @Serializable
-private data class PersonalRoute(
-    val groupId: String?,
+private data object SectionsRoute
+
+@Serializable
+private data object MyReviewsRoute
+
+/** Лента, отфильтрованная по тегу (нажатие на тег в карточке). */
+@Serializable
+private data class TagRoute(
+    val tag: String,
 )
 
 /**
@@ -184,7 +194,8 @@ private data class PersonalRoute(
 private fun SignedInNavigation() {
     val outer = rememberNavController()
     val tabs = MainTab.entries.associateWith { rememberNavController() }
-    val main = koinViewModel<MainNavigationViewModel>()
+    val mainOwner = checkNotNull(LocalViewModelStoreOwner.current)
+    val main = koinViewModel<MainNavigationViewModel>(viewModelStoreOwner = mainOwner)
     val state by main.state.collectAsStateWithLifecycle()
     LaunchedEffect(main) {
         main.reselected.collect { tab ->
@@ -197,23 +208,27 @@ private fun SignedInNavigation() {
     ) -> Unit = { reviewId, groupId -> outer.navigate(ReviewFormRoute(reviewId, groupId)) }
     NavHost(outer, startDestination = MainRoute) {
         composable<MainRoute> {
-            Box(Modifier.fillMaxSize()) {
-                Box(Modifier.fillMaxSize().padding(bottom = BOTTOM_BAR_SPACE)) {
-                    TabHost(state.tab, tabs.getValue(state.tab), state, main, openForm)
+            Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
+                Box(Modifier.fillMaxSize()) {
+                    CompositionLocalProvider(LocalMainOwner provides mainOwner) {
+                        TabHost(state.tab, tabs.getValue(state.tab), state, main, openForm)
+                    }
                 }
-                PodgonBottomBar(
-                    selected = state.tab,
-                    onSelect = main::select,
-                    onPlus = { openForm(null, main.newReviewGroup()) },
-                    modifier = Modifier.align(Alignment.BottomCenter).navigationBarsPadding(),
-                )
+                if (!state.barHidden) {
+                    PodgonBottomBar(
+                        selected = state.tab,
+                        onSelect = main::select,
+                        onPlus = { main.plus { group -> openForm(null, group) } },
+                        modifier = Modifier.align(Alignment.BottomCenter).navigationBarsPadding(),
+                    )
+                }
             }
         }
         composable<ReviewFormRoute> { entry ->
             val route = entry.toRoute<ReviewFormRoute>()
             ReviewFormScreen(
                 koinViewModel(parameters = { parametersOf(route.reviewId, route.presetGroupId) }),
-                editing = route.reviewId != null,
+                onClose = { outer.popBackStack() },
                 onSaved = { id ->
                     outer.popBackStack()
                     val nav = tabs.getValue(main.state.value.tab)
@@ -241,34 +256,53 @@ private fun TabHost(
     }
     val start: Any =
         when (tab) {
-            MainTab.FEED -> GroupsRoute
-            MainTab.FAVORITES -> FavoritesRoute
-            MainTab.PERSONAL -> PersonalRoute(state.personalGroupId)
+            MainTab.FEED -> HomeRoute(null, favorites = false)
+            MainTab.FAVORITES -> HomeRoute(state.favoritesGroupId, favorites = true)
+            MainTab.PERSONAL -> HomeRoute(state.personalGroupId, favorites = false)
             MainTab.SETTINGS -> SettingsRoute
         }
-    // «Личное» ждёт id системной группы из профиля
-    key(tab, if (tab == MainTab.PERSONAL) state.personalGroupId else null) {
-        NavHost(nav, startDestination = start) {
-            composable<FavoritesRoute> {
-                Column(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
-                    header()
-                    EmptyState(
-                        stringResource(Res.string.favorites_stub_title),
-                        stringResource(Res.string.favorites_stub_text),
-                    )
-                }
-            }
-            composable<PersonalRoute> { entry ->
-                val groupId = entry.toRoute<PersonalRoute>().groupId
-                if (groupId == null) {
+    // «Личное» и «Избранное» ждут id системных групп из профиля
+    val systemId = (start as? HomeRoute)?.groupId
+    key(tab, systemId) {
+        // отступ под строкой состояния — для всех экранов раздела (edge-to-edge)
+        NavHost(nav, startDestination = start, modifier = Modifier.statusBarsPadding()) {
+            composable<HomeRoute> { entry ->
+                val route = entry.toRoute<HomeRoute>()
+                val area =
+                    when {
+                        tab == MainTab.FEED -> HomeArea.Feed
+                        route.groupId != null -> HomeArea.System(route.groupId, route.favorites)
+                        else -> null
+                    }
+                if (area == null) {
                     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
                 } else {
-                    val scope = FeedScope.Group(groupId)
-                    FeedScreen(
-                        koinViewModel(key = "personal", parameters = { parametersOf(scope) }),
-                        scope = scope,
-                        onOpen = { nav.navigate(ReviewRoute(it)) },
-                        onNew = { openForm(null, null) },
+                    HomeScreen(
+                        koinViewModel(key = "home:$tab", parameters = { parametersOf(area) }),
+                        area = area,
+                        actions =
+                            HomeActions(
+                                openReview = { nav.navigate(ReviewRoute(it)) },
+                                openProfile = { nav.navigate(ProfileRoute) },
+                                openGroup = { nav.navigate(GroupRoute(it)) },
+                                invite = { nav.navigate(InvitationsRoute(it)) },
+                                openSections = { nav.navigate(SectionsRoute) },
+                                newReview = {
+                                    openForm(
+                                        null,
+                                        if (tab ==
+                                            MainTab.FEED
+                                        ) {
+                                            main.newReviewGroup()
+                                        } else {
+                                            null
+                                        },
+                                    )
+                                },
+                                joinGroup = { nav.navigate(JoinGroupRoute()) },
+                                createGroup = { nav.navigate(GroupsRoute) },
+                                onTabChanged = { if (tab == MainTab.FEED) main.setFeedGroup(it) },
+                            ),
                     )
                 }
             }
@@ -277,10 +311,11 @@ private fun TabHost(
                     koinViewModel(),
                     version = koinInject<ApiConfig>().appVersion.toString(),
                     onGroups = { nav.navigate(GroupsRoute) },
-                    onSections = {},
+                    onSections = { nav.navigate(SectionsRoute) },
                     header = header,
                 )
             }
+            composable<SectionsRoute> { SectionsScreen(koinViewModel(), onBack = { nav.popBackStack() }) }
             commonDestinations(nav, openForm, onFeedGroup = main::setFeedGroup)
         }
     }
@@ -293,48 +328,55 @@ private fun NavGraphBuilder.commonDestinations(
     onFeedGroup: (String?) -> Unit,
 ) {
     composable<GroupsRoute> {
-        LaunchedEffect(Unit) { onFeedGroup(null) }
+        val main = koinViewModel<MainNavigationViewModel>(viewModelStoreOwner = LocalMainOwner.current)
+        DisposableEffect(Unit) {
+            main.setGroupsScreen(true)
+            onDispose { main.setGroupsScreen(false) }
+        }
         GroupsScreen(
             koinViewModel(),
-            onCreate = { nav.navigate(CreateGroupRoute) },
-            onJoin = { nav.navigate(JoinGroupRoute) },
+            koinViewModel(),
+            plusPressed = main.groupsPlusPressed,
             onOpen = { nav.navigate(GroupRoute(it)) },
-            onProfile = { nav.navigate(ProfileRoute) },
-            onMyReviews = { nav.navigate(FeedRoute(null)) },
-            onSearch = { nav.navigate(FeedRoute(null, all = true)) },
+            onJoin = { nav.navigate(JoinGroupRoute(it)) },
+            onBack = { nav.popBackStack() },
         )
     }
-    composable<ProfileRoute> { ProfileScreen(koinViewModel()) }
+    composable<ProfileRoute> {
+        ProfileScreen(koinViewModel(), onMyReviews = { nav.navigate(MyReviewsRoute) }, onBack = { nav.popBackStack() })
+    }
+    composable<MyReviewsRoute> {
+        MyReviewsScreen(
+            koinViewModel(parameters = {
+                parametersOf(FeedScope.Mine)
+            }),
+            onOpen = { nav.navigate(ReviewRoute(it)) },
+            onBack = { nav.popBackStack() },
+        )
+    }
     composable<CreateGroupRoute> {
         CreateGroupScreen(koinViewModel(), onCreated = { nav.openGroup(it, replacing = CreateGroupRoute) })
     }
-    composable<JoinGroupRoute> {
-        JoinGroupScreen(koinViewModel(), onJoined = { nav.openGroup(it, replacing = JoinGroupRoute) })
+    composable<JoinGroupRoute> { entry ->
+        val main = koinViewModel<MainNavigationViewModel>(viewModelStoreOwner = LocalMainOwner.current)
+        DisposableEffect(Unit) {
+            main.setBarHidden(true)
+            onDispose { main.setBarHidden(false) }
+        }
+        val token = entry.toRoute<JoinGroupRoute>().token
+        JoinGroupScreen(koinViewModel(), token = token, onJoined = {
+            nav.openGroup(it, replacing = entry.toRoute<JoinGroupRoute>())
+        })
     }
     composable<GroupRoute> { entry ->
         val route = entry.toRoute<GroupRoute>()
         GroupScreen(
             koinViewModel(parameters = { parametersOf(route.groupId) }),
-            onReviews = { nav.navigate(FeedRoute(route.groupId)) },
             onRoles = { nav.navigate(RolesRoute(route.groupId)) },
             onInvitations = { nav.navigate(InvitationsRoute(route.groupId)) },
-            onClosed = { nav.popBackStack(GroupsRoute, inclusive = false) },
-        )
-    }
-    composable<FeedRoute> { entry ->
-        val route = entry.toRoute<FeedRoute>()
-        val scope =
-            when {
-                route.all -> FeedScope.AllGroups
-                route.groupId == null -> FeedScope.Mine
-                else -> FeedScope.Group(route.groupId)
-            }
-        LaunchedEffect(route.groupId) { onFeedGroup(route.groupId) }
-        FeedScreen(
-            koinViewModel(parameters = { parametersOf(scope) }),
-            scope = scope,
-            onOpen = { nav.navigate(ReviewRoute(it)) },
-            onNew = { openForm(null, route.groupId) },
+            onBack = { nav.popBackStack() },
+            // после выхода или удаления группы — к началу раздела (лента или настройки)
+            onClosed = { nav.popBackStack(nav.graph.startDestinationId, inclusive = false) },
         )
     }
     composable<ReviewRoute> { entry ->
@@ -342,7 +384,27 @@ private fun NavGraphBuilder.commonDestinations(
         ReviewScreen(
             koinViewModel(parameters = { parametersOf(route.reviewId) }),
             onEdit = { openForm(it, null) },
-            onClosed = { nav.popBackStack() },
+            onTag = { nav.navigate(TagRoute(it)) },
+            onBack = { nav.popBackStack() },
+        )
+    }
+    composable<TagRoute> { entry ->
+        val area = HomeArea.Tagged(entry.toRoute<TagRoute>().tag)
+        HomeScreen(
+            koinViewModel(key = "tag:${area.tag}", parameters = { parametersOf(area) }),
+            area = area,
+            actions =
+                HomeActions(
+                    openReview = { nav.navigate(ReviewRoute(it)) },
+                    openProfile = { nav.navigate(ProfileRoute) },
+                    openGroup = { nav.navigate(GroupRoute(it)) },
+                    invite = { nav.navigate(InvitationsRoute(it)) },
+                    openSections = {},
+                    newReview = { openForm(null, null) },
+                    joinGroup = { nav.navigate(JoinGroupRoute()) },
+                    createGroup = { nav.navigate(GroupsRoute) },
+                    onTabChanged = {},
+                ),
         )
     }
     composable<RolesRoute> { entry ->
@@ -355,8 +417,8 @@ private fun NavGraphBuilder.commonDestinations(
     }
 }
 
-/** Место под плавающее нижнее меню: последняя запись списка не прячется под ним. */
-private val BOTTOM_BAR_SPACE = 96.dp
+/** Владелец ViewModel основной навигации: экраны разделов получают тот же [MainNavigationViewModel]. */
+private val LocalMainOwner = staticCompositionLocalOf<ViewModelStoreOwner> { error("нет владельца навигации") }
 
 /** Открывает группу, убирая из стека экран создания/вступления: «назад» ведёт к списку групп. */
 private fun androidx.navigation.NavController.openGroup(

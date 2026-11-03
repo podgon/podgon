@@ -25,11 +25,16 @@ import app.podgon.mobile.feature.groups.GroupsViewModel
 import app.podgon.mobile.feature.groups.InvitationsViewModel
 import app.podgon.mobile.feature.groups.JoinGroupViewModel
 import app.podgon.mobile.feature.groups.RolesViewModel
+import app.podgon.mobile.feature.home.FiltersViewModel
+import app.podgon.mobile.feature.home.HomeArea
+import app.podgon.mobile.feature.home.HomeViewModel
+import app.podgon.mobile.feature.home.SectionsViewModel
 import app.podgon.mobile.feature.main.MainNavigationViewModel
 import app.podgon.mobile.feature.profile.ProfileViewModel
 import app.podgon.mobile.feature.reviews.CategoryRepository
 import app.podgon.mobile.feature.reviews.FeedScope
 import app.podgon.mobile.feature.reviews.FeedViewModel
+import app.podgon.mobile.feature.reviews.ReviewFilter
 import app.podgon.mobile.feature.reviews.ReviewFormViewModel
 import app.podgon.mobile.feature.reviews.ReviewViewModel
 import app.podgon.mobile.feature.reviews.ReviewsRepository
@@ -79,11 +84,14 @@ val appModule =
         }
         viewModel { CreateGroupViewModel(get()) }
         viewModel { MainNavigationViewModel(get()) }
+        viewModel { SectionsViewModel(get(), get()) }
+        viewModel { (groupId: String?, filter: ReviewFilter) -> FiltersViewModel(groupId, filter, get(), get(), get()) }
+        viewModel { (area: HomeArea) -> HomeViewModel(area, get(), get(), get(), get(), get(), get()) }
         viewModel { SettingsViewModel(get(), get(), get()) }
         viewModel { JoinGroupViewModel(get(), get()) }
         viewModel { (groupId: String) -> GroupViewModel(groupId, get(), get()) }
         viewModel { (scope: FeedScope) -> FeedViewModel(scope, get(), get(), get()) }
-        viewModel { (reviewId: String) -> ReviewViewModel(reviewId, get(), get(), get()) }
+        viewModel { (reviewId: String) -> ReviewViewModel(reviewId, get(), get(), get(), get()) }
         viewModel { (reviewId: String?, presetGroupId: String?) ->
             ReviewFormViewModel(reviewId, presetGroupId, get(), get(), get())
         }

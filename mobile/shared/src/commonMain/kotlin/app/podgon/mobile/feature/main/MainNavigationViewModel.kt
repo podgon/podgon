@@ -22,6 +22,10 @@ data class MainNavState(
     /** Системные группы из профиля: лента «Личного» и «Избранного». */
     val personalGroupId: String? = null,
     val favoritesGroupId: String? = null,
+    /** Открыт экран «Группы»: «+» открывает окно «Создать / Присоединиться» вместо новой рекомендации. */
+    val groupsPlus: Boolean = false,
+    /** Шаг сценария (вступление в группу): нижнее меню скрыто. */
+    val barHidden: Boolean = false,
     val error: AppError? = null,
 )
 
@@ -66,6 +70,20 @@ class MainNavigationViewModel(
     }
 
     fun setFeedGroup(groupId: String?) = _state.update { it.copy(feedGroupId = groupId) }
+
+    private val _groupsPlusPressed = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
+
+    /** Нажатие «+» на экране «Группы». */
+    val groupsPlusPressed: SharedFlow<Unit> = _groupsPlusPressed.asSharedFlow()
+
+    fun setGroupsScreen(shown: Boolean) = _state.update { it.copy(groupsPlus = shown) }
+
+    fun setBarHidden(hidden: Boolean) = _state.update { it.copy(barHidden = hidden) }
+
+    /** «+» нижнего меню: на «Группах» — окно групп, иначе — новая рекомендация ([onReview] с группой). */
+    fun plus(onReview: (String?) -> Unit) {
+        if (_state.value.groupsPlus) _groupsPlusPressed.tryEmit(Unit) else onReview(newReviewGroup())
+    }
 
     /** Группа, отмеченная в новой рекомендации: только из ленты; в «Личном», «Избранном», «Настройках» — личная. */
     fun newReviewGroup(): String? = _state.value.let { if (it.tab == MainTab.FEED) it.feedGroupId else null }

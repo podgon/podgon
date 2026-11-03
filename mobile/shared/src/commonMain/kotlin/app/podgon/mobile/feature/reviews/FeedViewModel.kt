@@ -34,8 +34,10 @@ data class FeedState(
     val filter: ReviewFilter = ReviewFilter(),
     /** `null` — панель фильтров ещё не открывалась. */
     val options: FilterOptions? = null,
-    /** Названия моих групп: подписи карточек в поиске по всем группам. */
+    /** Названия моих групп: подписи карточек в поиске по всем группам и в «Моих». */
     val groupNames: Map<String, String> = emptyMap(),
+    /** Категории набора: подписи строк. */
+    val categories: Map<String, Category> = emptyMap(),
     val error: AppError? = null,
 )
 
@@ -60,10 +62,13 @@ class FeedViewModel(
                 (scope as? FeedScope.Group)?.let { g ->
                     repository.savedFilter(g.groupId)?.let { saved -> _state.update { it.copy(filter = saved) } }
                 }
-                if (scope == FeedScope.AllGroups) {
+                if (scope !is FeedScope.Group) {
                     groups.list().getOrNull()?.let { list ->
                         _state.update { it.copy(groupNames = list.associate { g -> g.id to g.name }) }
                     }
+                }
+                categorySet.set().getOrNull()?.let { set ->
+                    _state.update { it.copy(categories = set.items.associateBy { c -> c.id }) }
                 }
                 load()
             }

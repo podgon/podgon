@@ -107,6 +107,7 @@ fun PodgonTheme(
 ) {
     val dark = mode.isDark()
     val colors = if (dark) DarkColors else LightColors
+    SystemBarsAppearance(dark)
     CompositionLocalProvider(LocalPodgonColors provides colors) {
         MaterialTheme(
             colorScheme = colors.toColorScheme(dark),
@@ -148,3 +149,6 @@ fun FormScaffold(
         }
     }
 }
+
+/** Отступ внизу прокручиваемых экранов разделов: последняя запись не прячется под плавающим нижним меню. */
+val BottomBarSpace = 120.dp

@@ -27,7 +27,8 @@ data class ReviewFormState(
     val saving: Boolean = false,
     val title: String = "",
     val description: String = "",
-    val rating: Int = DEFAULT_RATING,
+    /** `null` — оценка ещё не выбрана («—/10»): обязательна. */
+    val rating: Int? = null,
     /** Теги одной строкой: через пробел или запятую, `#` необязателен. */
     val tagsText: String = "",
     val groups: List<GroupSummary> = emptyList(),
@@ -36,6 +37,12 @@ data class ReviewFormState(
     val categoryId: String? = null,
     /** Группы публикации; пусто — рекомендация личная. */
     val selected: Set<String> = emptySet(),
+    /** Замок открыт: рекомендация будет видна в выбранных группах (пустой набор при открытом замке — ошибка). */
+    val lockOpen: Boolean = false,
+    /** Группы, где рекомендация уже опубликована (при правке): закрытие замка снимает их — нужно подтверждение. */
+    val publishedIn: Set<String> = emptySet(),
+    /** Подсказки тегов (видимые мне теги по началу ввода). */
+    val tagSuggestions: List<String> = emptyList(),
     val errors: Map<String, FieldErrorReason> = emptyMap(),
     /** Категория не выбрана, или «Без категории» выбрана у рекомендации с группами. */
     val categoryMissing: Boolean = false,
@@ -44,6 +51,30 @@ data class ReviewFormState(
     val tags: List<String> get() = parseTags(tagsText)
 
     val category: Category? get() = categories.firstOrNull { it.id == categoryId }
+
+    /** Полный путь категории: «Рестораны › Кофейни». */
+    val categoryPath: String?
+        get() =
+            category?.let { cat ->
+                listOfNotNull(
+                    cat.parentId?.let { p ->
+                        categories.firstOrNull { it.id == p }?.name
+                    },
+                    cat.name,
+                ).joinToString(" › ")
+            }
+
+    /** Чего не хватает для сохранения (для серой кнопки и описания для диктора). */
+    val missing: List<String>
+        get() =
+            listOfNotNull(
+                "title".takeIf { title.isBlank() },
+                "rating".takeIf { rating == null },
+                "category".takeIf {
+                    categoryId == null || (selected.isNotEmpty() && category?.key == CATEGORY_NONE_KEY)
+                },
+                "groups".takeIf { lockOpen && selected.isEmpty() },
+            )
 
     /** Категории для выбора: «Без категории» — только у личной рекомендации. */
     val choices: List<CategoryNode>
@@ -99,13 +130,16 @@ class ReviewFormViewModel(
                     presetGroupId != null -> setOf(presetGroupId)
                     else -> emptySet()
                 }
+            val known = reviewId == null || review != null
             _state.update {
                 it.copy(
                     loading = false,
                     groups = myGroups.getOrNull() ?: it.groups,
                     categories = set.getOrNull()?.items ?: it.categories,
                     categoryId = review?.categoryId ?: it.categoryId,
-                    selected = if (reviewId == null || review != null) selected else it.selected,
+                    selected = if (known) selected else it.selected,
+                    lockOpen = if (known) selected.isNotEmpty() else it.lockOpen,
+                    publishedIn = review?.publications?.map { p -> p.groupId }?.toSet() ?: it.publishedIn,
                     title = review?.title ?: it.title,
                     description = review?.description ?: it.description,
                     rating = review?.rating ?: it.rating,
@@ -123,8 +157,48 @@ class ReviewFormViewModel(
 
     fun setRating(value: Int) =
         _state.update {
-            it.copy(rating = value.coerceIn(Validation.RATING_MIN, Validation.RATING_MAX))
+            it.copy(
+                rating = value.coerceIn(Validation.RATING_MIN, Validation.RATING_MAX),
+                errors = it.errors - "rating",
+            )
         }
+
+    /** Замок: закрытый — личная (группы очищаются), открытый — выбрать группы (набор тоже очищается). */
+    fun setLockOpen(open: Boolean) =
+        _state.update { it.copy(lockOpen = open, selected = emptySet(), categoryMissing = false) }
+
+    /** Добавляет тег чипом (нормализация — как на сервере). */
+    fun addTag(raw: String) {
+        val tag = Validation.normalizeTag(raw)
+        if (tag.isEmpty()) return
+        _state.update { s ->
+            s.copy(
+                tagsText = (s.tags + tag).distinct().joinToString(" "),
+                errors = s.errors - "tags",
+                tagSuggestions = emptyList(),
+            )
+        }
+    }
+
+    fun removeTag(tag: String) = _state.update { s -> s.copy(tagsText = (s.tags - tag).joinToString(" ")) }
+
+    /** Подсказки тегов по началу ввода — из тегов моих групп и «Личного». */
+    fun suggestTags(prefix: String) {
+        val p = Validation.normalizeTag(prefix)
+        if (p.isEmpty()) {
+            _state.update { it.copy(tagSuggestions = emptyList()) }
+            return
+        }
+        viewModelScope.launch {
+            val tags =
+                reviews
+                    .myTags(p)
+                    .getOrNull()
+                    .orEmpty()
+                    .map { it.name }
+            _state.update { s -> s.copy(tagSuggestions = tags.filter { it !in s.tags }.take(TAG_SUGGESTIONS)) }
+        }
+    }
 
     fun setTagsText(value: String) = _state.update { it.copy(tagsText = value, errors = it.errors - "tags") }
 
@@ -133,7 +207,9 @@ class ReviewFormViewModel(
         _state.update {
             it.copy(
                 selected = if (groupId in it.selected) it.selected - groupId else it.selected + groupId,
+                lockOpen = true,
                 categoryMissing = false,
+                errors = it.errors - "groups",
             )
         }
 
@@ -150,6 +226,8 @@ class ReviewFormViewModel(
                 Validation.reviewTitle(title)?.let { "title" to it },
                 Validation.reviewDescription(description)?.let { "description" to it },
                 Validation.tags(tags)?.let { "tags" to it },
+                if (s.rating == null) "rating" to FieldErrorReason.REQUIRED else null,
+                if (s.lockOpen && s.selected.isEmpty()) "groups" to FieldErrorReason.REQUIRED else null,
             ).toMap()
         val categoryId = s.categoryId
         val missing = categoryId == null || (s.selected.isNotEmpty() && s.category?.key == CATEGORY_NONE_KEY)
@@ -162,7 +240,7 @@ class ReviewFormViewModel(
         viewModelScope.launch {
             val result =
                 if (reviewId == null) {
-                    reviews.create(CreateReviewRequest(title, description, s.rating, categoryId!!, tags, groupIds))
+                    reviews.create(CreateReviewRequest(title, description, s.rating!!, categoryId!!, tags, groupIds))
                 } else {
                     val update = UpdateReviewRequest(title, description, s.rating, categoryId, tags)
                     val publish = SetPublicationsRequest(groupIds)
@@ -186,4 +264,4 @@ class ReviewFormViewModel(
 
 private inline fun <T> Result<T>.then(next: () -> Result<T>): Result<T> = if (isSuccess) next() else this
 
-private const val DEFAULT_RATING = 7
+private const val TAG_SUGGESTIONS = 8
