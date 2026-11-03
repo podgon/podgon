@@ -68,10 +68,18 @@ class RolesViewModel(
         api.updateRole(groupId, role.id, UpdateRoleRequest(title.trim(), description.trim(), admin))
     }
 
-    fun delete(role: RoleInfo) {
+    fun delete(
+        role: RoleInfo,
+        onDone: () -> Unit = {},
+    ) {
         viewModelScope.launch {
             val result = api.deleteRole(groupId, role.id)
-            if (result.isSuccess) load() else _state.update { it.copy(error = result.appError()) }
+            if (result.isSuccess) {
+                load()
+                onDone()
+            } else {
+                _state.update { it.copy(error = result.appError()) }
+            }
         }
     }
 

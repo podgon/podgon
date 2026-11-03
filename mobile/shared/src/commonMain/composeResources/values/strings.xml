@@ -321,4 +321,12 @@
     <string name="invite_share_text">Join my group in Podgon. Invitation code: %1$s</string>
     <string name="a11y_saved_filters">Saved filters</string>
     <string name="home_saved_filters_empty">No saved filters yet. Save one in the filters panel.</string>
+    <string name="a11y_decrease">Fewer</string>
+    <string name="a11y_increase">More</string>
+    <string name="action_copy">Copy</string>
+    <string name="action_done">Done</string>
+    <string name="invite_by_code">By code · anyone</string>
+    <string name="invite_by_email">For %1$s</string>
+    <string name="invite_created_by">by @%1$s</string>
+    <string name="invite_none">No invitations yet</string>
 </resources>

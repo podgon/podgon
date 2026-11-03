@@ -101,6 +101,7 @@ object PodgonIcons {
         )
     }
     val Plus by lazy { icon("plus", 2.4f, Part("M12 5v14M5 12h14")) }
+    val Minus by lazy { icon("minus", 2.4f, Part("M5 12h14")) }
     val Bell by lazy { icon("bell", 1.8f, Part("M6 16.5V11a6 6 0 0 1 12 0v5.5l1.5 2h-15z"), Part("M10 21h4")) }
     val Search by lazy { icon("search", 2f, circle(10.5, 10.5, 6.5), Part("M15.5 15.5 20 20")) }
     val Filters by lazy {

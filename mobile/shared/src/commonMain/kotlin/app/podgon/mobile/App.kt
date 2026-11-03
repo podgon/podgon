@@ -43,9 +43,7 @@ import app.podgon.mobile.feature.auth.ui.RegisterScreen
 import app.podgon.mobile.feature.groups.CreateGroupScreen
 import app.podgon.mobile.feature.groups.GroupScreen
 import app.podgon.mobile.feature.groups.GroupsScreen
-import app.podgon.mobile.feature.groups.InvitationsScreen
 import app.podgon.mobile.feature.groups.JoinGroupScreen
-import app.podgon.mobile.feature.groups.RolesScreen
 import app.podgon.mobile.feature.home.HomeActions
 import app.podgon.mobile.feature.home.HomeArea
 import app.podgon.mobile.feature.home.HomeScreen
@@ -91,14 +89,11 @@ private data class JoinGroupRoute(
     val token: String? = null,
 )
 
+/** Страница группы; [invite] — сразу открыть лист приглашения (меню вкладки ленты). */
 @Serializable
 private data class GroupRoute(
     val groupId: String,
-)
-
-@Serializable
-private data class RolesRoute(
-    val groupId: String,
+    val invite: Boolean = false,
 )
 
 @Serializable
@@ -111,11 +106,6 @@ private data class ReviewRoute(
 private data class ReviewFormRoute(
     val reviewId: String?,
     val presetGroupId: String?,
-)
-
-@Serializable
-private data class InvitationsRoute(
-    val groupId: String,
 )
 
 /** Корневой экран: по состоянию сессии показывает вход или основное содержимое. */
@@ -290,7 +280,7 @@ private fun TabHost(
                                 openReview = { nav.navigate(ReviewRoute(it)) },
                                 openProfile = { nav.navigate(ProfileRoute) },
                                 openGroup = { nav.navigate(GroupRoute(it)) },
-                                invite = { nav.navigate(InvitationsRoute(it)) },
+                                invite = { nav.navigate(GroupRoute(it, invite = true)) },
                                 openSections = { nav.navigate(SectionsRoute) },
                                 newReview = {
                                     openForm(
@@ -377,8 +367,8 @@ private fun NavGraphBuilder.commonDestinations(
         val route = entry.toRoute<GroupRoute>()
         GroupScreen(
             koinViewModel(parameters = { parametersOf(route.groupId) }),
-            onRoles = { nav.navigate(RolesRoute(route.groupId)) },
-            onInvitations = { nav.navigate(InvitationsRoute(route.groupId)) },
+            groupId = route.groupId,
+            openInvite = route.invite,
             onBack = { nav.popBackStack() },
             // после выхода или удаления группы — к началу раздела (лента или настройки)
             onClosed = { nav.popBackStack(nav.graph.startDestinationId, inclusive = false) },
@@ -403,7 +393,7 @@ private fun NavGraphBuilder.commonDestinations(
                     openReview = { nav.navigate(ReviewRoute(it)) },
                     openProfile = { nav.navigate(ProfileRoute) },
                     openGroup = { nav.navigate(GroupRoute(it)) },
-                    invite = { nav.navigate(InvitationsRoute(it)) },
+                    invite = { nav.navigate(GroupRoute(it, invite = true)) },
                     openSections = {},
                     newReview = { openForm(null, null) },
                     joinGroup = { nav.navigate(JoinGroupRoute()) },
@@ -411,14 +401,6 @@ private fun NavGraphBuilder.commonDestinations(
                     onTabChanged = {},
                 ),
         )
-    }
-    composable<RolesRoute> { entry ->
-        val route = entry.toRoute<RolesRoute>()
-        RolesScreen(koinViewModel(parameters = { parametersOf(route.groupId) }))
-    }
-    composable<InvitationsRoute> { entry ->
-        val route = entry.toRoute<InvitationsRoute>()
-        InvitationsScreen(koinViewModel(parameters = { parametersOf(route.groupId) }))
     }
 }
 

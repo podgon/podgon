@@ -321,4 +321,12 @@
     <string name="invite_share_text">Присоединяйтесь к моей группе в Podgon. Код приглашения: %1$s</string>
     <string name="a11y_saved_filters">Сохранённые фильтры</string>
     <string name="home_saved_filters_empty">Сохранённых фильтров пока нет. Сохранить фильтр можно в панели фильтров.</string>
+    <string name="a11y_decrease">Меньше</string>
+    <string name="a11y_increase">Больше</string>
+    <string name="action_copy">Копировать</string>
+    <string name="action_done">Готово</string>
+    <string name="invite_by_code">По коду · для всех</string>
+    <string name="invite_by_email">Для %1$s</string>
+    <string name="invite_created_by">создал @%1$s</string>
+    <string name="invite_none">Действующих приглашений нет</string>
 </resources>
