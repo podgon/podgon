@@ -81,11 +81,18 @@ class ReviewsController(
         @RequestParam(required = false) categoryIds: List<String>?,
         @RequestParam(required = false) tags: List<String>?,
         @RequestParam(required = false) tagMode: String?,
-        @RequestParam(required = false) authorId: String?,
+        @RequestParam(required = false) authorIds: List<String>?,
+        @RequestParam(required = false) minRating: Int?,
+        @RequestParam(required = false) maxRating: Int?,
+        @RequestParam(required = false) section: String?,
         @RequestParam(required = false) cursor: String?,
         @RequestParam(required = false) limit: Int?,
     ): ReviewPage =
-        reviews.feed(user.userId, groupId.uuid(), SearchParams(q, categoryIds, tags, tagMode, authorId, cursor, limit))
+        reviews.feed(
+            user.userId,
+            groupId.uuid(),
+            SearchParams(q, categoryIds, tags, tagMode, authorIds, minRating, maxRating, section, cursor, limit),
+        )
 
     @GetMapping("/reviews")
     fun search(
@@ -95,15 +102,24 @@ class ReviewsController(
         @RequestParam(required = false) categoryIds: List<String>?,
         @RequestParam(required = false) tags: List<String>?,
         @RequestParam(required = false) tagMode: String?,
-        @RequestParam(required = false) authorId: String?,
+        @RequestParam(required = false) authorIds: List<String>?,
+        @RequestParam(required = false) minRating: Int?,
+        @RequestParam(required = false) maxRating: Int?,
+        @RequestParam(required = false) section: String?,
         @RequestParam(required = false) cursor: String?,
         @RequestParam(required = false) limit: Int?,
     ): ReviewPage =
         reviews.search(
             user.userId,
             groupIds?.map { it.uuid() },
-            SearchParams(q, categoryIds, tags, tagMode, authorId, cursor, limit),
+            SearchParams(q, categoryIds, tags, tagMode, authorIds, minRating, maxRating, section, cursor, limit),
         )
+
+    @GetMapping("/me/tags")
+    fun myTags(
+        @AuthenticationPrincipal user: AuthenticatedUser,
+        @RequestParam(required = false) prefix: String?,
+    ): List<TagCount> = reviews.myTags(user.userId, prefix)
 
     @GetMapping("/groups/{groupId}/tags")
     fun tags(

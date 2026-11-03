@@ -26,33 +26,23 @@ data class PublicationRow(
     val sharedAt: Instant,
 )
 
-/** Строка ленты или списка: рекомендация и (для ленты) её публикация в группе. */
+/**
+ * Строка ленты или списка: рекомендация один раз (И15), [sharedAt] — самая свежая публикация в области запроса,
+ * [groupIds] — группы публикации в ней.
+ */
 data class CardRow(
     val review: ReviewRow,
-    val sharedAt: Instant?,
-    val groupId: UUID? = null,
+    val sharedAt: Instant,
+    val groupIds: List<UUID>,
     /** Релевантность поиску (0 без запроса). */
     val score: Double = 0.0,
 )
 
-/** Фильтры поиска публикаций; все заданные условия применяются через «и». */
-data class SearchFilters(
-    /** Категории набора: корень выбирается вместе с подкатегориями. */
-    val categoryIds: Set<UUID> = emptySet(),
-    val tags: List<String> = emptyList(),
-    /** `true` — достаточно любого из тегов, `false` — нужны все. */
-    val anyTag: Boolean = false,
-    val authorId: UUID? = null,
-    /** Поисковый запрос; с ним выдача упорядочена по релевантности. */
-    val query: String? = null,
-)
-
-/** Позиция в результатах поиска: строки идут по убыванию `(score, sharedAt, reviewId, groupId)`. */
+/** Позиция в результатах поиска: строки идут по убыванию `(score, sharedAt, reviewId)`. */
 data class SearchPosition(
     val score: Double,
     val sharedAt: Instant,
     val reviewId: UUID,
-    val groupId: UUID,
 )
 
 /** Тег и число публикаций с ним. */
@@ -271,8 +261,9 @@ class ReviewRepository(
     // --- списки ---
 
     /**
-     * Поиск публикаций в [groupIds]. Без запроса порядок — `(sharedAt, reviewId[, groupId])` по убыванию и
-     * читается по индексу ленты; с запросом сначала считается релевантность, затем применяется курсор.
+     * Рекомендации, опубликованные в [groupIds], каждая один раз. Без запроса порядок — `(sharedAt, reviewId)`
+     * по убыванию (для одной группы читается по индексу ленты); с запросом сначала считается релевантность,
+     * затем применяется курсор.
      */
     fun search(
         groupIds: Collection<UUID>,
@@ -280,105 +271,65 @@ class ReviewRepository(
         after: SearchPosition?,
         limit: Int,
     ): List<CardRow> {
-        val params = mutableMapOf<String, Any?>("groups" to groupIds, "limit" to limit)
+        val f = FilterSql(groupIds, filters)
+        val params = f.params + mapOf("limit" to limit)
         val ranked = filters.query != null
-        val inner = StringBuilder()
-        val with = StringBuilder()
-        if (filters.categoryIds.isNotEmpty()) {
-            with.append(
-                """
-                with tree as (select id from categories where id in (:categories) or parent_id in (:categories))
-                """.trimIndent() + "\n",
-            )
-            params["categories"] = filters.categoryIds
-            inner.append(" and r.category_id in (select id from tree)")
-        }
-        filters.authorId?.let {
-            inner.append(" and r.author_id = :author")
-            params["author"] = it
-        }
-        if (filters.tags.isNotEmpty()) {
-            inner.append(
-                " and (select count(*) from review_tags rt join tags t on t.id = rt.tag_id" +
-                    " where rt.review_id = r.id and t.name in (:tags)) >= :tagsNeeded",
-            )
-            params["tags"] = filters.tags
-            params["tagsNeeded"] = if (filters.anyTag) 1 else filters.tags.size
-        }
-        var score = "0.0"
-        filters.query?.let { raw ->
-            // «ё» = «е»: так же нормализованы search_vector и title_search (миграция V7)
-            val q = raw.replace('ё', 'е').replace('Ё', 'Е')
-            inner.append(
-                " and (r.search_vector @@ websearch_to_tsquery('russian', :q)" +
-                    " or r.title_search ilike :like escape '\\' or r.title_search % :q)",
-            )
-            params["q"] = q
-            params["like"] = "%" + q.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_") + "%"
-            score =
-                "cast(coalesce(ts_rank_cd(r.search_vector, websearch_to_tsquery('russian', :q)), 0)" +
-                " + similarity(r.title_search, :q) as float8)"
-        }
-        val single = groupIds.size == 1
-        val outer = StringBuilder()
+        var keyset = ""
+        var outer = ""
+        val position =
+            after
+                ?.let {
+                    mapOf("afterScore" to it.score, "afterAt" to it.sharedAt.toSql(), "afterId" to it.reviewId)
+                }.orEmpty()
         if (after != null) {
-            params["afterScore"] = after.score
-            params["afterAt"] = after.sharedAt.toSql()
-            params["afterId"] = after.reviewId
-            params["afterGroup"] = after.groupId
             if (ranked) {
-                outer.append(
-                    " where (x.score, x.shared_at, x.id, x.group_id) < (:afterScore, :afterAt, :afterId, :afterGroup)",
-                )
-            } else if (single) {
-                inner.append(" and (g.shared_at, g.review_id) < (:afterAt, :afterId)")
+                outer = " where (x.score, x.shared_at, x.id) < (:afterScore, :afterAt, :afterId)"
             } else {
-                inner.append(" and (g.shared_at, g.review_id, g.group_id) < (:afterAt, :afterId, :afterGroup)")
+                keyset = " and (p.shared_at, p.review_id) < (:afterAt, :afterId)"
             }
         }
-        val order =
-            (if (ranked) "x.score desc, " else "") + "x.shared_at desc, x.id desc" +
-                (if (single) "" else ", x.group_id desc")
+        val order = (if (ranked) "x.score desc, " else "") + "x.shared_at desc, x.id desc"
         val sql =
-            with.toString() +
-                "select x.* from (select $reviewColumns, g.group_id, g.shared_at, $score as score" +
-                " from review_groups g join reviews r on r.id = g.review_id" +
-                " where g.group_id in (:groups)$inner) x$outer order by $order limit :limit"
+            "select x.* from (select $reviewColumns, p.shared_at, p.group_ids, ${f.score} as score" +
+                " from ${f.from} where true${f.where}$keyset) x$outer order by $order limit :limit"
         return jdbc
             .sql(sql)
-            .params(params)
+            .params(params + position)
             .query { rs, _ ->
                 CardRow(
                     review = review(rs),
                     sharedAt = rs.getTimestamp("shared_at").toInstant(),
-                    groupId = rs.getObject("group_id", UUID::class.java),
+                    groupIds = uuids(rs, "group_ids"),
                     score = rs.getDouble("score"),
                 )
             }.list()
     }
 
-    /** Теги публикаций группы: самые частые первыми, не больше [limit]; [prefix] — начало тега. */
-    fun groupTags(
-        groupId: UUID,
+    /** Теги рекомендаций области [groupIds]: самые частые первыми, не больше [limit]; [prefix] — начало тега. */
+    fun tags(
+        groupIds: Collection<UUID>,
         prefix: String?,
         limit: Int,
-    ): List<TagRow> =
-        jdbc
+    ): List<TagRow> {
+        if (groupIds.isEmpty()) return emptyList()
+        val f = FilterSql(groupIds, SearchFilters())
+        return jdbc
             .sql(
                 """
                 select t.name, count(*) as cnt
-                from review_groups g
-                join review_tags rt on rt.review_id = g.review_id
+                from ${f.from}
+                join review_tags rt on rt.review_id = r.id
                 join tags t on t.id = rt.tag_id
-                where g.group_id = :group and (cast(:prefix as text) is null or t.name ilike :like)
+                where (cast(:prefix as text) is null or t.name ilike :like)
                 group by t.name order by cnt desc, t.name limit :limit
                 """.trimIndent(),
-            ).param("group", groupId)
+            ).params(f.params)
             .param("prefix", prefix)
-            .param("like", (prefix ?: "").replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_") + "%")
+            .param("like", escapeLike(prefix ?: "") + "%")
             .param("limit", limit)
             .query { rs, _ -> TagRow(rs.getString("name").lowercase(), rs.getInt("cnt")) }
             .list()
+    }
 
     /** Групповые рекомендации автора (опубликованные хотя бы в одной обычной группе), новые сверху (И21). */
     fun byAuthor(
@@ -389,10 +340,12 @@ class ReviewRepository(
         jdbc
             .sql(
                 """
-                select $reviewColumns from reviews r
+                select $reviewColumns, p.shared_at, p.group_ids from reviews r
+                join lateral (select max(x.shared_at) as shared_at,
+                                     array_agg(x.group_id order by x.shared_at desc, x.group_id) as group_ids
+                              from review_groups x join groups g on g.id = x.group_id
+                              where x.review_id = r.id and g.kind = 'REGULAR') p on p.shared_at is not null
                 where r.author_id = :author
-                  and exists (select 1 from review_groups p join groups g on g.id = p.group_id
-                              where p.review_id = r.id and g.kind = 'REGULAR')
                   and (cast(:afterAt as timestamptz) is null or (r.created_at, r.id) < (:afterAt, :afterId))
                 order by r.created_at desc, r.id desc
                 limit :limit
@@ -401,8 +354,13 @@ class ReviewRepository(
             .param("afterAt", after?.at?.toSql())
             .param("afterId", after?.id ?: UUID(0, 0))
             .param("limit", limit)
-            .query { rs, _ -> CardRow(review(rs), null) }
+            .query { rs, _ -> CardRow(review(rs), rs.getTimestamp("shared_at").toInstant(), uuids(rs, "group_ids")) }
             .list()
 }
 
 private const val TAGS_LOCK = "tags"
+
+internal fun uuids(
+    rs: ResultSet,
+    column: String,
+): List<UUID> = (rs.getArray(column).array as Array<*>).map { it as UUID }

@@ -36,6 +36,10 @@ object Validation {
     const val SEARCH_QUERY_MAX = 100
     const val SEARCH_CATEGORIES_MAX = 20
     const val SEARCH_GROUPS_MAX = 50
+    const val SEARCH_AUTHORS_MAX = 20
+    const val SAVED_FILTER_NAME_MAX = 60
+    const val SAVED_FILTERS_MAX = 50
+    const val SECTION_MAX = 60
     const val INVITATION_MAX_USES = 100
     const val SHARE_CATEGORIES_MAX = 20
     const val SHARE_PREVIEW_MAX = 100
@@ -141,6 +145,8 @@ object Validation {
             value.any { it.isISOControl() } -> FieldErrorReason.INVALID_FORMAT
             else -> null
         }
+
+    fun savedFilterName(value: String): FieldErrorReason? = title(value, SAVED_FILTER_NAME_MAX)
 
     fun roleTitle(value: String): FieldErrorReason? = title(value, ROLE_TITLE_MAX)
 

@@ -42,9 +42,10 @@ private const val AUTHOR = """{"id":"u-me","username":"me","displayName":"Я"}""
 private fun card(
     id: String,
     title: String = id,
+    groupIds: String = """["g1"]""",
 ) =
     """{"id":"$id","title":"$title","excerpt":"","rating":8,"tags":[],"author":$AUTHOR,"createdAt":"2026-06-01T10:00:00Z",
-    "categoryId":"c1"}"""
+    "categoryId":"c1","sharedAt":"2026-06-01T10:00:00Z","groupIds":$groupIds}"""
 
 private fun details(
     id: String = "r1",
@@ -242,7 +243,7 @@ class ReviewsViewModelsTest {
         }
 
     @Test
-    fun `фильтры уходят параметрами запроса а результат с фильтром не кэшируется`() =
+    fun `фильтры уходят параметрами запроса а результат кэшируется под своим ключом`() =
         runTest(dispatcher) {
             val fixture = GroupsFixture { json("""{"items":[${card("a")}]}""") }
             val vm = FeedViewModel(FeedScope.Group("g1"), fixture.reviewsRepository, fixture.api, fixture.categories)
@@ -256,7 +257,9 @@ class ReviewsViewModelsTest {
                     categoryIds = setOf("c1", "c2"),
                     tags = setOf("a", "b"),
                     anyTag = true,
-                    authorId = "u1",
+                    authorIds = setOf("u1", "u2"),
+                    minRating = 7,
+                    maxRating = 9,
                 ),
             )
             awaitUntil { fixture.requests.size >= 2 }
@@ -266,12 +269,14 @@ class ReviewsViewModelsTest {
             assertEquals("c1,c2", url.parameters["categoryIds"])
             assertEquals("a,b", url.parameters["tags"])
             assertEquals("ANY", url.parameters["tagMode"])
-            assertEquals("u1", url.parameters["authorId"])
-            assertTrue(
+            assertEquals("u1,u2", url.parameters["authorIds"])
+            assertEquals("7", url.parameters["minRating"])
+            assertEquals("9", url.parameters["maxRating"])
+            val keys =
                 fixture.cacheDao.entries.keys
-                    .none { it.startsWith("feed:") },
-                "результат с фильтром в кэш не попадает",
-            )
+                    .filter { it.startsWith("feed:") }
+            assertEquals(1, keys.size, keys.toString())
+            assertTrue(keys.single().startsWith("feed:g1|"), "вариант ленты — свой ключ, «feed:g1» не затирается")
         }
 
     @Test
@@ -531,6 +536,89 @@ class ReviewsViewModelsTest {
             job.cancel()
             val writes = fixture.calls().filter { it.startsWith("PUT") || it.startsWith("PATCH") }
             assertEquals(listOf("PUT /api/v1/reviews/r1/groups", "PATCH /api/v1/reviews/r1"), writes)
+        }
+
+    @Test
+    fun `оглавление и секция кэшируются отдельно и без сети берутся сохранённые`() =
+        runTest(dispatcher) {
+            var offline = false
+            val toc = """{"sections":[{"section":"category:c1","kind":"CATEGORY","pinned":false,"count":2,
+                "lastSharedAt":"2026-06-01T10:00:00Z","categoryId":"c1"}]}"""
+            val fixture =
+                GroupsFixture { r ->
+                    when {
+                        offline -> error("нет сети")
+                        r.url.encodedPath.endsWith("/feed") -> json(toc)
+                        else -> json("""{"items":[${card("a")}]}""")
+                    }
+                }
+            val repo = fixture.reviewsRepository
+            val online = repo.toc("g1", ReviewFilter(minRating = 5)).getOrThrow()
+            assertEquals(false, online.fromCache)
+            assertEquals(
+                "g1",
+                fixture.requests
+                    .last()
+                    .url.parameters["groupId"],
+            )
+            assertEquals(
+                "5",
+                fixture.requests
+                    .last()
+                    .url.parameters["minRating"],
+            )
+            repo.feed(FeedScope.Group("g1"), ReviewFilter(), null, section = "category:c1").getOrThrow()
+            assertEquals(
+                "category:c1",
+                fixture.requests
+                    .last()
+                    .url.parameters["section"],
+            )
+
+            offline = true
+            assertEquals(
+                1,
+                repo
+                    .toc("g1", ReviewFilter(minRating = 5))
+                    .getOrThrow()
+                    .value.sections.size,
+            )
+            assertTrue(repo.toc("g1", ReviewFilter()).isFailure, "другой фильтр — другой вариант")
+            assertEquals(
+                listOf("a"),
+                repo
+                    .feed(
+                        FeedScope.Group("g1"),
+                        ReviewFilter(),
+                        null,
+                        section = "category:c1",
+                    ).getOrThrow()
+                    .value.items
+                    .map { it.id },
+            )
+
+            repo.retainGroups(emptySet())
+            assertTrue(
+                fixture.cacheDao.entries.keys
+                    .none { it.startsWith("feed:g1") || it.startsWith("toc:g1") },
+            )
+        }
+
+    @Test
+    fun `на Все карточка подписана всеми группами публикации`() =
+        runTest(dispatcher) {
+            val fixture =
+                GroupsFixture { r ->
+                    if (r.url.encodedPath.endsWith("/groups")) {
+                        json("[${groupJson("g1", "Клуб")},${groupJson("g2", "Бег")}]")
+                    } else {
+                        json("""{"items":[${card("a", groupIds = """["g1","g2"]""")}]}""")
+                    }
+                }
+            val vm = FeedViewModel(FeedScope.AllGroups, fixture.reviewsRepository, fixture.api, fixture.categories)
+            val state = vm.state.first { !it.loading && it.items.isNotEmpty() && it.groupNames.isNotEmpty() }
+            assertEquals(listOf("g1", "g2"), state.items.single().groupIds)
+            assertEquals("Клуб", state.groupNames["g1"])
         }
 
     private fun kotlinx.coroutines.CoroutineScope.launchCollect(

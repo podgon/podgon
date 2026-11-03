@@ -1,5 +1,6 @@
 package app.podgon.mobile.feature.reviews
 
+import app.podgon.contract.FeedToc
 import app.podgon.contract.ReviewDetails
 import app.podgon.contract.ReviewPage
 import app.podgon.contract.TagCount
@@ -15,30 +16,32 @@ data class Cached<T>(
 )
 
 /**
- * Чтение рекомендаций с запасным вариантом из кэша: первая страница каждой ленты и открытые карточки
- * сохраняются, при отсутствии сети показываются они. Правки только онлайн — запись идёт напрямую через API.
+ * Чтение рекомендаций с запасным вариантом из кэша: первая страница каждой ленты (своя для каждого сочетания
+ * области, фильтра и секции), оглавления и открытые карточки сохраняются, при отсутствии сети показываются они.
+ * Правки только онлайн — запись идёт напрямую через API.
  */
 class ReviewsRepository(
     private val api: ReviewsApi,
     private val cache: ResponseCache,
 ) {
     /**
-     * Страница ленты ([scope]) с фильтром. В кэш попадает только первая страница без фильтра; при сетевой
-     * ошибке с фильтром или на следующей странице сохранённое не подставляется.
+     * Страница ленты ([scope]) с фильтром и (для секции оглавления) [section]. В кэш попадает первая страница
+     * под ключом «область + секция + фильтр»; следующие страницы при сетевой ошибке из кэша не берутся.
      */
     suspend fun feed(
         scope: FeedScope,
         filter: ReviewFilter,
         cursor: String?,
+        section: String? = null,
     ): Result<Cached<ReviewPage>> {
         val result =
             when (scope) {
-                is FeedScope.Group -> api.feed(scope.groupId, filter, cursor)
+                is FeedScope.Group -> api.feed(scope.groupId, filter, cursor, section)
                 FeedScope.Mine -> api.mine(cursor)
-                FeedScope.AllGroups -> api.search(filter, cursor)
+                FeedScope.AllGroups -> api.search(filter, cursor, section)
             }
-        val key = feedKey(scope)
-        val cacheable = cursor == null && filter.isEmpty
+        val key = variantKey(feedKey(scope), filter, section)
+        val cacheable = cursor == null
         return result.fold(
             onSuccess = { page ->
                 if (cacheable) cache.write(key, page)
@@ -54,6 +57,26 @@ class ReviewsRepository(
                     } else {
                         null
                     }
+                if (cached != null) Result.success(Cached(cached, fromCache = true)) else Result.failure(it)
+            },
+        )
+    }
+
+    /** Оглавление ленты группы или «Все» ([groupId] `null`); без сети — сохранённое для того же фильтра. */
+    suspend fun toc(
+        groupId: String?,
+        filter: ReviewFilter,
+    ): Result<Cached<FeedToc>> {
+        val result = api.toc(groupId, filter)
+        val key = variantKey(TOC_PREFIX + (groupId ?: "all"), filter.copy(query = ""), null)
+        return result.fold(
+            onSuccess = {
+                cache.write(key, it)
+                Result.success(Cached(it, fromCache = false))
+            },
+            onFailure = {
+                if (groupId != null && result.lostAccess()) forgetGroup(groupId)
+                val cached = if (result.appError() == AppError.Network) cache.read<FeedToc>(key) else null
                 if (cached != null) Result.success(Cached(cached, fromCache = true)) else Result.failure(it)
             },
         )
@@ -98,15 +121,36 @@ class ReviewsRepository(
      * после исключения из группы её данные не должны показываться без сети. Вызывается после загрузки списка групп.
      */
     suspend fun retainGroups(groupIds: Set<String>) {
-        listOf(FEED_PREFIX, FILTER_PREFIX).forEach { prefix ->
-            cache.keys(prefix).filter { it.removePrefix(prefix) !in groupIds }.forEach { cache.remove(it) }
+        listOf(FEED_PREFIX, TOC_PREFIX, FILTER_PREFIX).forEach { prefix ->
+            cache
+                .keys(prefix)
+                .filter { key ->
+                    key.removePrefix(prefix).substringBefore(VARIANT).let { it !in groupIds && it != "all" }
+                }.forEach { cache.remove(it) }
         }
     }
 
     private suspend fun forgetGroup(groupId: String) {
-        cache.remove(FEED_PREFIX + groupId)
+        listOf(FEED_PREFIX, TOC_PREFIX).forEach { prefix ->
+            cache
+                .keys(prefix + groupId)
+                .filter { it.removePrefix(prefix + groupId).let { rest -> rest.isEmpty() || rest.startsWith(VARIANT) } }
+                .forEach { cache.remove(it) }
+        }
         cache.remove(filterKey(groupId))
     }
+
+    /** Ключ варианта ленты: без фильтра и секции — сам [base] (как до этапа 8.2.2), иначе с их описанием. */
+    private fun variantKey(
+        base: String,
+        filter: ReviewFilter,
+        section: String?,
+    ): String =
+        if (filter.isEmpty && section == null) {
+            base
+        } else {
+            base + VARIANT + section.orEmpty() + VARIANT + cache.json.encodeToString(ReviewFilter.serializer(), filter)
+        }
 
     /** Сервер ответил «нет доступа» (не участник → 404, нет прав → 403): сохранённое больше не показываем. */
     private fun Result<*>.lostAccess(): Boolean = (appError() as? AppError.Api)?.status in setOf(403, 404)
@@ -124,4 +168,6 @@ class ReviewsRepository(
 }
 
 private const val FEED_PREFIX = "feed:"
+private const val TOC_PREFIX = "toc:"
+private const val VARIANT = "|"
 private const val FILTER_PREFIX = "filter:"

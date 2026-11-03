@@ -46,6 +46,15 @@ class CategoryService(
 
     fun isSystem(id: UUID): Boolean = byId[id]?.system == true
 
+    /** Категория есть в наборе (в том числе скрытая). */
+    fun exists(id: UUID): Boolean = id in byId
+
+    /** Корень категории (для корня — она сама). */
+    fun rootOf(id: UUID): UUID = byId[id]?.parentId ?: id
+
+    /** Корневая категория набора. */
+    fun isRoot(id: UUID): Boolean = byId[id]?.let { it.parentId == null } == true
+
     private fun load(locale: String): CategorySet {
         val items = categories.list(locale).map { it.toDto() }
         val digest = MessageDigest.getInstance("SHA-256").digest(items.toString().toByteArray())

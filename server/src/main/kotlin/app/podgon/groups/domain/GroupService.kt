@@ -25,6 +25,7 @@ import java.util.UUID
 class GroupService(
     private val groups: GroupRepository,
     private val policy: GroupPolicy,
+    private val summaries: GroupSummaries,
     private val admins: AdminGuard,
     private val props: GroupsProperties,
     private val events: ApplicationEventPublisher,
@@ -55,15 +56,15 @@ class GroupService(
                 groups.insertMember(id, userId, adminRole.id, now)
                 id
             }!!
-        return policy.member(userId, groupId).toDto()
+        return summaries.of(policy.member(userId, groupId))
     }
 
-    fun list(userId: UUID): List<GroupSummary> = groups.listForUser(userId).map { it.toDto() }
+    fun list(userId: UUID): List<GroupSummary> = summaries.of(groups.listForUser(userId))
 
     fun get(
         userId: UUID,
         groupId: UUID,
-    ): GroupSummary = policy.member(userId, groupId).toDto()
+    ): GroupSummary = summaries.of(policy.member(userId, groupId))
 
     /** Частичное обновление: `null` — поле не менять. */
     fun update(
@@ -87,7 +88,7 @@ class GroupService(
                 clock.instant(),
             )
         }
-        return policy.member(userId, groupId).toDto()
+        return summaries.of(policy.member(userId, groupId))
     }
 
     /**

@@ -191,7 +191,20 @@ class AccountDeletionTest : GroupsTestBase() {
     @Test
     fun `сессии завершаются а адрес освобождается`() {
         val a = account("ad_free6")
+        val saved =
+            call(
+                HttpMethod.POST,
+                "/me/filters",
+                a.access,
+                mapOf("kind" to "CATEGORY", "categoryId" to category("books")),
+            )
+        assertEquals(201, status(saved))
         assertEquals(204, status(deleteAccount(a, requestCode(a))))
+        assertEquals(
+            0,
+            jdbc.sql("select count(*) from saved_filters").query(Int::class.java).single(),
+            "фильтры удалены",
+        )
         assertEquals(401, status(post("/auth/refresh", mapOf("refreshToken" to a.tokens["refreshToken"].asString()))))
         clock.advance(java.time.Duration.ofSeconds(61))
         val again = registerUser(a.email, "ad_free6b")

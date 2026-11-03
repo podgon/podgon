@@ -1,6 +1,8 @@
 package app.podgon.mobile.core.network
 
 import app.podgon.contract.CreateReviewRequest
+import app.podgon.contract.Facets
+import app.podgon.contract.FeedToc
 import app.podgon.contract.ReviewDetails
 import app.podgon.contract.ReviewPage
 import app.podgon.contract.SetPublicationsRequest
@@ -48,19 +50,52 @@ class ReviewsApi(
     suspend fun mine(cursor: String? = null): Result<ReviewPage> =
         apiCall { client.get("api/v1/me/reviews") { cursor?.let { parameter("cursor", it) } }.bodyOrThrow() }
 
-    /** Лента и поиск в одной группе. */
+    /** Лента и поиск в одной группе; [section] — записи одной секции оглавления. */
     suspend fun feed(
         groupId: String,
         filter: ReviewFilter = ReviewFilter(),
         cursor: String? = null,
+        section: String? = null,
     ): Result<ReviewPage> =
-        apiCall { client.get("api/v1/groups/$groupId/reviews") { applyFilter(filter, cursor) }.bodyOrThrow() }
+        apiCall {
+            client.get("api/v1/groups/$groupId/reviews") { applyFilter(filter, cursor, section) }.bodyOrThrow()
+        }
 
-    /** Поиск по всем своим группам. */
+    /** «Все» и поиск по всем своим группам; каждая рекомендация один раз. */
     suspend fun search(
         filter: ReviewFilter,
         cursor: String? = null,
-    ): Result<ReviewPage> = apiCall { client.get("api/v1/reviews") { applyFilter(filter, cursor) }.bodyOrThrow() }
+        section: String? = null,
+    ): Result<ReviewPage> =
+        apiCall { client.get("api/v1/reviews") { applyFilter(filter, cursor, section) }.bodyOrThrow() }
+
+    /** Оглавление ленты: [groupId] `null` — «Все». Поиск в оглавлении не участвует. */
+    suspend fun toc(
+        groupId: String?,
+        filter: ReviewFilter = ReviewFilter(),
+    ): Result<FeedToc> =
+        apiCall {
+            client
+                .get("api/v1/feed") {
+                    groupId?.let { parameter("groupId", it) }
+                    applyFilter(filter.copy(query = ""), null, null)
+                }.bodyOrThrow()
+        }
+
+    /** Счётчики для панели фильтров: [groupId] `null` — «Все». */
+    suspend fun facets(
+        groupId: String?,
+        filter: ReviewFilter = ReviewFilter(),
+        section: String? = null,
+    ): Result<Facets> =
+        apiCall {
+            val path = if (groupId == null) "api/v1/reviews/facets" else "api/v1/groups/$groupId/facets"
+            client.get(path) { applyFilter(filter, null, section) }.bodyOrThrow()
+        }
+
+    /** Теги моих групп и «Личного» (автодополнение в форме и на «Все»). */
+    suspend fun myTags(prefix: String? = null): Result<List<TagCount>> =
+        apiCall { client.get("api/v1/me/tags") { prefix?.let { parameter("prefix", it) } }.bodyOrThrow() }
 
     /** Теги группы с числом публикаций (подсказки и панель фильтров). */
     suspend fun tags(
@@ -72,6 +107,7 @@ class ReviewsApi(
     private fun HttpRequestBuilder.applyFilter(
         filter: ReviewFilter,
         cursor: String?,
+        section: String?,
     ) {
         filter.query
             .trim()
@@ -82,7 +118,10 @@ class ReviewsApi(
             parameter("tags", filter.tags.joinToString(","))
             if (filter.anyTag) parameter("tagMode", "ANY")
         }
-        filter.authorId?.let { parameter("authorId", it) }
+        if (filter.authorIds.isNotEmpty()) parameter("authorIds", filter.authorIds.joinToString(","))
+        filter.minRating?.let { parameter("minRating", it) }
+        filter.maxRating?.let { parameter("maxRating", it) }
+        section?.let { parameter("section", it) }
         cursor?.let { parameter("cursor", it) }
     }
 }

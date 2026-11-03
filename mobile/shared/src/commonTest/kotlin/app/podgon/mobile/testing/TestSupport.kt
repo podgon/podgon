@@ -136,7 +136,8 @@ fun groupJson(
     name: String = "Книжный клуб",
     role: String = ADMIN_ROLE,
     members: Int = 2,
-) = """{"id":"$id","name":"$name","description":"Читаем вместе","memberCount":$members,"myRole":$role}"""
+) = """{"id":"$id","name":"$name","description":"Читаем вместе","memberCount":$members,"myRole":$role,
+    "reviewCount":0}"""
 
 fun memberJson(
     userId: String,

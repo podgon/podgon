@@ -13,7 +13,7 @@ data class RoleInfo(
     val system: Boolean,
 )
 
-/** Группа глазами текущего пользователя: с его ролью и числом участников. */
+/** Группа глазами текущего пользователя: с его ролью, числом участников и опубликованных рекомендаций. */
 @Serializable
 data class GroupSummary(
     val id: String,
@@ -21,6 +21,7 @@ data class GroupSummary(
     val description: String,
     val memberCount: Int,
     val myRole: RoleInfo,
+    val reviewCount: Int,
 )
 
 @Serializable

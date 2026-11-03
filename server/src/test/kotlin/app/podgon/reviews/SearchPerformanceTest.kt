@@ -37,7 +37,8 @@ class SearchPerformanceTest : GroupsTestBase() {
                 val elapsed = (System.nanoTime() - started) / 1_000_000
                 check(status(r) == 200) { r.response.contentAsString }
                 val json = body(r)
-                size = if (json.isArray) json.size() else json["items"].size()
+                size =
+                    if (json.isArray) json.size() else (json["items"] ?: json["sections"] ?: json["categories"]).size()
                 elapsed
             }
         // первые два запроса — прогрев (план, кэш JVM)
@@ -118,12 +119,17 @@ class SearchPerformanceTest : GroupsTestBase() {
                 Triple("поиск по всем группам", "/reviews", mapOf("q" to "ресторан")),
                 Triple("категория с потомками", "/groups/$g1/reviews", mapOf("categoryIds" to firstCategory)),
                 Triple("два тега", "/groups/$g1/reviews", mapOf("tags" to "тег3,тег15")),
+                Triple("оглавление «Все»", "/feed", emptyMap()),
+                Triple("оглавление группы с фильтром", "/feed", mapOf("groupId" to g1, "minRating" to "5")),
+                Triple("секция категории", "/groups/$g1/reviews", mapOf("section" to "category:$firstCategory")),
+                Triple("секция на «Все»", "/reviews", mapOf("section" to "category:$secondGroupCategory")),
+                Triple("фасеты группы", "/groups/$g1/facets", emptyMap()),
                 Triple("тег и текст", "/groups/$g1/reviews", mapOf("tags" to "тег3", "q" to "кофе")),
                 Triple(
                     "автор и категория",
                     "/groups/$g2/reviews",
                     mapOf(
-                        "authorId" to authorId.toString(),
+                        "authorIds" to authorId.toString(),
                         "categoryIds" to secondGroupCategory,
                     ),
                 ),

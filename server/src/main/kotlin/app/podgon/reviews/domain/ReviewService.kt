@@ -18,7 +18,6 @@ import app.podgon.contract.UpdateReviewRequest
 import app.podgon.contract.Validation
 import app.podgon.groups.GroupAccess
 import app.podgon.identity.SystemGroupIds
-import app.podgon.identity.SystemGroups
 import app.podgon.identity.UserDirectory
 import app.podgon.reviews.ReviewsProperties
 import app.podgon.reviews.persistence.CardRow
@@ -26,7 +25,6 @@ import app.podgon.reviews.persistence.Position
 import app.podgon.reviews.persistence.PublicationRow
 import app.podgon.reviews.persistence.ReviewRepository
 import app.podgon.reviews.persistence.ReviewRow
-import app.podgon.reviews.persistence.SearchFilters
 import app.podgon.reviews.persistence.SearchPosition
 import app.podgon.reviews.persistence.SharingRepository
 import org.springframework.dao.DataIntegrityViolationException
@@ -38,17 +36,6 @@ import java.time.Instant
 import java.time.temporal.ChronoUnit
 import java.util.Base64
 import java.util.UUID
-
-/** Параметры запроса списка: фильтры, курсор и размер страницы (в сыром виде — разбирает сервис). */
-data class SearchParams(
-    val q: String? = null,
-    val categoryIds: List<String>? = null,
-    val tags: List<String>? = null,
-    val tagMode: String? = null,
-    val authorId: String? = null,
-    val cursor: String? = null,
-    val limit: Int? = null,
-)
 
 private const val TAGS_LIMIT = 100
 
@@ -71,7 +58,7 @@ class ReviewService(
     private val sharing: SharingRepository,
     private val categories: CategoryService,
     private val access: GroupAccess,
-    private val systemGroups: SystemGroups,
+    private val filters: FeedFilters,
     private val users: UserDirectory,
     private val props: ReviewsProperties,
     private val clock: Clock,
@@ -168,26 +155,21 @@ class ReviewService(
     ): ReviewPage = search(userId, listOf(groupId), params)
 
     /**
-     * Поиск по публикациям. [groupIds] `null` — все обычные группы пользователя (без «Личного» и «Избранного», Л2);
-     * явно можно указать и свои системные группы. Чужая группа — 404. Результат — публикации, поэтому
-     * рекомендация в двух группах приходит двумя карточками.
+     * Лента и поиск: каждая рекомендация один раз (И15). [groupIds] `null` — все обычные группы пользователя
+     * (без «Личного» и «Избранного», Л2); явно можно указать и свои системные группы. Чужая группа — 404.
+     * Без запроса — по самой свежей публикации в области, с запросом — по релевантности; `section` сужает выборку.
      */
     fun search(
         userId: UUID,
         groupIds: List<UUID>?,
         params: SearchParams,
     ): ReviewPage {
-        val filters = parseFilters(params)
-        val mine = access.memberGroupIds(userId)
-        val groups =
-            groupIds?.toSet()?.also { ids ->
-                val readable = mine + system(userId).let { setOf(it.personal, it.favorites) }
-                ids.forEach { if (it !in readable) throw notFound() }
-            } ?: mine
+        val parsed = filters.parse(userId, params)
+        val groups = filters.scope(userId, groupIds)
         val size = pageSize(params.limit)
-        val ranked = filters.query != null
+        val ranked = parsed.query != null
         val after = decodeSearchCursor(params.cursor, ranked)
-        val rows = if (groups.isEmpty()) emptyList() else reviews.search(groups, filters, after, size + 1)
+        val rows = if (groups.isEmpty()) emptyList() else reviews.search(groups, parsed, after, size + 1)
         return page(rows, size) { encodeSearchCursor(it, ranked) }
     }
 
@@ -196,16 +178,25 @@ class ReviewService(
         userId: UUID,
         groupId: UUID,
         prefix: String?,
+    ): List<TagCount> = tags(filters.scope(userId, listOf(groupId)), prefix)
+
+    /** Теги моих обычных групп и «Личного» — автодополнение в форме и на «Все». */
+    fun myTags(
+        userId: UUID,
+        prefix: String?,
+    ): List<TagCount> = tags(filters.scope(userId, null) + filters.system(userId).personal, prefix)
+
+    private fun tags(
+        groups: Set<UUID>,
+        prefix: String?,
     ): List<TagCount> {
-        val system = system(userId)
-        if (groupId != system.personal && groupId != system.favorites) access.requireMember(userId, groupId)
         val normalized = prefix?.let(Validation::normalizeTag)?.takeIf { it.isNotEmpty() }
         if (normalized != null &&
             normalized.length > Validation.TAG_MAX
         ) {
             throw validationFailed(listOf(FieldError("prefix", FieldErrorReason.TOO_LONG)))
         }
-        return reviews.groupTags(groupId, normalized, TAGS_LIMIT).map { TagCount(it.name, it.count) }
+        return reviews.tags(groups, normalized, TAGS_LIMIT).map { TagCount(it.name, it.count) }
     }
 
     /** «Мои рекомендации»: групповые, где я автор (И21); личные — в ленте личной группы. */
@@ -289,8 +280,7 @@ class ReviewService(
     private fun authors(ids: Collection<UUID>): Map<UUID, ReviewAuthor> =
         users.findAll(ids).mapValues { (_, u) -> ReviewAuthor(u.id.toString(), u.username, u.displayName) }
 
-    private fun system(userId: UUID): SystemGroupIds =
-        systemGroups.of(userId) ?: throw ApiException(ErrorCode.UNAUTHORIZED, HttpStatus.UNAUTHORIZED)
+    private fun system(userId: UUID): SystemGroupIds = filters.system(userId)
 
     private fun isPersonal(
         userId: UUID,
@@ -382,58 +372,12 @@ class ReviewService(
                     author = authors.getValue(r.review.authorId),
                     createdAt = r.review.createdAt.toString(),
                     categoryId = r.review.categoryId.toString(),
-                    sharedAt = r.sharedAt?.toString(),
-                    groupId = r.groupId?.toString(),
+                    sharedAt = r.sharedAt.toString(),
+                    groupIds = r.groupIds.map(UUID::toString),
                 )
             }
         val next = if (rows.size > size) cursorOf(pageRows.last()) else null
         return ReviewPage(items, next)
-    }
-
-    private fun parseFilters(params: SearchParams): SearchFilters {
-        val errors = mutableListOf<FieldError>()
-        val query = params.q?.takeIf { it.isNotBlank() }
-        params.q?.let { q -> Validation.searchQuery(q)?.let { errors += FieldError("q", it) } }
-        val categories =
-            params.categoryIds.orEmpty().mapNotNull { raw ->
-                raw.toUuidOrNull().also {
-                    if (it ==
-                        null
-                    ) {
-                        errors += FieldError("categoryIds", FieldErrorReason.INVALID_FORMAT)
-                    }
-                }
-            }
-        if (categories.size >
-            Validation.SEARCH_CATEGORIES_MAX
-        ) {
-            errors += FieldError("categoryIds", FieldErrorReason.TOO_LONG)
-        }
-        val tags =
-            params.tags
-                .orEmpty()
-                .map(Validation::normalizeTag)
-                .filter { it.isNotEmpty() }
-                .distinct()
-        Validation.tags(tags)?.let { errors += FieldError("tags", it) }
-        val author =
-            params.authorId?.let { raw ->
-                raw.toUuidOrNull().also {
-                    if (it ==
-                        null
-                    ) {
-                        errors += FieldError("authorId", FieldErrorReason.INVALID_FORMAT)
-                    }
-                }
-            }
-        val anyTag =
-            when (params.tagMode?.uppercase()) {
-                null, "ALL" -> false
-                "ANY" -> true
-                else -> false.also { errors += FieldError("tagMode", FieldErrorReason.INVALID_FORMAT) }
-            }
-        if (errors.isNotEmpty()) throw validationFailed(errors)
-        return SearchFilters(categories.toSet(), tags, anyTag, author, query?.trim())
     }
 
     private fun encodeSearchCursor(
@@ -441,7 +385,7 @@ class ReviewService(
         ranked: Boolean,
     ): String {
         val mode = if (ranked) "r" else "d"
-        val raw = "$mode|${row.score}|${row.sharedAt}|${row.review.id}|${row.groupId}"
+        val raw = "$mode|${row.score}|${row.sharedAt}|${row.review.id}"
         return Base64.getUrlEncoder().withoutPadding().encodeToString(raw.toByteArray())
     }
 
@@ -452,9 +396,14 @@ class ReviewService(
     ): SearchPosition? {
         if (cursor.isNullOrEmpty()) return null
         return runCatching {
-            val (mode, score, at, id, group) = String(Base64.getUrlDecoder().decode(cursor)).split('|')
+            val (mode, score, at, id) =
+                String(Base64.getUrlDecoder().decode(cursor)).split('|').also {
+                    require(
+                        it.size == 4,
+                    )
+                }
             require(mode == if (ranked) "r" else "d")
-            SearchPosition(score.toDouble(), Instant.parse(at), UUID.fromString(id), UUID.fromString(group))
+            SearchPosition(score.toDouble(), Instant.parse(at), UUID.fromString(id))
         }.getOrElse { throw validationFailed(listOf(FieldError("cursor", FieldErrorReason.INVALID_FORMAT))) }
     }
 

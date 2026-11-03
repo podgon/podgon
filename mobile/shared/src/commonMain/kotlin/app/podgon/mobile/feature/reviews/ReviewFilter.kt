@@ -6,19 +6,25 @@ import kotlinx.serialization.Serializable
 @Serializable
 data class ReviewFilter(
     val query: String = "",
-    /** Категории: сервер ищет в них вместе с подкатегориями. */
+    /** Категории: корень включает подкатегории. */
     val categoryIds: Set<String> = emptySet(),
     val tags: Set<String> = emptySet(),
     /** `true` — достаточно любого из тегов, `false` — нужны все. */
     val anyTag: Boolean = false,
-    val authorId: String? = null,
+    val authorIds: Set<String> = emptySet(),
+    val minRating: Int? = null,
+    val maxRating: Int? = null,
 ) {
-    val isEmpty: Boolean get() = query.isBlank() && categoryIds.isEmpty() && tags.isEmpty() && authorId == null
+    val isEmpty: Boolean get() = query.isBlank() && panelCount == 0
 
     /** Число включённых условий панели фильтров (без строки поиска) — для подписи кнопки. */
     val panelCount: Int get() =
-        (if (categoryIds.isEmpty()) 0 else 1) + (if (tags.isEmpty()) 0 else 1) +
-            (if (authorId == null) 0 else 1)
+        listOf(
+            categoryIds.isNotEmpty(),
+            tags.isNotEmpty(),
+            authorIds.isNotEmpty(),
+            minRating != null || maxRating != null,
+        ).count { it }
 }
 
 /** Что показывает лента: одна группа, мои рекомендации или поиск по всем своим группам. */

@@ -9,6 +9,7 @@ import app.podgon.groups.MemberLeft
 import app.podgon.identity.DELETED_USER_ID
 import app.podgon.identity.UserDeleting
 import app.podgon.reviews.persistence.ReviewRepository
+import app.podgon.reviews.persistence.SavedFilterRepository
 import app.podgon.reviews.persistence.SharingRepository
 import org.springframework.context.event.EventListener
 import org.springframework.core.annotation.Order
@@ -27,6 +28,7 @@ const val REVIEWS_AFTER_GROUPS = 20
 class LifecycleService(
     private val sharing: SharingRepository,
     private val reviews: ReviewRepository,
+    private val savedFilters: SavedFilterRepository,
     private val access: GroupAccess,
     private val clock: Clock,
 ) {
@@ -91,5 +93,6 @@ class LifecycleService(
     fun onUserDeleting(event: UserDeleting) {
         if (!event.deleteReviews) sharing.reassignPublished(event.userId, DELETED_USER_ID)
         sharing.deleteAllOf(event.userId)
+        savedFilters.deleteAll(event.userId)
     }
 }

@@ -16,6 +16,10 @@ info:
     ленты и теги доступны владельцу, управление ими (участники, роли, приглашения, выход, удаление, правка)
     даёт 409 `SYSTEM_GROUP`; в `GET /groups` они не входят.
 
+    Лента (этап 8.2.2): в списках каждая рекомендация один раз (`groupIds`, `sharedAt` — самая свежая публикация
+    в области), фильтры `authorIds`, `minRating`, `maxRating`, секции (`section`, оглавление `GET /feed`),
+    счётчики `facets`, сохранённые фильтры и закрепления `/me/filters`.
+
     Ошибки — `application/problem+json` (RFC 9457) с машинным полем `code` (см. `ErrorCode`
     в shared-contract); текст для пользователя формирует клиент.
 servers:
@@ -33,6 +37,8 @@ tags:
     description: Рекомендации, публикации в группы, ленты
   - name: invitations
     description: Приглашения в группы
+  - name: filters
+    description: Оглавление ленты, счётчики и сохранённые фильтры
 
 paths:
   /auth/otp/request:
@@ -666,10 +672,12 @@ paths:
     get:
       tags: [reviews]
       operationId: searchReviews
-      summary: Поиск по нескольким своим группам
+      summary: Лента «Все» и поиск по нескольким своим группам
       description: |
-        Публикации в выбранных группах (допустимы свои системные); без `groupIds` — во всех своих обычных.
-        Чужая группа — 404. Рекомендация, опубликованная в двух группах, приходит двумя карточками (поле `groupId`).
+        Рекомендации, опубликованные в выбранных группах (допустимы свои системные); без `groupIds` — во всех
+        своих обычных. Каждая рекомендация один раз (И15): `groupIds` — группы публикации в этой области,
+        `sharedAt` — самая свежая из них; порядок без `q` — по `sharedAt`, с `q` — по релевантности.
+        Чужая группа — 404. `section` сужает выборку до секции ленты (вместе с `q` — 400); `minRating > maxRating` — 400.
       security: [{ bearerAuth: [] }]
       parameters:
         - name: groupIds
@@ -685,7 +693,10 @@ paths:
         - $ref: '#/components/parameters/CategoryIds'
         - $ref: '#/components/parameters/Tags'
         - $ref: '#/components/parameters/TagMode'
-        - $ref: '#/components/parameters/AuthorId'
+        - $ref: '#/components/parameters/AuthorIds'
+        - $ref: '#/components/parameters/MinRating'
+        - $ref: '#/components/parameters/MaxRating'
+        - $ref: '#/components/parameters/Section'
         - $ref: '#/components/parameters/Cursor'
         - $ref: '#/components/parameters/Limit'
       responses:
@@ -837,6 +848,239 @@ paths:
         '429': { $ref: '#/components/responses/RateLimited' }
         '426': { $ref: '#/components/responses/UpgradeRequired' }
 
+  /me/tags:
+    get:
+      tags: [reviews]
+      operationId: listMyTags
+      summary: Теги моих групп и «Личного» с числом рекомендаций (до 100, самые частые первыми)
+      description: Автодополнение в форме и на вкладке «Все».
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: prefix
+          in: query
+          description: Начало тега (автодополнение).
+          schema: { type: string, maxLength: 31 }
+      responses:
+        '200':
+          description: Теги
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/TagCount' }
+        '400': { $ref: '#/components/responses/Problem' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '429': { $ref: '#/components/responses/RateLimited' }
+        '426': { $ref: '#/components/responses/UpgradeRequired' }
+
+  /feed:
+    get:
+      tags: [filters]
+      operationId: feedToc
+      summary: Оглавление ленты — секции в порядке показа
+      description: |
+        Без `groupId` — «Все» (мои обычные группы); допустимы id своих «Личного» и «Избранного», чужая группа — 404.
+        Порядок (И29): закреплённые фильтры → закреплённые категории (в порядке пользователя) → остальные корневые
+        категории по `lastSharedAt`, «Без категории» — последней. Фильтр панели накладывается на каждую секцию;
+        пустые секции не возвращаются. Записи секции — ленты с параметром `section`.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: groupId
+          in: query
+          schema: { type: string, format: uuid }
+        - $ref: '#/components/parameters/CategoryIds'
+        - $ref: '#/components/parameters/Tags'
+        - $ref: '#/components/parameters/TagMode'
+        - $ref: '#/components/parameters/AuthorIds'
+        - $ref: '#/components/parameters/MinRating'
+        - $ref: '#/components/parameters/MaxRating'
+      responses:
+        '200':
+          description: Оглавление
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/FeedToc' }
+        '400': { $ref: '#/components/responses/Problem' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+        '429': { $ref: '#/components/responses/RateLimited' }
+        '426': { $ref: '#/components/responses/UpgradeRequired' }
+
+  /reviews/facets:
+    get:
+      tags: [filters]
+      operationId: facets
+      summary: Счётчики выборки «Все» (или выбранных групп) для панели фильтров
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: groupIds
+          in: query
+          description: Группы через запятую.
+          style: form
+          explode: false
+          schema:
+            type: array
+            maxItems: 50
+            items: { type: string, format: uuid }
+        - $ref: '#/components/parameters/SearchQuery'
+        - $ref: '#/components/parameters/CategoryIds'
+        - $ref: '#/components/parameters/Tags'
+        - $ref: '#/components/parameters/TagMode'
+        - $ref: '#/components/parameters/AuthorIds'
+        - $ref: '#/components/parameters/MinRating'
+        - $ref: '#/components/parameters/MaxRating'
+        - $ref: '#/components/parameters/Section'
+      responses:
+        '200':
+          description: Счётчики
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Facets' }
+        '400': { $ref: '#/components/responses/Problem' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+        '429': { $ref: '#/components/responses/RateLimited' }
+        '426': { $ref: '#/components/responses/UpgradeRequired' }
+
+  /groups/{groupId}/facets:
+    parameters:
+      - $ref: '#/components/parameters/GroupId'
+    get:
+      tags: [filters]
+      operationId: groupFacets
+      summary: Счётчики выборки группы для панели фильтров
+      description: Работает и для своих системных групп; в «Личном» авторов нет.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: '#/components/parameters/SearchQuery'
+        - $ref: '#/components/parameters/CategoryIds'
+        - $ref: '#/components/parameters/Tags'
+        - $ref: '#/components/parameters/TagMode'
+        - $ref: '#/components/parameters/AuthorIds'
+        - $ref: '#/components/parameters/MinRating'
+        - $ref: '#/components/parameters/MaxRating'
+        - $ref: '#/components/parameters/Section'
+      responses:
+        '200':
+          description: Счётчики
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Facets' }
+        '400': { $ref: '#/components/responses/Problem' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+        '429': { $ref: '#/components/responses/RateLimited' }
+        '426': { $ref: '#/components/responses/UpgradeRequired' }
+
+  /me/filters:
+    get:
+      tags: [filters]
+      operationId: listSavedFilters
+      summary: Сохранённые фильтры и закреплённые категории
+      description: Сначала закреплённые фильтры и категории (по позиции), затем незакреплённые фильтры по имени.
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200':
+          description: Записи
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/SavedFilter' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '429': { $ref: '#/components/responses/RateLimited' }
+        '426': { $ref: '#/components/responses/UpgradeRequired' }
+    post:
+      tags: [filters]
+      operationId: createSavedFilter
+      summary: Сохранить фильтр или закрепить категорию
+      description: |
+        `FILTER` — `name` и `definition` (с `inFeed` — сразу закреплён секцией); `CATEGORY` — `categoryId`
+        корневой категории набора. Повторное закрепление категории — 409 `ALREADY_PINNED`, больше 50 записей —
+        409 `LIMIT_EXCEEDED`. Закреплённая запись встаёт последней в своём виде.
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CreateSavedFilterRequest' }
+      responses:
+        '201':
+          description: Запись создана
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SavedFilter' }
+        '400': { $ref: '#/components/responses/Problem' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '409': { $ref: '#/components/responses/Problem' }
+        '429': { $ref: '#/components/responses/RateLimited' }
+        '426': { $ref: '#/components/responses/UpgradeRequired' }
+
+  /me/filters/order:
+    put:
+      tags: [filters]
+      operationId: orderSavedFilters
+      summary: Порядок закреплённых секций
+      description: Полный порядок закреплённых фильтров и закреплённых категорий (id записей); состав должен совпадать с закреплёнными, иначе 400.
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/SavedFilterOrderRequest' }
+      responses:
+        '200':
+          description: Записи в новом порядке
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/SavedFilter' }
+        '400': { $ref: '#/components/responses/Problem' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '429': { $ref: '#/components/responses/RateLimited' }
+        '426': { $ref: '#/components/responses/UpgradeRequired' }
+
+  /me/filters/{filterId}:
+    parameters:
+      - name: filterId
+        in: path
+        required: true
+        schema: { type: string, format: uuid }
+    patch:
+      tags: [filters]
+      operationId: updateSavedFilter
+      summary: Изменить сохранённый фильтр (название, определение, закрепление)
+      description: Закреплённую категорию не правят — её открепляют удалением (400).
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/UpdateSavedFilterRequest' }
+      responses:
+        '200':
+          description: Обновлённая запись
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SavedFilter' }
+        '400': { $ref: '#/components/responses/Problem' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+        '429': { $ref: '#/components/responses/RateLimited' }
+        '426': { $ref: '#/components/responses/UpgradeRequired' }
+    delete:
+      tags: [filters]
+      operationId: deleteSavedFilter
+      summary: Удалить фильтр или открепить категорию
+      security: [{ bearerAuth: [] }]
+      responses:
+        '204': { description: Запись удалена }
+        '401': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+        '429': { $ref: '#/components/responses/RateLimited' }
+        '426': { $ref: '#/components/responses/UpgradeRequired' }
+
   /groups/{groupId}/reviews:
     parameters:
       - $ref: '#/components/parameters/GroupId'
@@ -846,7 +1090,8 @@ paths:
       summary: Лента группы (новые публикации сверху)
       description: |
         Только для участников (иначе 404); работает и для своих системных групп. Без `q` — по времени
-        публикации, с `q` — по релевантности.
+        публикации, с `q` — по релевантности. `section` — записи одной секции оглавления (`GET /feed`),
+        накладывается на остальные фильтры; вместе с `q` — 400.
         Курсор действует только с теми же фильтрами; курсор другого режима — 400.
       security: [{ bearerAuth: [] }]
       parameters:
@@ -854,7 +1099,10 @@ paths:
         - $ref: '#/components/parameters/CategoryIds'
         - $ref: '#/components/parameters/Tags'
         - $ref: '#/components/parameters/TagMode'
-        - $ref: '#/components/parameters/AuthorId'
+        - $ref: '#/components/parameters/AuthorIds'
+        - $ref: '#/components/parameters/MinRating'
+        - $ref: '#/components/parameters/MaxRating'
+        - $ref: '#/components/parameters/Section'
         - $ref: '#/components/parameters/Cursor'
         - $ref: '#/components/parameters/Limit'
       responses:
@@ -1071,10 +1319,29 @@ components:
       in: query
       description: «все теги» (по умолчанию) или «любой из тегов».
       schema: { type: string, enum: [ALL, ANY], default: ALL }
-    AuthorId:
-      name: authorId
+    AuthorIds:
+      name: authorIds
       in: query
-      schema: { type: string, format: uuid }
+      description: Авторы через запятую.
+      style: form
+      explode: false
+      schema:
+        type: array
+        maxItems: 20
+        items: { type: string, format: uuid }
+    MinRating:
+      name: minRating
+      in: query
+      schema: { type: integer, minimum: 1, maximum: 10 }
+    MaxRating:
+      name: maxRating
+      in: query
+      schema: { type: integer, minimum: 1, maximum: 10 }
+    Section:
+      name: section
+      in: query
+      description: 'Секция ленты: `category:<categoryId>` или `filter:<savedFilterId>` (из оглавления); пересекается с остальными фильтрами.'
+      schema: { type: string, maxLength: 60 }
     Limit:
       name: limit
       in: query
@@ -1140,6 +1407,7 @@ components:
             - LIMIT_EXCEEDED
             - CONFIRMATION_REQUIRED
             - SYSTEM_GROUP
+            - ALREADY_PINNED
             - UPGRADE_REQUIRED
             - INTERNAL_ERROR
         errors:
@@ -1257,13 +1525,14 @@ components:
 
     GroupSummary:
       type: object
-      required: [id, name, description, memberCount, myRole]
+      required: [id, name, description, memberCount, myRole, reviewCount]
       properties:
         id: { type: string, format: uuid }
         name: { type: string }
         description: { type: string }
         memberCount: { type: integer }
         myRole: { $ref: '#/components/schemas/RoleInfo' }
+        reviewCount: { type: integer, description: 'Число рекомендаций, опубликованных в группе.' }
 
     CreateGroupRequest:
       type: object
@@ -1410,7 +1679,7 @@ components:
 
     ReviewCard:
       type: object
-      required: [id, title, excerpt, rating, tags, author, createdAt, categoryId]
+      required: [id, title, excerpt, rating, tags, author, createdAt, categoryId, sharedAt, groupIds]
       properties:
         id: { type: string, format: uuid }
         title: { type: string }
@@ -1422,8 +1691,14 @@ components:
         author: { $ref: '#/components/schemas/ReviewAuthor' }
         createdAt: { type: string, format: date-time }
         categoryId: { type: string, format: uuid }
-        sharedAt: { type: string, format: date-time, nullable: true }
-        groupId: { type: string, format: uuid, nullable: true }
+        sharedAt:
+          type: string
+          format: date-time
+          description: 'Самая свежая публикация в области запроса (в «Моих» — по обычным группам; в «Избранном» — добавление).'
+        groupIds:
+          type: array
+          description: Группы публикации в области запроса (на «Все» — мои группы, в группе — одна).
+          items: { type: string, format: uuid }
 
     TagCount:
       type: object
@@ -1581,3 +1856,128 @@ components:
         groupDescription: { type: string }
         memberCount: { type: integer }
         invitedBy: { type: string }
+
+    TagMode:
+      type: string
+      enum: [ALL, ANY]
+
+    FilterDefinition:
+      type: object
+      description: Определение сохранённого фильтра (версия `v`); группа не сохраняется, удалённые теги игнорируются.
+      required: [v]
+      properties:
+        v: { type: integer, enum: [1] }
+        q: { type: string, maxLength: 100, nullable: true, description: 'Только при применении в панели: в секции поиска нет.' }
+        categoryIds:
+          type: array
+          maxItems: 20
+          items: { type: string, format: uuid }
+        tags:
+          type: array
+          maxItems: 10
+          items: { type: string, maxLength: 31 }
+        tagMode: { $ref: '#/components/schemas/TagMode' }
+        authorIds:
+          type: array
+          maxItems: 20
+          items: { type: string, format: uuid }
+        minRating: { type: integer, minimum: 1, maximum: 10, nullable: true }
+        maxRating: { type: integer, minimum: 1, maximum: 10, nullable: true }
+
+    SavedFilterKind:
+      type: string
+      enum: [FILTER, CATEGORY]
+
+    SavedFilter:
+      type: object
+      required: [id, kind, inFeed]
+      properties:
+        id: { type: string, format: uuid }
+        kind: { $ref: '#/components/schemas/SavedFilterKind' }
+        inFeed: { type: boolean, description: 'Закреплён секцией ленты; у CATEGORY всегда true.' }
+        name: { type: string, maxLength: 60, nullable: true, description: Только у FILTER. }
+        categoryId: { type: string, format: uuid, nullable: true, description: Только у CATEGORY. }
+        definition: { $ref: '#/components/schemas/FilterDefinition' }
+        position: { type: integer, nullable: true, description: Порядок среди закреплённых своего вида. }
+
+    CreateSavedFilterRequest:
+      type: object
+      required: [kind]
+      properties:
+        kind: { $ref: '#/components/schemas/SavedFilterKind' }
+        name: { type: string, maxLength: 60, nullable: true }
+        definition: { $ref: '#/components/schemas/FilterDefinition' }
+        inFeed: { type: boolean, default: false }
+        categoryId: { type: string, format: uuid, nullable: true }
+
+    UpdateSavedFilterRequest:
+      type: object
+      properties:
+        name: { type: string, maxLength: 60, nullable: true }
+        definition: { $ref: '#/components/schemas/FilterDefinition' }
+        inFeed: { type: boolean, nullable: true }
+
+    SavedFilterOrderRequest:
+      type: object
+      required: [filterIds, categoryIds]
+      properties:
+        filterIds:
+          type: array
+          description: Закреплённые записи-фильтры в новом порядке.
+          items: { type: string, format: uuid }
+        categoryIds:
+          type: array
+          description: Записи закреплённых категорий (id записей, не категорий) в новом порядке.
+          items: { type: string, format: uuid }
+
+    FeedSection:
+      type: object
+      required: [section, kind, pinned, count, lastSharedAt]
+      properties:
+        section: { type: string, description: 'Значение параметра section: category:<id> или filter:<id>.' }
+        kind: { type: string, enum: [FILTER, CATEGORY] }
+        pinned: { type: boolean }
+        count: { type: integer }
+        lastSharedAt: { type: string, format: date-time }
+        categoryId: { type: string, format: uuid, nullable: true, description: Для CATEGORY. }
+        filterId: { type: string, format: uuid, nullable: true, description: Для FILTER и закреплённой CATEGORY. }
+        name: { type: string, nullable: true, description: 'Название фильтра; у категории — из набора на клиенте.' }
+
+    FeedToc:
+      type: object
+      required: [sections]
+      properties:
+        sections:
+          type: array
+          items: { $ref: '#/components/schemas/FeedSection' }
+
+    CategoryCount:
+      type: object
+      required: [categoryId, count]
+      properties:
+        categoryId: { type: string, format: uuid }
+        count: { type: integer, description: У корня — вместе с подкатегориями. }
+
+    AuthorCount:
+      type: object
+      required: [author, count]
+      properties:
+        author: { $ref: '#/components/schemas/ReviewAuthor' }
+        count: { type: integer }
+
+    Facets:
+      type: object
+      required: [categories, tags, authors]
+      properties:
+        categories:
+          type: array
+          items: { $ref: '#/components/schemas/CategoryCount' }
+        tags:
+          type: array
+          maxItems: 100
+          description: Самые частые первыми — они же популярные теги в подсказках поиска.
+          items: { $ref: '#/components/schemas/TagCount' }
+        authors:
+          type: array
+          description: Авторы выборки (в «Личном» — пусто).
+          items: { $ref: '#/components/schemas/AuthorCount' }

@@ -9,6 +9,7 @@ import app.podgon.mobile.core.network.CategoriesApi
 import app.podgon.mobile.core.network.GroupsApi
 import app.podgon.mobile.core.network.MeApi
 import app.podgon.mobile.core.network.ReviewsApi
+import app.podgon.mobile.core.network.SavedFiltersApi
 import app.podgon.mobile.core.network.UpdateGate
 import app.podgon.mobile.core.network.createAuthorizedClient
 import app.podgon.mobile.core.network.createPublicClient
@@ -59,6 +60,7 @@ val appModule =
         single { GroupsApi(get(AUTHORIZED_CLIENT)) }
         single { ReviewsApi(get(AUTHORIZED_CLIENT)) }
         single { CategoriesApi(get(AUTHORIZED_CLIENT)) }
+        single { SavedFiltersApi(get(AUTHORIZED_CLIENT)) }
         // Виджет SmartCaptcha подключается на этапе 9; пока токена нет
         single { CaptchaProvider { null } }
         single { AuthRepository(get(), get(), get(), get()) }

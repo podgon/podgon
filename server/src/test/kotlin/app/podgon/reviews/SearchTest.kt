@@ -21,6 +21,7 @@ class SearchTest : GroupsTestBase() {
         tags: List<String> = emptyList(),
         groups: List<String> = emptyList(),
         categoryId: String = category("books.sf"),
+        rating: Int = 8,
     ): String {
         val r =
             call(
@@ -30,7 +31,7 @@ class SearchTest : GroupsTestBase() {
                 mapOf(
                     "title" to title,
                     "description" to description,
-                    "rating" to 8,
+                    "rating" to rating,
                     "categoryId" to categoryId,
                     "tags" to tags,
                     "groupIds" to groups,
@@ -166,11 +167,11 @@ class SearchTest : GroupsTestBase() {
         assertEquals(3, search(author, "/groups/$g/reviews?tags=a,b&tagMode=ANY")["items"].size())
         assertEquals(
             listOf("Чужой с a"),
-            titles(search(author, "/groups/$g/reviews?tags=%23a&authorId=${userId(other)}")),
+            titles(search(author, "/groups/$g/reviews?tags=%23a&authorIds=${userId(other)}")),
         )
         assertEquals(
             listOf("Только a"),
-            titles(search(author, "/groups/$g/reviews?tags=a&authorId=${userId(author)}&q=${enc("только")}")),
+            titles(search(author, "/groups/$g/reviews?tags=a&authorIds=${userId(author)}&q=${enc("только")}")),
         )
     }
 
@@ -213,10 +214,13 @@ class SearchTest : GroupsTestBase() {
         addReview(stranger, "Чужая рекомендация", groups = listOf(foreign))
 
         val all = search(u, "/reviews")
-        assertEquals(3, all["items"].size(), "«Везде» — двумя карточками")
-        assertEquals(setOf(g1, g2), all["items"].toList().map { it["groupId"].asString() }.toSet())
+        assertEquals(listOf("Только первая", "Везде"), titles(all), "каждая рекомендация один раз (И15)")
+        val everywhere = all["items"].toList().first { it["title"].asString() == "Везде" }
+        assertEquals(setOf(g1, g2), everywhere["groupIds"].toList().map { it.asString() }.toSet())
         assertTrue("Чужая рекомендация" !in titles(all))
-        assertEquals(listOf("Везде"), titles(search(u, "/reviews?groupIds=$g2")))
+        val onlySecond = search(u, "/reviews?groupIds=$g2")
+        assertEquals(listOf("Везде"), titles(onlySecond))
+        assertEquals(listOf(g2), onlySecond["items"][0]["groupIds"].toList().map { it.asString() })
         assertEquals(1, search(u, "/reviews?q=${enc("первая")}")["items"].size())
         assertEquals(404, status(get("/reviews?groupIds=$foreign", u)))
         assertEquals(404, status(get("/reviews?groupIds=$g1,$foreign", u)))
@@ -225,10 +229,31 @@ class SearchTest : GroupsTestBase() {
         var cursor: String? = null
         do {
             val page = search(u, "/reviews?limit=2" + (cursor?.let { "&cursor=$it" } ?: ""))
-            pagedIds += page["items"].toList().map { it["id"].asString() + it["groupId"].asString() }
+            pagedIds += page["items"].toList().map { it["id"].asString() }
             cursor = nextCursor(page)
         } while (cursor != null)
-        assertEquals(3, pagedIds.distinct().size)
+        assertEquals(2, pagedIds.size)
+        assertEquals(2, pagedIds.distinct().size)
+    }
+
+    @Test
+    fun `на Все порядок и дата по самой свежей публикации`() {
+        val u = newUser("s_user8b")
+        val g1 = createGroup(u, "Первая")["id"].asString()
+        val g2 = createGroup(u, "Вторая")["id"].asString()
+        val old = addReview(u, "Старая", groups = listOf(g1))
+        addReview(u, "Новая", groups = listOf(g1))
+        assertEquals(listOf("Новая", "Старая"), titles(search(u, "/reviews")))
+
+        clock.advance(Duration.ofMinutes(5))
+        val shared =
+            call(HttpMethod.PUT, "/reviews/$old/groups", u, mapOf("groupIds" to listOf(g1, g2)))
+        assertEquals(200, status(shared))
+        val all = search(u, "/reviews")
+        assertEquals(listOf("Старая", "Новая"), titles(all), "свежая публикация поднимает рекомендацию")
+        val card = all["items"][0]
+        assertTrue(card["sharedAt"].asString() > card["createdAt"].asString())
+        assertEquals(listOf("Новая", "Старая"), titles(search(u, "/groups/$g1/reviews")), "в группе — своя дата")
     }
 
     @Test
@@ -268,7 +293,7 @@ class SearchTest : GroupsTestBase() {
             assertEquals(400, status(get("/groups/$g/reviews?q=${"я".repeat(101)}", u)))
             assertEquals(400, status(get("/groups/$g/reviews?tagMode=SOME", u)))
             assertEquals(400, status(get("/groups/$g/reviews?categoryIds=не-uuid", u)))
-            assertEquals(400, status(get("/groups/$g/reviews?authorId=не-uuid", u)))
+            assertEquals(400, status(get("/groups/$g/reviews?authorIds=не-uuid", u)))
             assertEquals(400, status(get("/groups/$g/reviews?tags=${(1..11).joinToString(",") { "t$it" }}", u)))
         }
     }

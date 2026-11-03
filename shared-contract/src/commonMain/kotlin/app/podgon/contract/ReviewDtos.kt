@@ -69,7 +69,10 @@ data class SetPublicationsRequest(
     val groupIds: List<String>,
 )
 
-/** Карточка рекомендации в списке; [sharedAt] и [groupId] заполнены в лентах и поиске. */
+/**
+ * Карточка рекомендации в списке; каждая рекомендация — один раз (И15). [sharedAt] — самая свежая публикация
+ * в области запроса, [groupIds] — группы публикации в этой области (на «Все» — мои группы, в группе — одна).
+ */
 @Serializable
 data class ReviewCard(
     val id: String,
@@ -81,9 +84,8 @@ data class ReviewCard(
     val author: ReviewAuthor,
     val createdAt: String,
     val categoryId: String,
-    val sharedAt: String? = null,
-    /** Группа публикации: заполнена в лентах и поиске (рекомендация в двух группах — две карточки). */
-    val groupId: String? = null,
+    val sharedAt: String,
+    val groupIds: List<String>,
 )
 
 /** Страница списка; [nextCursor] — `null`, если страница последняя. */

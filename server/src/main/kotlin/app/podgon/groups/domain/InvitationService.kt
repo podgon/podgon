@@ -37,6 +37,7 @@ class InvitationService(
     private val groups: GroupRepository,
     private val invitations: InvitationRepository,
     private val policy: GroupPolicy,
+    private val summaries: GroupSummaries,
     private val users: UserDirectory,
     private val mail: MailQueue,
     private val props: GroupsProperties,
@@ -199,7 +200,7 @@ class InvitationService(
                 events.publishEvent(MemberJoined(invitation.groupId, userId, request.share))
                 invitation.groupId
             }!!
-        return policy.member(userId, groupId).toDto()
+        return summaries.of(policy.member(userId, groupId))
     }
 
     /** Приглашение существует и (если адресное) предназначено этому пользователю. */

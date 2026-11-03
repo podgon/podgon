@@ -20,7 +20,6 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
@@ -157,10 +156,18 @@ fun FeedScreen(
                 )
             }
             LazyColumn(modifier = Modifier.weight(1f, fill = false)) {
-                items(state.items, key = { "${it.id}:${it.groupId}" }) { card ->
+                items(state.items, key = { it.id }) { card ->
                     ReviewCardRow(
                         card,
-                        groupName = if (scope == FeedScope.AllGroups) state.groupNames[card.groupId] else null,
+                        groupName =
+                            if (scope == FeedScope.AllGroups) {
+                                card.groupIds
+                                    .mapNotNull { state.groupNames[it] }
+                                    .joinToString(", ")
+                                    .ifEmpty { null }
+                            } else {
+                                null
+                            },
                         onClick = { onOpen(card.id) },
                     )
                 }
@@ -232,18 +239,17 @@ private fun FiltersDialog(
                         Text(stringResource(Res.string.filter_author), style = MaterialTheme.typography.titleSmall)
                         options.authors.forEach { member ->
                             Row(verticalAlignment = Alignment.CenterVertically) {
-                                RadioButton(
-                                    selected = draft.authorId == member.userId,
-                                    onClick = {
+                                Checkbox(
+                                    checked = member.userId in draft.authorIds,
+                                    onCheckedChange = {
                                         draft =
                                             draft.copy(
-                                                authorId =
-                                                    if (draft.authorId ==
-                                                        member.userId
-                                                    ) {
-                                                        null
+                                                authorIds =
+                                                    if (it) {
+                                                        draft.authorIds + member.userId
                                                     } else {
-                                                        member.userId
+                                                        draft.authorIds -
+                                                            member.userId
                                                     },
                                             )
                                     },
