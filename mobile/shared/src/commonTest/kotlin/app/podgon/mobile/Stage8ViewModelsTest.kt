@@ -38,9 +38,12 @@ import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 private const val INVITE_PREVIEW = """{"groupName":"Бегуны","groupDescription":"","memberCount":3,"invitedBy":"Аня"}"""
-private const val SHARE_PREVIEW =
-    """{"total":3,"matched":2,"unmatched":[{"reviewId":"r-personal","title":"Заметка"}],
-    "categories":[{"id":"nc1","parentId":null,"name":"Книги","description":""}]}"""
+private const val SHARE_PREVIEW = """{"total":3,"items":[{"reviewId":"r1","title":"Дюна","categoryId":"sc1"}]}"""
+private const val CATEGORY_SET =
+    """{"version":"v1","items":[
+    {"id":"sc1","key":"film","parentId":null,"name":"Фильмы","sortOrder":1,"system":false},
+    {"id":"sc2","key":"film.movies","parentId":"sc1","name":"Кино","sortOrder":2,"system":false},
+    {"id":"none","key":"none","parentId":null,"name":"Без категории","sortOrder":3,"system":true}]}"""
 
 private fun HttpRequestData.text(): String = (body as TextContent).text
 
@@ -68,17 +71,16 @@ class Stage8ViewModelsTest {
                 "/api/v1/invitations/preview" -> json(INVITE_PREVIEW)
                 "/api/v1/invitations/share-preview" -> json(SHARE_PREVIEW)
                 "/api/v1/groups" -> json("[${groupJson("g1", "Мой клуб")}]")
-                "/api/v1/groups/g1/categories" ->
-                    json("""[{"id":"sc1","parentId":null,"name":"Фильмы","description":""}]""")
+                "/api/v1/categories" -> json(CATEGORY_SET)
                 else -> json(groupJson("g7", "Бегуны", MEMBER_ROLE, 4))
             }
         }
 
     @Test
-    fun `вступление с правилом все - предпросмотр назначение и отправка в одном запросе`() =
+    fun `вступление с правилом все - предпросмотр и отправка правила`() =
         runTest(dispatcher) {
             val fixture = joinFixture()
-            val vm = JoinGroupViewModel(fixture.api)
+            val vm = JoinGroupViewModel(fixture.api, fixture.categories)
             vm.onTokenChange("abc")
             vm.check()
             vm.state.first { it.preview != null }
@@ -86,8 +88,7 @@ class Stage8ViewModelsTest {
             vm.setMode(ShareMode.ALL)
             val shown = vm.state.first { it.sharePreview != null }
             assertEquals(3, shown.sharePreview?.total)
-            vm.assign("r-personal", "nc1")
-            vm.assign("r-other", "nc1")
+            assertEquals(listOf("Дюна"), shown.sharePreview?.items?.map { it.title })
 
             vm.joined.test {
                 vm.confirm()
@@ -95,15 +96,14 @@ class Stage8ViewModelsTest {
             }
             val accept = fixture.requests.last { it.url.encodedPath == "/api/v1/invitations/accept" }.text()
             assertTrue("\"mode\":\"ALL\"" in accept, accept)
-            assertTrue("r-personal" in accept && "nc1" in accept, accept)
-            assertTrue("r-other" !in accept, "назначения для записей вне предпросмотра не отправляются")
+            assertTrue("assignments" !in accept, accept)
         }
 
     @Test
     fun `без правила вступление идёт без share`() =
         runTest(dispatcher) {
             val fixture = joinFixture()
-            val vm = JoinGroupViewModel(fixture.api)
+            val vm = JoinGroupViewModel(fixture.api, fixture.categories)
             vm.onTokenChange("abc")
             vm.check()
             vm.state.first { it.preview != null }
@@ -120,14 +120,14 @@ class Stage8ViewModelsTest {
     fun `правило по категориям не запрашивает предпросмотр пока ничего не выбрано`() =
         runTest(dispatcher) {
             val fixture = joinFixture()
-            val vm = JoinGroupViewModel(fixture.api)
+            val vm = JoinGroupViewModel(fixture.api, fixture.categories)
             vm.onTokenChange("abc")
             vm.check()
             vm.state.first { it.preview != null }
 
             vm.setMode(ShareMode.CATEGORIES)
-            val loaded = vm.state.first { it.sourceCategories.isNotEmpty() }
-            assertEquals("Мой клуб › Фильмы", loaded.sourceCategories.single().label)
+            val loaded = vm.state.first { it.categories.isNotEmpty() }
+            assertEquals(listOf("Фильмы", "Кино"), loaded.categories.map { it.category.name }, "без «Без категории»")
             assertNull(loaded.rule)
             assertTrue(fixture.calls().none { it.endsWith("share-preview") })
 
@@ -141,7 +141,7 @@ class Stage8ViewModelsTest {
     fun `теги разбираются и предпросмотр запрашивается явно`() =
         runTest(dispatcher) {
             val fixture = joinFixture()
-            val vm = JoinGroupViewModel(fixture.api)
+            val vm = JoinGroupViewModel(fixture.api, fixture.categories)
             vm.onTokenChange("abc")
             vm.check()
             vm.state.first { it.preview != null }

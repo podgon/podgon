@@ -7,7 +7,6 @@ import app.podgon.contract.AcceptInvitationRequest
 import app.podgon.contract.CreateInvitationRequest
 import app.podgon.contract.ErrorCode
 import app.podgon.contract.FieldError
-import app.podgon.contract.FieldErrorReason
 import app.podgon.contract.GroupSummary
 import app.podgon.contract.InvitationCreated
 import app.podgon.contract.InvitationInfo
@@ -173,9 +172,6 @@ class InvitationService(
         userId: UUID,
         request: AcceptInvitationRequest,
     ): GroupSummary {
-        if (request.assignments.size > Validation.SHARE_ASSIGNMENTS_MAX) {
-            throw validationFailed(listOf(FieldError("assignments", FieldErrorReason.TOO_LONG)))
-        }
         val token = request.token
         val user = users.find(userId) ?: throw ApiException(ErrorCode.UNAUTHORIZED, HttpStatus.UNAUTHORIZED)
         if (user.blocked) throw ApiException(ErrorCode.USER_BLOCKED, HttpStatus.FORBIDDEN)
@@ -200,7 +196,7 @@ class InvitationService(
                     clock.instant(),
                 )
                 invitations.incrementUsed(invitation.id)
-                events.publishEvent(MemberJoined(invitation.groupId, userId, request.share, request.assignments))
+                events.publishEvent(MemberJoined(invitation.groupId, userId, request.share))
                 invitation.groupId
             }!!
         return policy.member(userId, groupId).toDto()

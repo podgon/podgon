@@ -14,9 +14,12 @@ fun notFound() = ApiException(ErrorCode.NOT_FOUND, HttpStatus.NOT_FOUND)
 
 fun forbidden() = ApiException(ErrorCode.FORBIDDEN, HttpStatus.FORBIDDEN)
 
+fun systemGroup() = ApiException(ErrorCode.SYSTEM_GROUP, HttpStatus.CONFLICT)
+
 /**
  * Единственное место проверки прав в группе. Не участник → 404 (существование группы не раскрываем),
- * участник без роли администратора → 403.
+ * участник без роли администратора → 403. Своя системная группа → 409 `SYSTEM_GROUP`: участников и ролей
+ * у неё нет, управлять ею нельзя.
  */
 @Service
 class GroupPolicy(
@@ -25,7 +28,9 @@ class GroupPolicy(
     fun member(
         userId: UUID,
         groupId: UUID,
-    ): MyGroupRow = groups.findForMember(groupId, userId) ?: throw notFound()
+    ): MyGroupRow =
+        groups.findForMember(groupId, userId)
+            ?: throw if (groups.isSystemGroupOf(groupId, userId)) systemGroup() else notFound()
 
     fun admin(
         userId: UUID,

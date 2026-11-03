@@ -1,9 +1,11 @@
 package app.podgon.groups.domain
 
 import app.podgon.contract.MemberInfo
+import app.podgon.groups.MemberLeft
 import app.podgon.groups.persistence.GroupRepository
 import app.podgon.groups.persistence.MemberRow
 import app.podgon.identity.UserDirectory
+import org.springframework.context.ApplicationEventPublisher
 import org.springframework.stereotype.Service
 import org.springframework.transaction.support.TransactionTemplate
 import java.util.UUID
@@ -14,6 +16,7 @@ class MemberService(
     private val policy: GroupPolicy,
     private val admins: AdminGuard,
     private val users: UserDirectory,
+    private val events: ApplicationEventPublisher,
     private val tx: TransactionTemplate,
 ) {
     fun list(
@@ -26,7 +29,10 @@ class MemberService(
         return members.map { it.toDto(profiles) }
     }
 
-    /** Администратор удаляет участника; себя удалить нельзя — для этого есть выход из группы. */
+    /**
+     * Администратор удаляет участника; себя удалить нельзя — для этого есть выход из группы. Публикации
+     * участника остаются в группе.
+     */
     fun remove(
         adminId: UUID,
         groupId: UUID,
@@ -37,6 +43,7 @@ class MemberService(
             if (userId == adminId) throw forbidden()
             if (!groups.deleteMember(groupId, userId)) throw notFound()
             admins.ensureAdminRemains(groupId)
+            events.publishEvent(MemberLeft(groupId, userId, deleteContributions = false))
         }
     }
 

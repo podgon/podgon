@@ -45,6 +45,20 @@ abstract class GroupsTestBase : IntegrationTest() {
 
     fun userId(access: String): String = body(get("/me", access))["id"].asString()
 
+    /** Системная группа «Личное» пользователя. */
+    fun personalGroup(access: String): String = body(get("/me", access))["personalGroupId"].asString()
+
+    /** Системная группа «Избранное» пользователя. */
+    fun favoritesGroup(access: String): String = body(get("/me", access))["favoritesGroupId"].asString()
+
+    /** Id категории общего набора по ключу из `docs/categories.md`. */
+    fun category(key: String): String =
+        jdbc
+            .sql("select id::text from categories where key = :key")
+            .param("key", key)
+            .query(String::class.java)
+            .single()
+
     fun createGroup(
         access: String,
         name: String = "Книжный клуб",

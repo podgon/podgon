@@ -55,14 +55,17 @@ class SearchPerformanceTest : GroupsTestBase() {
         jdbc
             .sql(
                 """
-                insert into reviews (id, author_id, title, description, rating, created_at, updated_at)
+                insert into reviews (id, author_id, title, description, rating, category_id, created_at, updated_at)
                 select gen_random_uuid(), :author,
                        (array['Дюна','Матрица','Кофейня','Путешествие','Интерстеллар','Ресторан','Альбом','Сериал','Игра','Роман'])[1 + n % 10]
                          || ' ' || n,
                        (array['отличная книга про космос','хороший завтрак и кофе','путешествие по странам','фантастика будущего',
                               'любимая музыка для работы','семейный ресторан рядом','сильный сюжет и актёры','удобный сервис'])[1 + n % 8]
                          || ' ' || (array['лето','зима','вечер','утро','выходные'])[1 + n % 5],
-                       1 + n % 10, now() - make_interval(secs => n), now()
+                       1 + n % 10,
+                       (select id from categories
+                        where key = (array['books.sf','books.crime','film.movies','film.series','food.coffee'])[1 + n % 5]),
+                       now() - make_interval(secs => n), now()
                 from generate_series(1, 100000) n
                 """.trimIndent(),
             ).param("author", authorId)
@@ -70,10 +73,11 @@ class SearchPerformanceTest : GroupsTestBase() {
         jdbc
             .sql(
                 """
-                insert into review_groups (review_id, group_id, category_id, shared_at)
-                select r.id, g.id, (select id from categories c where c.group_id = g.id order by c.sort_order limit 1 offset (abs(hashtext(r.id::text)) % 5)), r.created_at
+                insert into review_groups (review_id, group_id, shared_at)
+                select r.id, g.id, r.created_at
                 from reviews r
-                join (select id, row_number() over (order by id) as rn from groups) g on g.rn = 1 + (abs(hashtext(r.id::text)) % 2)
+                join (select id, row_number() over (order by id) as rn from groups where kind = 'REGULAR') g
+                  on g.rn = 1 + (abs(hashtext(r.id::text)) % 2)
                 where r.author_id = :author
                 """.trimIndent(),
             ).param("author", authorId)
@@ -96,8 +100,8 @@ class SearchPerformanceTest : GroupsTestBase() {
         jdbc.sql("analyze tags").update()
         val total = jdbc.sql("select count(*) from review_groups").query(Int::class.java).single()
         assertEquals(100_000, total)
-        val firstCategory = body(get("/groups/$g1/categories", author))[0]["id"].asString()
-        val secondGroupCategory = body(get("/groups/$g2/categories", author))[0]["id"].asString()
+        val firstCategory = category("books")
+        val secondGroupCategory = category("film.movies")
 
         val cases =
             listOf(

@@ -9,23 +9,17 @@ data class ReviewAuthor(
     val displayName: String,
 )
 
-/** Публикация рекомендации в группе: в какой категории группы она лежит. */
+/** Публикация рекомендации в обычной группе. */
 @Serializable
 data class PublicationInfo(
     val groupId: String,
-    val categoryId: String,
     /** Момент публикации в группе, ISO-8601 в UTC. */
     val sharedAt: String,
 )
 
-@Serializable
-data class PublicationRequest(
-    val groupId: String,
-    val categoryId: String,
-)
-
 /**
- * Рекомендация целиком. Автор видит все публикации, остальные — только в группах, где состоят сами.
+ * Рекомендация целиком. [publications] — только обычные группы: автор видит все, остальные — только
+ * группы, где состоят сами. [personal] — рекомендация личная (опубликована только в личной группе).
  */
 @Serializable
 data class ReviewDetails(
@@ -33,20 +27,27 @@ data class ReviewDetails(
     val title: String,
     val description: String,
     val rating: Int,
+    val categoryId: String,
     val tags: List<String>,
     val author: ReviewAuthor,
     val createdAt: String,
     val updatedAt: String,
+    val personal: Boolean,
     val publications: List<PublicationInfo>,
 )
 
+/**
+ * Новая рекомендация. [groupIds] — обычные группы, где я участник; пусто — рекомендация личная.
+ * «Без категории» допустима только у личной.
+ */
 @Serializable
 data class CreateReviewRequest(
     val title: String,
     val description: String = "",
     val rating: Int,
+    val categoryId: String,
     val tags: List<String> = emptyList(),
-    val publications: List<PublicationRequest> = emptyList(),
+    val groupIds: List<String> = emptyList(),
 )
 
 /** Частичное обновление: `null` — поле не менять (для [tags] `null` — теги не менять, пустой список — убрать все). */
@@ -55,16 +56,20 @@ data class UpdateReviewRequest(
     val title: String? = null,
     val description: String? = null,
     val rating: Int? = null,
+    val categoryId: String? = null,
     val tags: List<String>? = null,
 )
 
-/** Новый набор публикаций целиком: отсутствующие в нём публикации снимаются. */
+/**
+ * Новый набор обычных групп целиком: отсутствующие в нём публикации снимаются. Пустой набор делает
+ * рекомендацию личной.
+ */
 @Serializable
 data class SetPublicationsRequest(
-    val publications: List<PublicationRequest>,
+    val groupIds: List<String>,
 )
 
-/** Карточка рекомендации в списке; [categoryId] и [sharedAt] заполнены в ленте группы. */
+/** Карточка рекомендации в списке; [sharedAt] и [groupId] заполнены в лентах и поиске. */
 @Serializable
 data class ReviewCard(
     val id: String,
@@ -75,7 +80,7 @@ data class ReviewCard(
     val tags: List<String>,
     val author: ReviewAuthor,
     val createdAt: String,
-    val categoryId: String? = null,
+    val categoryId: String,
     val sharedAt: String? = null,
     /** Группа публикации: заполнена в лентах и поиске (рекомендация в двух группах — две карточки). */
     val groupId: String? = null,

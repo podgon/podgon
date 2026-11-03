@@ -64,25 +64,53 @@ class GroupRepository(
             memberCount = rs.getInt("member_count"),
         )
 
+    /** [kind] — `REGULAR` или системная группа (`PERSONAL`, `FAVORITES`; владелец — [createdBy]). */
     fun insertGroup(
         id: UUID,
         name: String,
         description: String,
         createdBy: UUID,
         now: Instant,
+        kind: String = "REGULAR",
     ) {
         jdbc
             .sql(
                 """
-                insert into groups (id, name, description, created_by, created_at, updated_at)
-                values (:id, :name, :description, :createdBy, :now, :now)
+                insert into groups (id, name, description, created_by, created_at, updated_at, kind)
+                values (:id, :name, :description, :createdBy, :now, :now, :kind)
                 """.trimIndent(),
             ).param("id", id)
             .param("name", name)
             .param("description", description)
             .param("createdBy", createdBy)
             .param("now", now.toSql())
+            .param("kind", kind)
             .update()
+    }
+
+    /** Системные группы пользователя: тип → id. */
+    fun systemGroupsOf(userId: UUID): Map<String, UUID> =
+        jdbc
+            .sql("select kind, id from groups where created_by = :u and kind <> 'REGULAR'")
+            .param("u", userId)
+            .query { rs, _ -> rs.getString("kind") to rs.getObject("id", UUID::class.java) }
+            .list()
+            .toMap()
+
+    fun isSystemGroupOf(
+        groupId: UUID,
+        userId: UUID,
+    ): Boolean =
+        jdbc
+            .sql("select exists (select 1 from groups where id = :g and created_by = :u and kind <> 'REGULAR')")
+            .param("g", groupId)
+            .param("u", userId)
+            .query(Boolean::class.java)
+            .single()
+
+    /** Удаляет системные группы пользователя (публикации в них уходят каскадом). */
+    fun deleteSystemGroupsOf(userId: UUID) {
+        jdbc.sql("delete from groups where created_by = :u and kind <> 'REGULAR'").param("u", userId).update()
     }
 
     fun insertRole(

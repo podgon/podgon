@@ -13,6 +13,7 @@ import app.podgon.reviews.persistence.SharingRepository
 import org.springframework.context.event.EventListener
 import org.springframework.core.annotation.Order
 import org.springframework.stereotype.Service
+import java.time.Clock
 import java.util.UUID
 
 /** Порядок обработчиков [UserDeleting]: сначала группы (членства, пустые группы), затем рекомендации. */
@@ -27,6 +28,7 @@ class LifecycleService(
     private val sharing: SharingRepository,
     private val reviews: ReviewRepository,
     private val access: GroupAccess,
+    private val clock: Clock,
 ) {
     fun groupDeleteImpact(
         userId: UUID,
@@ -51,21 +53,38 @@ class LifecycleService(
             blockingGroups = access.soleAdminGroups(userId),
         )
 
-    /** Сами рекомендации остаются у автора: в других группах и в личных. */
+    /**
+     * Сами рекомендации остаются у автора: в других группах, а те, что были только здесь, — в «Личном».
+     * Из «Избранного» ушедшего убираются чужие рекомендации, которые ему больше не видны (Ф1).
+     */
     @EventListener
     fun onMemberLeft(event: MemberLeft) {
-        if (event.deleteContributions) sharing.deleteAuthorPublications(event.groupId, event.userId)
-    }
-
-    /** Публикации в группе уйдут каскадом; здесь решается судьба рекомендаций, которые были только в ней. */
-    @EventListener
-    fun onGroupDeleting(event: GroupDeleting) {
-        if (event.deleteExclusiveReviews) sharing.deleteExclusive(event.groupId)
+        if (event.deleteContributions) {
+            sharing.deleteAuthorPublications(event.groupId, event.userId)
+            sharing.makeOrphansPersonal(event.userId, clock.instant())
+            sharing.cleanupFavorites(author = event.userId)
+        }
+        sharing.cleanupFavorites(owner = event.userId)
     }
 
     /**
-     * Без удаления: рекомендации с публикациями переходят «удалённому пользователю», личные удаляются
-     * (их никто не видит). С удалением — исчезают все, вместе с публикациями и тегами.
+     * Публикации в группе уйдут каскадом; здесь решается судьба рекомендаций, которые были только в ней
+     * (вернуть авторам в «Личное» или удалить), и чистится чужое «Избранное» (Ф1).
+     */
+    @EventListener
+    fun onGroupDeleting(event: GroupDeleting) {
+        if (event.deleteExclusiveReviews) {
+            sharing.deleteExclusive(event.groupId)
+        } else {
+            sharing.returnExclusiveToPersonal(event.groupId, clock.instant())
+        }
+        sharing.cleanupFavorites(groupId = event.groupId)
+    }
+
+    /**
+     * К этому моменту системные группы пользователя уже удалены (обработчик модуля групп). Без удаления:
+     * групповые рекомендации переходят «удалённому пользователю» и остаются в чужом «Избранном» (Ф2), личные
+     * удаляются. С удалением — исчезают все, вместе с публикациями (и в «Избранном») и тегами.
      */
     @EventListener
     @Order(REVIEWS_AFTER_GROUPS)

@@ -25,15 +25,14 @@ enum class ShareMode {
 }
 
 /**
- * Правило переноса. [categoryIds] — категории **исходных** групп пользователя; [withSubcategories]
- * распространяет выбор на потомков. Для режимов с тегами — [tags] (любой из перечисленных).
+ * Правило переноса своих групповых рекомендаций (личные не переносятся). [categoryIds] — категории набора
+ * (корень включает подкатегории); для режимов с тегами — [tags] (любой из перечисленных).
  */
 @Serializable
 data class ShareRule(
     val mode: ShareMode,
     val categoryIds: List<String> = emptyList(),
     val tags: List<String> = emptyList(),
-    val withSubcategories: Boolean = true,
 )
 
 @Serializable
@@ -42,38 +41,26 @@ data class SharePreviewRequest(
     val share: ShareRule,
 )
 
-/** Рекомендация, для которой в новой группе нет подходящей категории. */
+/** Рекомендация, которая будет опубликована в новой группе. */
 @Serializable
-data class UnmatchedReview(
+data class SharePreviewItem(
     val reviewId: String,
     val title: String,
-    /** Название категории в исходной группе; нет — рекомендация личная. */
-    val sourceCategory: String? = null,
+    val categoryId: String,
 )
 
 @Serializable
 data class SharePreview(
     /** Сколько рекомендаций отобрано правилом. */
     val total: Int,
-    /** Из них категория в новой группе подобрана автоматически. */
-    val matched: Int,
-    /** Без соответствия (до [Validation.SHARE_UNMATCHED_MAX] штук); их число — `total - matched`. */
-    val unmatched: List<UnmatchedReview>,
-    /** Категории новой группы — для ручного выбора. */
-    val categories: List<CategoryInfo>,
-)
-
-@Serializable
-data class ShareAssignment(
-    val reviewId: String,
-    val categoryId: String,
+    /** Первые из них (до [Validation.SHARE_PREVIEW_MAX]) — для списка «Будет опубликовано». */
+    val items: List<SharePreviewItem>,
 )
 
 @Serializable
 data class AcceptInvitationRequest(
     val token: String,
     val share: ShareRule? = null,
-    val assignments: List<ShareAssignment> = emptyList(),
 )
 
 /** Судьба рекомендаций, опубликованных только в удаляемой группе. */

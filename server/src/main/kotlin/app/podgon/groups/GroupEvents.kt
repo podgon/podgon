@@ -1,13 +1,15 @@
 package app.podgon.groups
 
-import app.podgon.contract.ShareAssignment
 import app.podgon.contract.ShareRule
 import java.util.UUID
 
 // События модуля групп. Публикуются синхронно внутри транзакции, поэтому обработчики других модулей
 // (рекомендации) выполняются атомарно с изменением группы, а исключение откатывает всё.
 
-/** Участник вышел из группы (или будет удалён вместе с аккаунтом — тогда без этого события). */
+/**
+ * Участник вышел из группы или его удалил администратор (при удалении аккаунта события нет: связи снимают
+ * обработчики `UserDeleting`).
+ */
 data class MemberLeft(
     val groupId: UUID,
     val userId: UUID,
@@ -18,7 +20,7 @@ data class MemberLeft(
 /** Группа сейчас будет удалена (событие — до удаления строк). */
 data class GroupDeleting(
     val groupId: UUID,
-    /** Удалить рекомендации, опубликованные только в этой группе; иначе они остаются личными. */
+    /** Удалить рекомендации, опубликованные только в этой группе; иначе они возвращаются авторам в «Личное». */
     val deleteExclusiveReviews: Boolean,
 )
 
@@ -27,7 +29,6 @@ data class MemberJoined(
     val groupId: UUID,
     val userId: UUID,
     val share: ShareRule?,
-    val assignments: List<ShareAssignment>,
 )
 
 /** Порт для предпросмотра шаринга: в какую группу ведёт приглашение (с теми же проверками, что и при вступлении). */

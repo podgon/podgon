@@ -2,7 +2,7 @@ package app.podgon.mobile.feature.reviews
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import app.podgon.contract.CategoryInfo
+import app.podgon.contract.Category
 import app.podgon.contract.MemberInfo
 import app.podgon.contract.ReviewCard
 import app.podgon.contract.TagCount
@@ -18,7 +18,7 @@ import kotlinx.coroutines.launch
 
 /** Варианты для панели фильтров: загружаются при её первом открытии. */
 data class FilterOptions(
-    val categories: List<CategoryInfo> = emptyList(),
+    val categories: List<Category> = emptyList(),
     val tags: List<TagCount> = emptyList(),
     val authors: List<MemberInfo> = emptyList(),
 )
@@ -47,6 +47,7 @@ class FeedViewModel(
     private val scope: FeedScope,
     private val repository: ReviewsRepository,
     private val groups: GroupsApi,
+    private val categorySet: CategoryRepository,
 ) : ViewModel() {
     private val _state = MutableStateFlow(FeedState())
     val state: StateFlow<FeedState> = _state.asStateFlow()
@@ -128,20 +129,20 @@ class FeedViewModel(
 
     fun clearFilter() = setFilter(ReviewFilter())
 
-    /** Подгружает категории, теги и участников группы для панели фильтров (один раз). */
+    /** Подгружает категории набора, теги и участников группы для панели фильтров (один раз). */
     fun loadOptions() {
         val group = (scope as? FeedScope.Group)?.groupId ?: return
         if (_state.value.options != null) return
         _state.update { it.copy(options = FilterOptions()) }
         viewModelScope.launch {
-            val categories = groups.categories(group)
+            val categories = categorySet.set()
             val tags = repository.tags(group)
             val members = groups.members(group)
             _state.update {
                 it.copy(
                     options =
                         FilterOptions(
-                            categories = categories.getOrNull().orEmpty(),
+                            categories = categories.getOrNull()?.items.orEmpty(),
                             tags = tags.getOrNull().orEmpty(),
                             authors = members.getOrNull().orEmpty(),
                         ),

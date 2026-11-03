@@ -13,21 +13,22 @@ data class ReviewRow(
     val title: String,
     val description: String,
     val rating: Int,
+    val categoryId: UUID,
     val createdAt: Instant,
     val updatedAt: Instant,
 )
 
+/** Публикация в группе; [kind] — тип группы (`REGULAR`, `PERSONAL`, `FAVORITES`). */
 data class PublicationRow(
     val reviewId: UUID,
     val groupId: UUID,
-    val categoryId: UUID,
+    val kind: String,
     val sharedAt: Instant,
 )
 
 /** Строка ленты или списка: рекомендация и (для ленты) её публикация в группе. */
 data class CardRow(
     val review: ReviewRow,
-    val categoryId: UUID?,
     val sharedAt: Instant?,
     val groupId: UUID? = null,
     /** Релевантность поиску (0 без запроса). */
@@ -36,7 +37,7 @@ data class CardRow(
 
 /** Фильтры поиска публикаций; все заданные условия применяются через «и». */
 data class SearchFilters(
-    /** Категории: выбираются вместе с подкатегориями. */
+    /** Категории набора: корень выбирается вместе с подкатегориями. */
     val categoryIds: Set<UUID> = emptySet(),
     val tags: List<String> = emptyList(),
     /** `true` — достаточно любого из тегов, `false` — нужны все. */
@@ -66,12 +67,16 @@ data class Position(
     val id: UUID,
 )
 
-/** Рекомендации, публикации и теги. Все запросы параметризованы. */
+/**
+ * Рекомендации, публикации и теги. Все запросы параметризованы. Тип группы (`groups.kind`) читается SQL-ом
+ * напрямую: публикации в системных группах («Личное», «Избранное») обрабатываются иначе, чем в обычных.
+ */
 @Repository
 class ReviewRepository(
     private val jdbc: JdbcClient,
 ) {
-    private val reviewColumns = "r.id, r.author_id, r.title, r.description, r.rating, r.created_at, r.updated_at"
+    private val reviewColumns =
+        "r.id, r.author_id, r.title, r.description, r.rating, r.category_id, r.created_at, r.updated_at"
 
     private fun review(rs: ResultSet) =
         ReviewRow(
@@ -80,6 +85,7 @@ class ReviewRepository(
             title = rs.getString("title"),
             description = rs.getString("description"),
             rating = rs.getInt("rating"),
+            categoryId = rs.getObject("category_id", UUID::class.java),
             createdAt = rs.getTimestamp("created_at").toInstant(),
             updatedAt = rs.getTimestamp("updated_at").toInstant(),
         )
@@ -88,14 +94,15 @@ class ReviewRepository(
         jdbc
             .sql(
                 """
-                insert into reviews (id, author_id, title, description, rating, created_at, updated_at)
-                values (:id, :author, :title, :description, :rating, :now, :now)
+                insert into reviews (id, author_id, title, description, rating, category_id, created_at, updated_at)
+                values (:id, :author, :title, :description, :rating, :category, :now, :now)
                 """.trimIndent(),
             ).param("id", row.id)
             .param("author", row.authorId)
             .param("title", row.title)
             .param("description", row.description)
             .param("rating", row.rating)
+            .param("category", row.categoryId)
             .param("now", row.createdAt.toSql())
             .update()
     }
@@ -105,14 +112,20 @@ class ReviewRepository(
         title: String,
         description: String,
         rating: Int,
+        categoryId: UUID,
         now: Instant,
     ) {
         jdbc
             .sql(
-                "update reviews set title = :title, description = :description, rating = :rating, updated_at = :now where id = :id",
+                """
+                update reviews set title = :title, description = :description, rating = :rating,
+                                   category_id = :category, updated_at = :now
+                where id = :id
+                """.trimIndent(),
             ).param("title", title)
             .param("description", description)
             .param("rating", rating)
+            .param("category", categoryId)
             .param("now", now.toSql())
             .param("id", id)
             .update()
@@ -204,52 +217,55 @@ class ReviewRepository(
     fun publications(reviewId: UUID): List<PublicationRow> =
         jdbc
             .sql(
-                "select review_id, group_id, category_id, shared_at from review_groups where review_id = :id order by shared_at, group_id",
+                """
+                select p.review_id, p.group_id, g.kind, p.shared_at
+                from review_groups p join groups g on g.id = p.group_id
+                where p.review_id = :id order by p.shared_at, p.group_id
+                """.trimIndent(),
             ).param("id", reviewId)
             .query { rs, _ ->
                 PublicationRow(
                     reviewId = rs.getObject("review_id", UUID::class.java),
                     groupId = rs.getObject("group_id", UUID::class.java),
-                    categoryId = rs.getObject("category_id", UUID::class.java),
+                    kind = rs.getString("kind"),
                     sharedAt = rs.getTimestamp("shared_at").toInstant(),
                 )
             }.list()
 
-    /** Снимает публикации в группах, которых нет в [keepGroupIds]. */
-    fun removePublicationsExcept(
+    /**
+     * Задаёт, где рекомендация видна: в обычных группах [groupIds] либо, если набор пуст, только в личной группе
+     * автора [personalGroupId] (Л1). Остальные публикации в обычных группах и в личной снимаются; у сохранённых
+     * время публикации не меняется. Публикации в «Избранном» (своём и чужом) не трогаются.
+     */
+    fun setVisibility(
         reviewId: UUID,
-        keepGroupIds: Collection<UUID>,
-    ) {
-        if (keepGroupIds.isEmpty()) {
-            jdbc.sql("delete from review_groups where review_id = :id").param("id", reviewId).update()
-        } else {
-            jdbc
-                .sql("delete from review_groups where review_id = :id and group_id not in (:keep)")
-                .param("id", reviewId)
-                .param("keep", keepGroupIds)
-                .update()
-        }
-    }
-
-    /** Новая публикация либо смена категории существующей (время публикации не меняется). */
-    fun upsertPublication(
-        reviewId: UUID,
-        groupId: UUID,
-        categoryId: UUID,
+        groupIds: Collection<UUID>,
+        personalGroupId: UUID,
         now: Instant,
     ) {
+        val keep = groupIds.ifEmpty { listOf(personalGroupId) }
         jdbc
             .sql(
                 """
-                insert into review_groups (review_id, group_id, category_id, shared_at)
-                values (:review, :group, :category, :now)
-                on conflict (review_id, group_id) do update set category_id = excluded.category_id
+                delete from review_groups p using groups g
+                where g.id = p.group_id and p.review_id = :id and g.kind in ('REGULAR', 'PERSONAL')
+                  and p.group_id not in (:keep)
                 """.trimIndent(),
-            ).param("review", reviewId)
-            .param("group", groupId)
-            .param("category", categoryId)
-            .param("now", now.toSql())
+            ).param("id", reviewId)
+            .param("keep", keep)
             .update()
+        for (groupId in keep) {
+            jdbc
+                .sql(
+                    """
+                    insert into review_groups (review_id, group_id, shared_at) values (:review, :group, :now)
+                    on conflict (review_id, group_id) do nothing
+                    """.trimIndent(),
+                ).param("review", reviewId)
+                .param("group", groupId)
+                .param("now", now.toSql())
+                .update()
+        }
     }
 
     // --- списки ---
@@ -271,15 +287,11 @@ class ReviewRepository(
         if (filters.categoryIds.isNotEmpty()) {
             with.append(
                 """
-                with recursive tree as (
-                    select id from categories where id in (:categories) and group_id in (:groups)
-                    union all
-                    select c.id from categories c join tree t on c.parent_id = t.id where c.group_id in (:groups)
-                )
+                with tree as (select id from categories where id in (:categories) or parent_id in (:categories))
                 """.trimIndent() + "\n",
             )
             params["categories"] = filters.categoryIds
-            inner.append(" and g.category_id in (select id from tree)")
+            inner.append(" and r.category_id in (select id from tree)")
         }
         filters.authorId?.let {
             inner.append(" and r.author_id = :author")
@@ -329,7 +341,7 @@ class ReviewRepository(
                 (if (single) "" else ", x.group_id desc")
         val sql =
             with.toString() +
-                "select x.* from (select $reviewColumns, g.group_id, g.category_id, g.shared_at, $score as score" +
+                "select x.* from (select $reviewColumns, g.group_id, g.shared_at, $score as score" +
                 " from review_groups g join reviews r on r.id = g.review_id" +
                 " where g.group_id in (:groups)$inner) x$outer order by $order limit :limit"
         return jdbc
@@ -338,7 +350,6 @@ class ReviewRepository(
             .query { rs, _ ->
                 CardRow(
                     review = review(rs),
-                    categoryId = rs.getObject("category_id", UUID::class.java),
                     sharedAt = rs.getTimestamp("shared_at").toInstant(),
                     groupId = rs.getObject("group_id", UUID::class.java),
                     score = rs.getDouble("score"),
@@ -369,6 +380,7 @@ class ReviewRepository(
             .query { rs, _ -> TagRow(rs.getString("name").lowercase(), rs.getInt("cnt")) }
             .list()
 
+    /** Групповые рекомендации автора (опубликованные хотя бы в одной обычной группе), новые сверху (И21). */
     fun byAuthor(
         authorId: UUID,
         after: Position?,
@@ -379,6 +391,8 @@ class ReviewRepository(
                 """
                 select $reviewColumns from reviews r
                 where r.author_id = :author
+                  and exists (select 1 from review_groups p join groups g on g.id = p.group_id
+                              where p.review_id = r.id and g.kind = 'REGULAR')
                   and (cast(:afterAt as timestamptz) is null or (r.created_at, r.id) < (:afterAt, :afterId))
                 order by r.created_at desc, r.id desc
                 limit :limit
@@ -387,46 +401,8 @@ class ReviewRepository(
             .param("afterAt", after?.at?.toSql())
             .param("afterId", after?.id ?: UUID(0, 0))
             .param("limit", limit)
-            .query { rs, _ -> CardRow(review(rs), null, null) }
+            .query { rs, _ -> CardRow(review(rs), null) }
             .list()
-
-    // --- для категорий ---
-
-    fun countPublications(
-        groupId: UUID,
-        categoryIds: Collection<UUID>,
-    ): Int =
-        if (categoryIds.isEmpty()) {
-            0
-        } else {
-            jdbc
-                .sql("select count(*) from review_groups where group_id = :group and category_id in (:ids)")
-                .param("group", groupId)
-                .param("ids", categoryIds)
-                .query(Int::class.java)
-                .single()
-        }
-
-    fun countPublicationsByOthers(
-        groupId: UUID,
-        categoryIds: Collection<UUID>,
-        userId: UUID,
-    ): Int =
-        if (categoryIds.isEmpty()) {
-            0
-        } else {
-            jdbc
-                .sql(
-                    """
-                    select count(*) from review_groups g join reviews r on r.id = g.review_id
-                    where g.group_id = :group and g.category_id in (:ids) and r.author_id <> :user
-                    """.trimIndent(),
-                ).param("group", groupId)
-                .param("ids", categoryIds)
-                .param("user", userId)
-                .query(Int::class.java)
-                .single()
-        }
 }
 
 private const val TAGS_LOCK = "tags"

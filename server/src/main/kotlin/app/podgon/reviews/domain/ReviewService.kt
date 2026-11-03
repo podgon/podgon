@@ -7,7 +7,6 @@ import app.podgon.contract.ErrorCode
 import app.podgon.contract.FieldError
 import app.podgon.contract.FieldErrorReason
 import app.podgon.contract.PublicationInfo
-import app.podgon.contract.PublicationRequest
 import app.podgon.contract.REVIEW_EXCERPT_MAX
 import app.podgon.contract.ReviewAuthor
 import app.podgon.contract.ReviewCard
@@ -18,6 +17,8 @@ import app.podgon.contract.TagCount
 import app.podgon.contract.UpdateReviewRequest
 import app.podgon.contract.Validation
 import app.podgon.groups.GroupAccess
+import app.podgon.identity.SystemGroupIds
+import app.podgon.identity.SystemGroups
 import app.podgon.identity.UserDirectory
 import app.podgon.reviews.ReviewsProperties
 import app.podgon.reviews.persistence.CardRow
@@ -27,6 +28,7 @@ import app.podgon.reviews.persistence.ReviewRepository
 import app.podgon.reviews.persistence.ReviewRow
 import app.podgon.reviews.persistence.SearchFilters
 import app.podgon.reviews.persistence.SearchPosition
+import app.podgon.reviews.persistence.SharingRepository
 import org.springframework.dao.DataIntegrityViolationException
 import org.springframework.http.HttpStatus
 import org.springframework.stereotype.Service
@@ -50,6 +52,10 @@ data class SearchParams(
 
 private const val TAGS_LIMIT = 100
 
+private const val REGULAR = "REGULAR"
+private const val PERSONAL = "PERSONAL"
+private const val FAVORITES = "FAVORITES"
+
 private fun notFound() = ApiException(ErrorCode.NOT_FOUND, HttpStatus.NOT_FOUND)
 
 private fun String.toUuidOrNull(): UUID? = runCatching { UUID.fromString(this) }.getOrNull()
@@ -57,11 +63,15 @@ private fun String.toUuidOrNull(): UUID? = runCatching { UUID.fromString(this) }
 /**
  * Рекомендации и их публикации в группы. Менять рекомендацию может только автор; читать — автор
  * и участники групп, где она опубликована (остальным — 404, существование не раскрываем).
+ * Рекомендация либо личная (опубликована только в личной группе автора), либо групповая (Л1).
  */
 @Service
 class ReviewService(
     private val reviews: ReviewRepository,
+    private val sharing: SharingRepository,
+    private val categories: CategoryService,
     private val access: GroupAccess,
+    private val systemGroups: SystemGroups,
     private val users: UserDirectory,
     private val props: ReviewsProperties,
     private val clock: Clock,
@@ -74,9 +84,12 @@ class ReviewService(
         val title = request.title.trim()
         val description = request.description.trim()
         val tags = normalizeTags(request.tags)
+        val categoryId = parseCategory(request.categoryId)
+        val groupIds = parseGroups(request.groupIds)
         validate(title, description, request.rating, tags)
-        val publications = parsePublications(request.publications)
+        requireCategoryAllowed(categoryId, personal = groupIds.isEmpty())
         val id = UUID.randomUUID()
+        val system = system(userId)
         inTransaction {
             if (reviews.countByAuthor(userId) >=
                 props.maxReviewsPerUser
@@ -84,9 +97,9 @@ class ReviewService(
                 throw ApiException(ErrorCode.LIMIT_EXCEEDED, HttpStatus.CONFLICT)
             }
             val now = now()
-            reviews.insert(ReviewRow(id, userId, title, description, request.rating, now, now))
+            reviews.insert(ReviewRow(id, userId, title, description, request.rating, categoryId, now, now))
             reviews.replaceTags(id, tags)
-            applyPublications(userId, id, publications, now)
+            applyVisibility(userId, system, id, groupIds, now)
         }
         return details(userId, id)
     }
@@ -107,9 +120,13 @@ class ReviewService(
             val title = request.title?.trim() ?: current.title
             val description = request.description?.trim() ?: current.description
             val rating = request.rating ?: current.rating
+            val categoryId = request.categoryId?.let(::parseCategory) ?: current.categoryId
             val tags = request.tags?.let(::normalizeTags)
             validate(title, description, rating, tags.orEmpty())
-            reviews.update(reviewId, title, description, rating, now())
+            if (categoryId != current.categoryId) {
+                requireCategoryAllowed(categoryId, personal = isPersonal(userId, reviewId))
+            }
+            reviews.update(reviewId, title, description, rating, categoryId, now())
             tags?.let { reviews.replaceTags(reviewId, it) }
         }
         return details(userId, reviewId)
@@ -120,10 +137,15 @@ class ReviewService(
         reviewId: UUID,
         request: SetPublicationsRequest,
     ): ReviewDetails {
-        val publications = parsePublications(request.publications)
+        val groupIds = parseGroups(request.groupIds)
+        val system = system(userId)
         inTransaction {
-            requireAuthor(userId, reviewId)
-            applyPublications(userId, reviewId, publications, now())
+            val current = requireAuthor(userId, reviewId)
+            reviews.lock(reviewId)
+            if (groupIds.isNotEmpty()) requireCategoryAllowed(current.categoryId, personal = false)
+            applyVisibility(userId, system, reviewId, groupIds, now())
+            // снятые публикации: рекомендация могла пропасть из чужого «Избранного» (Ф1)
+            sharing.cleanupFavorites(reviewId = reviewId)
         }
         return details(userId, reviewId)
     }
@@ -146,8 +168,9 @@ class ReviewService(
     ): ReviewPage = search(userId, listOf(groupId), params)
 
     /**
-     * Поиск по публикациям. [groupIds] `null` — все группы пользователя. Чужая группа — 404. Результат —
-     * публикации, поэтому рекомендация в двух группах приходит двумя карточками.
+     * Поиск по публикациям. [groupIds] `null` — все обычные группы пользователя (без «Личного» и «Избранного», Л2);
+     * явно можно указать и свои системные группы. Чужая группа — 404. Результат — публикации, поэтому
+     * рекомендация в двух группах приходит двумя карточками.
      */
     fun search(
         userId: UUID,
@@ -156,7 +179,11 @@ class ReviewService(
     ): ReviewPage {
         val filters = parseFilters(params)
         val mine = access.memberGroupIds(userId)
-        val groups = groupIds?.toSet()?.onEach { if (it !in mine) throw notFound() } ?: mine
+        val groups =
+            groupIds?.toSet()?.also { ids ->
+                val readable = mine + system(userId).let { setOf(it.personal, it.favorites) }
+                ids.forEach { if (it !in readable) throw notFound() }
+            } ?: mine
         val size = pageSize(params.limit)
         val ranked = filters.query != null
         val after = decodeSearchCursor(params.cursor, ranked)
@@ -164,13 +191,14 @@ class ReviewService(
         return page(rows, size) { encodeSearchCursor(it, ranked) }
     }
 
-    /** Теги группы для автодополнения и панели фильтров. */
+    /** Теги группы (в том числе своей системной) для автодополнения и панели фильтров. */
     fun groupTags(
         userId: UUID,
         groupId: UUID,
         prefix: String?,
     ): List<TagCount> {
-        access.requireMember(userId, groupId)
+        val system = system(userId)
+        if (groupId != system.personal && groupId != system.favorites) access.requireMember(userId, groupId)
         val normalized = prefix?.let(Validation::normalizeTag)?.takeIf { it.isNotEmpty() }
         if (normalized != null &&
             normalized.length > Validation.TAG_MAX
@@ -180,6 +208,7 @@ class ReviewService(
         return reviews.groupTags(groupId, normalized, TAGS_LIMIT).map { TagCount(it.name, it.count) }
     }
 
+    /** «Мои рекомендации»: групповые, где я автор (И21); личные — в ленте личной группы. */
     fun mine(
         userId: UUID,
         cursor: String?,
@@ -201,7 +230,7 @@ class ReviewService(
         } catch (
             @Suppress("SwallowedException") e: DataIntegrityViolationException,
         ) {
-            throw validationFailed(listOf(FieldError("publications", FieldErrorReason.INVALID_FORMAT)))
+            throw validationFailed(listOf(FieldError("groupIds", FieldErrorReason.INVALID_FORMAT)))
         }
     }
 
@@ -216,13 +245,16 @@ class ReviewService(
         throw ApiException(ErrorCode.FORBIDDEN, HttpStatus.FORBIDDEN)
     }
 
-    /** Публикации, видимые [userId]; для постороннего (не автор и не участник групп публикаций) — 404. */
+    /**
+     * Публикации, видимые [userId]: автору — все, остальным — в их обычных группах; постороннему (не автор
+     * и не участник групп публикаций) — 404. Публикации в «Избранном» не показываются никому.
+     */
     private fun visibleTo(
         userId: UUID,
         reviewId: UUID,
         row: ReviewRow,
     ): List<PublicationRow> {
-        val all = reviews.publications(reviewId)
+        val all = reviews.publications(reviewId).filter { it.kind != FAVORITES }
         if (row.authorId == userId) return all
         val mine = access.memberGroupIds(userId)
         return all.filter { it.groupId in mine }.ifEmpty { throw notFound() }
@@ -239,14 +271,16 @@ class ReviewService(
             title = row.title,
             description = row.description,
             rating = row.rating,
+            categoryId = row.categoryId.toString(),
             tags = reviews.tagsOf(listOf(reviewId))[reviewId].orEmpty(),
             author = author(row.authorId),
             createdAt = row.createdAt.toString(),
             updatedAt = row.updatedAt.toString(),
+            personal = publications.any { it.kind == PERSONAL },
             publications =
-                publications.map {
-                    PublicationInfo(it.groupId.toString(), it.categoryId.toString(), it.sharedAt.toString())
-                },
+                publications
+                    .filter { it.kind == REGULAR }
+                    .map { PublicationInfo(it.groupId.toString(), it.sharedAt.toString()) },
         )
     }
 
@@ -255,32 +289,56 @@ class ReviewService(
     private fun authors(ids: Collection<UUID>): Map<UUID, ReviewAuthor> =
         users.findAll(ids).mapValues { (_, u) -> ReviewAuthor(u.id.toString(), u.username, u.displayName) }
 
-    private fun applyPublications(
+    private fun system(userId: UUID): SystemGroupIds =
+        systemGroups.of(userId) ?: throw ApiException(ErrorCode.UNAUTHORIZED, HttpStatus.UNAUTHORIZED)
+
+    private fun isPersonal(
         userId: UUID,
         reviewId: UUID,
-        publications: List<Pair<UUID, UUID>>,
+    ): Boolean = reviews.publications(reviewId).any { it.kind == PERSONAL && it.groupId == system(userId).personal }
+
+    /** Группы публикации: только обычные, где автор участник; свои системные — ошибка запроса, чужие — 404. */
+    private fun applyVisibility(
+        userId: UUID,
+        system: SystemGroupIds,
+        reviewId: UUID,
+        groupIds: List<UUID>,
         now: Instant,
     ) {
-        publications.forEach { (groupId, _) -> if (!access.isMember(userId, groupId)) throw notFound() }
-        reviews.removePublicationsExcept(reviewId, publications.map { it.first })
-        publications.forEach { (groupId, categoryId) -> reviews.upsertPublication(reviewId, groupId, categoryId, now) }
+        groupIds.forEach { groupId ->
+            if (groupId == system.personal || groupId == system.favorites) {
+                throw validationFailed(listOf(FieldError("groupIds", FieldErrorReason.INVALID_FORMAT)))
+            }
+            if (!access.isMember(userId, groupId)) throw notFound()
+        }
+        reviews.setVisibility(reviewId, groupIds, system.personal, now)
     }
 
-    private fun parsePublications(requests: List<PublicationRequest>): List<Pair<UUID, UUID>> {
-        val parsed =
-            requests.map {
-                (it.groupId.toUuidOrNull() ?: throw notFound()) to
-                    (
-                        it.categoryId.toUuidOrNull()
-                            ?: throw validationFailed(
-                                listOf(FieldError("publications", FieldErrorReason.INVALID_FORMAT)),
-                            )
-                    )
-            }
-        if (parsed.map { it.first }.distinct().size != parsed.size || parsed.size > props.maxGroupsPerReview) {
-            throw validationFailed(listOf(FieldError("publications", FieldErrorReason.INVALID_FORMAT)))
+    private fun parseGroups(raw: List<String>): List<UUID> {
+        val parsed = raw.map { it.toUuidOrNull() ?: throw notFound() }
+        if (parsed.distinct().size != parsed.size || parsed.size > props.maxGroupsPerReview) {
+            throw validationFailed(listOf(FieldError("groupIds", FieldErrorReason.INVALID_FORMAT)))
         }
         return parsed
+    }
+
+    private fun parseCategory(raw: String): UUID =
+        raw.toUuidOrNull()
+            ?: throw validationFailed(listOf(FieldError("categoryId", FieldErrorReason.INVALID_FORMAT)))
+
+    /** Категория из набора и не скрытая; «Без категории» — только у личной (И28, причина `REQUIRED`). */
+    private fun requireCategoryAllowed(
+        categoryId: UUID,
+        personal: Boolean,
+    ) {
+        when (categories.use(categoryId)) {
+            CategoryUse.OK -> Unit
+            CategoryUse.PERSONAL_ONLY ->
+                if (!personal) throw validationFailed(listOf(FieldError("categoryId", FieldErrorReason.REQUIRED)))
+            CategoryUse.UNKNOWN -> throw validationFailed(
+                listOf(FieldError("categoryId", FieldErrorReason.INVALID_FORMAT)),
+            )
+        }
     }
 
     private fun normalizeTags(raw: List<String>): List<String> = raw.map(Validation::normalizeTag).distinct()
@@ -323,7 +381,7 @@ class ReviewService(
                     tags = tags[r.review.id].orEmpty(),
                     author = authors.getValue(r.review.authorId),
                     createdAt = r.review.createdAt.toString(),
-                    categoryId = r.categoryId?.toString(),
+                    categoryId = r.review.categoryId.toString(),
                     sharedAt = r.sharedAt?.toString(),
                     groupId = r.groupId?.toString(),
                 )

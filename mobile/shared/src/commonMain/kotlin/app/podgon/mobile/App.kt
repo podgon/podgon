@@ -22,7 +22,6 @@ import app.podgon.mobile.designsystem.PodgonTheme
 import app.podgon.mobile.feature.auth.ui.CodeScreen
 import app.podgon.mobile.feature.auth.ui.EmailScreen
 import app.podgon.mobile.feature.auth.ui.RegisterScreen
-import app.podgon.mobile.feature.groups.CategoriesScreen
 import app.podgon.mobile.feature.groups.CreateGroupScreen
 import app.podgon.mobile.feature.groups.GroupScreen
 import app.podgon.mobile.feature.groups.GroupsScreen
@@ -72,12 +71,6 @@ private data class GroupRoute(
 @Serializable
 private data class RolesRoute(
     val groupId: String,
-)
-
-@Serializable
-private data class CategoriesRoute(
-    val groupId: String,
-    val canEdit: Boolean,
 )
 
 /** Лента: группа (`groupId`), мои рекомендации (`groupId == null`) или поиск по всем группам (`all`). */
@@ -170,7 +163,6 @@ private fun SignedInNavigation() {
             GroupScreen(
                 koinViewModel(parameters = { parametersOf(route.groupId) }),
                 onReviews = { nav.navigate(FeedRoute(route.groupId)) },
-                onCategories = { canEdit -> nav.navigate(CategoriesRoute(route.groupId, canEdit)) },
                 onRoles = { nav.navigate(RolesRoute(route.groupId)) },
                 onInvitations = { nav.navigate(InvitationsRoute(route.groupId)) },
                 onClosed = { nav.popBackStack(GroupsRoute, inclusive = false) },
@@ -209,10 +201,6 @@ private fun SignedInNavigation() {
                     nav.navigate(ReviewRoute(id)) { popUpTo(entry.destination.id) { inclusive = true } }
                 },
             )
-        }
-        composable<CategoriesRoute> { entry ->
-            val route = entry.toRoute<CategoriesRoute>()
-            CategoriesScreen(koinViewModel(parameters = { parametersOf(route.groupId) }), canEdit = route.canEdit)
         }
         composable<RolesRoute> { entry ->
             val route = entry.toRoute<RolesRoute>()

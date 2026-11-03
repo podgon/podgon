@@ -27,8 +27,6 @@ object Validation {
     const val GROUP_DESCRIPTION_MAX = 500
     const val ROLE_TITLE_MAX = 60
     const val ROLE_DESCRIPTION_MAX = 255
-    const val CATEGORY_NAME_MAX = 100
-    const val CATEGORY_DESCRIPTION_MAX = 500
     const val REVIEW_TITLE_MAX = 200
     const val REVIEW_DESCRIPTION_MAX = 5000
     const val RATING_MIN = 1
@@ -40,8 +38,7 @@ object Validation {
     const val SEARCH_GROUPS_MAX = 50
     const val INVITATION_MAX_USES = 100
     const val SHARE_CATEGORIES_MAX = 20
-    const val SHARE_UNMATCHED_MAX = 100
-    const val SHARE_ASSIGNMENTS_MAX = 200
+    const val SHARE_PREVIEW_MAX = 100
     const val INVITATION_TTL_HOURS_DEFAULT = 168
     const val INVITATION_TTL_HOURS_MAX = 24 * 30
 
@@ -102,10 +99,6 @@ object Validation {
 
     fun groupDescription(value: String): FieldErrorReason? = text(value, GROUP_DESCRIPTION_MAX)
 
-    fun categoryName(value: String): FieldErrorReason? = title(value, CATEGORY_NAME_MAX)
-
-    fun categoryDescription(value: String): FieldErrorReason? = text(value, CATEGORY_DESCRIPTION_MAX)
-
     fun reviewTitle(value: String): FieldErrorReason? = title(value, REVIEW_TITLE_MAX)
 
     fun reviewDescription(value: String): FieldErrorReason? = text(value, REVIEW_DESCRIPTION_MAX)
@@ -117,8 +110,13 @@ object Validation {
             else -> null
         }
 
-    /** Тег хранится без `#`, в нижнем регистре, без пробелов по краям. */
-    fun normalizeTag(value: String): String = value.trim().removePrefix("#").lowercase()
+    /** Тег хранится без `#`, в нижнем регистре, без пробелов по краям; «ё» не отличается от «е». */
+    fun normalizeTag(value: String): String =
+        value
+            .trim()
+            .removePrefix("#")
+            .lowercase()
+            .replace('ё', 'е')
 
     /** Проверяет уже нормализованный ([normalizeTag]) тег. */
     fun tag(value: String): FieldErrorReason? =

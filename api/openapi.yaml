@@ -1,7 +1,7 @@
 openapi: 3.0.3
 info:
   title: Podgon API
-  version: 0.8.0
+  version: 0.9.0
   description: |
     Контракт API Podgon (contract-first, ADR-005). Этап 2: вход по одноразовому коду, регистрация,
     токены, профиль и сессии устройств. Этап 4: группы, участники, роли, приглашения. Этап 5: категории групп. Этап 6: рекомендации, публикации в группы, лента. Этап 7: поиск и фильтры.
@@ -10,6 +10,11 @@ info:
     устаревшая сборка получает 426 `UPGRADE_REQUIRED` на любой запрос. Авторизованные запросы ограничены
     по частоте на пользователя (429 `RATE_LIMITED` + `Retry-After`); отозванная сессия и заблокированный
     пользователь получают 401 сразу.
+
+    Этап 8.2 (0.9.0): категории групп заменены общим набором (`GET /categories`, ADR-011), категория — поле
+    рекомендации. У каждого пользователя две системные группы — «Личное» и «Избранное» (id в профиле): их
+    ленты и теги доступны владельцу, управление ими (участники, роли, приглашения, выход, удаление, правка)
+    даёт 409 `SYSTEM_GROUP`; в `GET /groups` они не входят.
 
     Ошибки — `application/problem+json` (RFC 9457) с машинным полем `code` (см. `ErrorCode`
     в shared-contract); текст для пользователя формирует клиент.
@@ -23,7 +28,7 @@ tags:
   - name: groups
     description: Группы, участники, роли
   - name: categories
-    description: Категории группы (иерархия)
+    description: Общий набор категорий
   - name: reviews
     description: Рекомендации, публикации в группы, ленты
   - name: invitations
@@ -252,7 +257,7 @@ paths:
       tags: [groups]
       operationId: getGroup
       summary: Группа
-      description: Не участнику группа не видна (404).
+      description: Не участнику группа не видна (404); своя системная группа — 409 `SYSTEM_GROUP`.
       security: [{ bearerAuth: [] }]
       responses:
         '200':
@@ -262,6 +267,7 @@ paths:
               schema: { $ref: '#/components/schemas/GroupSummary' }
         '401': { $ref: '#/components/responses/Problem' }
         '404': { $ref: '#/components/responses/Problem' }
+        '409': { $ref: '#/components/responses/Problem' }
         '429': { $ref: '#/components/responses/RateLimited' }
         '426': { $ref: '#/components/responses/UpgradeRequired' }
     patch:
@@ -284,6 +290,7 @@ paths:
         '401': { $ref: '#/components/responses/Problem' }
         '403': { $ref: '#/components/responses/Problem' }
         '404': { $ref: '#/components/responses/Problem' }
+        '409': { $ref: '#/components/responses/Problem' }
         '429': { $ref: '#/components/responses/RateLimited' }
         '426': { $ref: '#/components/responses/UpgradeRequired' }
     delete:
@@ -292,8 +299,9 @@ paths:
       summary: Удалить группу (администратор)
       description: |
         Необратимо; требует `confirm=true`, иначе 400 `CONFIRMATION_REQUIRED`. Публикации в группе удаляются.
-        Судьба рекомендаций, опубликованных только в этой группе: `RETURN_TO_PERSONAL` (по умолчанию) — остаются
-        личными у авторов, `DELETE` — удаляются. Опубликованные ещё где-то остаются в любом случае.
+        Судьба рекомендаций, опубликованных только в этой группе: `RETURN_TO_PERSONAL` (по умолчанию) — переходят
+        в «Личное» авторов, `DELETE` — удаляются. Опубликованные ещё где-то остаются в любом случае. Рекомендации
+        группы удаляются и из чужого «Избранного», если больше не видны его владельцу.
       security: [{ bearerAuth: [] }]
       parameters:
         - name: confirm
@@ -308,6 +316,7 @@ paths:
         '401': { $ref: '#/components/responses/Problem' }
         '403': { $ref: '#/components/responses/Problem' }
         '404': { $ref: '#/components/responses/Problem' }
+        '409': { $ref: '#/components/responses/Problem' }
         '429': { $ref: '#/components/responses/RateLimited' }
         '426': { $ref: '#/components/responses/UpgradeRequired' }
 
@@ -320,7 +329,8 @@ paths:
       summary: Выйти из группы
       description: |
         Единственный администратор выйти не может (409 `LAST_ADMIN`). С `deleteMyReviews=true` публикации
-        пользователя в этой группе удаляются (сами рекомендации остаются у него).
+        пользователя в этой группе удаляются (сами рекомендации остаются у него; не опубликованные больше нигде
+        переходят в «Личное»). Рекомендации группы, которые пользователю больше не видны, убираются из его «Избранного».
       security: [{ bearerAuth: [] }]
       parameters:
         - name: deleteMyReviews
@@ -351,6 +361,7 @@ paths:
         '401': { $ref: '#/components/responses/Problem' }
         '403': { $ref: '#/components/responses/Problem' }
         '404': { $ref: '#/components/responses/Problem' }
+        '409': { $ref: '#/components/responses/Problem' }
         '429': { $ref: '#/components/responses/RateLimited' }
         '426': { $ref: '#/components/responses/UpgradeRequired' }
 
@@ -370,6 +381,7 @@ paths:
               schema: { $ref: '#/components/schemas/LeaveImpact' }
         '401': { $ref: '#/components/responses/Problem' }
         '404': { $ref: '#/components/responses/Problem' }
+        '409': { $ref: '#/components/responses/Problem' }
         '429': { $ref: '#/components/responses/RateLimited' }
         '426': { $ref: '#/components/responses/UpgradeRequired' }
 
@@ -410,8 +422,9 @@ paths:
       description: |
         Подтверждается кодом из письма (`INVALID_CODE` при ошибке). Если пользователь — единственный администратор
         группы с другими участниками, 409 `LAST_ADMIN`: сначала передать права или удалить группу. Группы, где он
-        единственный участник, удаляются. С `deleteReviews=false` рекомендации с публикациями переходят служебному
-        пользователю «Удалённый пользователь», личные удаляются; с `true` удаляются все. Все сессии завершаются.
+        единственный участник, удаляются. С `deleteReviews=false` рекомендации с публикациями в обычных группах
+        переходят служебному пользователю «Удалённый пользователь» (и остаются в чужом «Избранном»), личные
+        удаляются; с `true` удаляются все. «Личное» и «Избранное» удаляются. Все сессии завершаются.
       security: [{ bearerAuth: [] }]
       requestBody:
         required: true
@@ -444,6 +457,7 @@ paths:
                 items: { $ref: '#/components/schemas/MemberInfo' }
         '401': { $ref: '#/components/responses/Problem' }
         '404': { $ref: '#/components/responses/Problem' }
+        '409': { $ref: '#/components/responses/Problem' }
         '429': { $ref: '#/components/responses/RateLimited' }
         '426': { $ref: '#/components/responses/UpgradeRequired' }
 
@@ -513,6 +527,7 @@ paths:
                 items: { $ref: '#/components/schemas/RoleInfo' }
         '401': { $ref: '#/components/responses/Problem' }
         '404': { $ref: '#/components/responses/Problem' }
+        '409': { $ref: '#/components/responses/Problem' }
         '429': { $ref: '#/components/responses/RateLimited' }
         '426': { $ref: '#/components/responses/UpgradeRequired' }
     post:
@@ -582,147 +597,41 @@ paths:
         '429': { $ref: '#/components/responses/RateLimited' }
         '426': { $ref: '#/components/responses/UpgradeRequired' }
 
-  /groups/{groupId}/categories:
-    parameters:
-      - $ref: '#/components/parameters/GroupId'
+  /categories:
     get:
       tags: [categories]
-      operationId: listCategories
-      summary: Категории группы (плоский список, упорядоченный; иерархия — по parentId)
-      security: [{ bearerAuth: [] }]
-      responses:
-        '200':
-          description: Категории
-          content:
-            application/json:
-              schema:
-                type: array
-                items: { $ref: '#/components/schemas/CategoryInfo' }
-        '401': { $ref: '#/components/responses/Problem' }
-        '404': { $ref: '#/components/responses/Problem' }
-        '429': { $ref: '#/components/responses/RateLimited' }
-        '426': { $ref: '#/components/responses/UpgradeRequired' }
-    post:
-      tags: [categories]
-      operationId: createCategory
-      summary: Создать категорию (администратор)
-      description: 409 — `CATEGORY_NAME_TAKEN`, `CATEGORY_TOO_DEEP` или `LIMIT_EXCEEDED`.
-      security: [{ bearerAuth: [] }]
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema: { $ref: '#/components/schemas/CreateCategoryRequest' }
-      responses:
-        '201':
-          description: Категория создана
-          content:
-            application/json:
-              schema: { $ref: '#/components/schemas/CategoryInfo' }
-        '400': { $ref: '#/components/responses/Problem' }
-        '401': { $ref: '#/components/responses/Problem' }
-        '403': { $ref: '#/components/responses/Problem' }
-        '404': { $ref: '#/components/responses/Problem' }
-        '409': { $ref: '#/components/responses/Problem' }
-        '429': { $ref: '#/components/responses/RateLimited' }
-        '426': { $ref: '#/components/responses/UpgradeRequired' }
-
-  /groups/{groupId}/categories/{categoryId}:
-    parameters:
-      - $ref: '#/components/parameters/GroupId'
-      - $ref: '#/components/parameters/CategoryId'
-    patch:
-      tags: [categories]
-      operationId: updateCategory
-      summary: Изменить название и описание (администратор)
-      security: [{ bearerAuth: [] }]
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema: { $ref: '#/components/schemas/UpdateCategoryRequest' }
-      responses:
-        '200':
-          description: Обновлённая категория
-          content:
-            application/json:
-              schema: { $ref: '#/components/schemas/CategoryInfo' }
-        '400': { $ref: '#/components/responses/Problem' }
-        '401': { $ref: '#/components/responses/Problem' }
-        '403': { $ref: '#/components/responses/Problem' }
-        '404': { $ref: '#/components/responses/Problem' }
-        '409': { $ref: '#/components/responses/Problem' }
-        '429': { $ref: '#/components/responses/RateLimited' }
-        '426': { $ref: '#/components/responses/UpgradeRequired' }
-    delete:
-      tags: [categories]
-      operationId: deleteCategory
-      summary: Удалить категорию вместе с подкатегориями (администратор)
+      operationId: getCategorySet
+      summary: Общий набор категорий (корни и подкатегории)
       description: |
-        Если у категории есть подкатегории или публикации, требуется `confirm=true`, иначе 400
-        `CONFIRMATION_REQUIRED` (последствия — в `delete-impact`).
+        Без `locale` — на языке профиля. Ответ несёт `ETag` (версия набора); запрос с `If-None-Match` той же
+        версии получает 304 без тела. Скрытые категории (`archived`) входят в набор для подписи старых
+        рекомендаций, но в выборе не предлагаются.
       security: [{ bearerAuth: [] }]
       parameters:
-        - name: confirm
+        - name: locale
           in: query
-          schema: { type: boolean }
-      responses:
-        '204': { description: Категория удалена }
-        '400': { $ref: '#/components/responses/Problem' }
-        '401': { $ref: '#/components/responses/Problem' }
-        '403': { $ref: '#/components/responses/Problem' }
-        '404': { $ref: '#/components/responses/Problem' }
-        '409': { $ref: '#/components/responses/Problem' }
-        '429': { $ref: '#/components/responses/RateLimited' }
-        '426': { $ref: '#/components/responses/UpgradeRequired' }
-
-  /groups/{groupId}/categories/{categoryId}/parent:
-    parameters:
-      - $ref: '#/components/parameters/GroupId'
-      - $ref: '#/components/parameters/CategoryId'
-    put:
-      tags: [categories]
-      operationId: moveCategory
-      summary: Перенести категорию под другого родителя или в корень (администратор)
-      description: 409 — `CATEGORY_CYCLE` (в себя или потомка), `CATEGORY_TOO_DEEP`, `CATEGORY_NAME_TAKEN`.
-      security: [{ bearerAuth: [] }]
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema: { $ref: '#/components/schemas/MoveCategoryRequest' }
+          schema: { type: string, enum: [ru, en] }
+        - name: If-None-Match
+          in: header
+          schema: { type: string }
       responses:
         '200':
-          description: Категория после переноса
+          description: Набор категорий
+          headers:
+            ETag:
+              description: Версия набора (совпадает с `version`)
+              schema: { type: string }
           content:
             application/json:
-              schema: { $ref: '#/components/schemas/CategoryInfo' }
+              schema: { $ref: '#/components/schemas/CategorySet' }
+        '304':
+          description: Набор не изменился
+          headers:
+            ETag:
+              description: Версия набора
+              schema: { type: string }
         '400': { $ref: '#/components/responses/Problem' }
         '401': { $ref: '#/components/responses/Problem' }
-        '403': { $ref: '#/components/responses/Problem' }
-        '404': { $ref: '#/components/responses/Problem' }
-        '409': { $ref: '#/components/responses/Problem' }
-        '429': { $ref: '#/components/responses/RateLimited' }
-        '426': { $ref: '#/components/responses/UpgradeRequired' }
-
-  /groups/{groupId}/categories/{categoryId}/delete-impact:
-    parameters:
-      - $ref: '#/components/parameters/GroupId'
-      - $ref: '#/components/parameters/CategoryId'
-    get:
-      tags: [categories]
-      operationId: categoryDeleteImpact
-      summary: Что будет удалено вместе с категорией (администратор)
-      security: [{ bearerAuth: [] }]
-      responses:
-        '200':
-          description: Число подкатегорий и публикаций
-          content:
-            application/json:
-              schema: { $ref: '#/components/schemas/CategoryDeleteImpact' }
-        '401': { $ref: '#/components/responses/Problem' }
-        '403': { $ref: '#/components/responses/Problem' }
-        '404': { $ref: '#/components/responses/Problem' }
         '429': { $ref: '#/components/responses/RateLimited' }
         '426': { $ref: '#/components/responses/UpgradeRequired' }
 
@@ -730,10 +639,12 @@ paths:
     post:
       tags: [reviews]
       operationId: createReview
-      summary: Создать рекомендацию (при необходимости сразу опубликовать в группы)
+      summary: Создать рекомендацию (личную или сразу опубликованную в группы)
       description: |
-        Публиковать можно только в группы, где пользователь состоит (иначе 404), в категории этой группы
-        (иначе 400 `VALIDATION_FAILED`, поле `publications`). 409 `LIMIT_EXCEEDED` — достигнут лимит.
+        Категория обязательна; неизвестная или скрытая — 400 `VALIDATION_FAILED` (поле `categoryId`).
+        Пустой `groupIds` — рекомендация личная («Личное»). Публиковать можно только в обычные группы, где
+        пользователь состоит: чужая группа — 404, своя системная — 400 (поле `groupIds`). «Без категории»
+        допустима только у личной (иначе 400, поле `categoryId`). 409 `LIMIT_EXCEEDED` — достигнут лимит.
       security: [{ bearerAuth: [] }]
       requestBody:
         required: true
@@ -757,8 +668,8 @@ paths:
       operationId: searchReviews
       summary: Поиск по нескольким своим группам
       description: |
-        Публикации в выбранных группах; без `groupIds` — во всех своих. Чужая группа — 404. Рекомендация,
-        опубликованная в двух группах, приходит двумя карточками (поле `groupId`).
+        Публикации в выбранных группах (допустимы свои системные); без `groupIds` — во всех своих обычных.
+        Чужая группа — 404. Рекомендация, опубликованная в двух группах, приходит двумя карточками (поле `groupId`).
       security: [{ bearerAuth: [] }]
       parameters:
         - name: groupIds
@@ -796,7 +707,9 @@ paths:
       tags: [reviews]
       operationId: getReview
       summary: Рекомендация
-      description: Видна автору и участникам групп, где она опубликована; иначе 404.
+      description: |
+        Видна автору и участникам обычных групп, где она опубликована; иначе 404. `publications` — только
+        обычные группы, `personal` — рекомендация в «Личном».
       security: [{ bearerAuth: [] }]
       responses:
         '200':
@@ -852,8 +765,11 @@ paths:
       operationId: setReviewPublications
       summary: Задать набор публикаций (автор)
       description: |
-        Заменяет набор целиком: отсутствующие публикации снимаются, у сохранённых время публикации не меняется.
-        Пустой набор делает рекомендацию личной.
+        Заменяет набор обычных групп целиком: отсутствующие публикации снимаются, у сохранённых время публикации
+        не меняется. Пустой набор делает рекомендацию личной, непустой — убирает её из «Личного»; «Избранное» не
+        затрагивается. Своя системная группа в наборе — 400, чужая группа — 404, «Без категории» с непустым
+        набором — 400 (поле `categoryId`). Снятые публикации убираются из чужого «Избранного», если рекомендация
+        больше не видна его владельцу.
       security: [{ bearerAuth: [] }]
       requestBody:
         required: true
@@ -880,6 +796,7 @@ paths:
       tags: [reviews]
       operationId: listGroupTags
       summary: Теги группы с числом публикаций (до 100, самые частые первыми)
+      description: Работает и для своих системных групп.
       security: [{ bearerAuth: [] }]
       parameters:
         - name: prefix
@@ -903,7 +820,8 @@ paths:
     get:
       tags: [reviews]
       operationId: listMyReviews
-      summary: Мои рекомендации (новые сверху)
+      summary: Мои групповые рекомендации (новые сверху)
+      description: Только опубликованные хотя бы в одной обычной группе; личные — в ленте «Личного».
       security: [{ bearerAuth: [] }]
       parameters:
         - $ref: '#/components/parameters/Cursor'
@@ -927,7 +845,8 @@ paths:
       operationId: listGroupReviews
       summary: Лента группы (новые публикации сверху)
       description: |
-        Только для участников (иначе 404). Без `q` — по времени публикации, с `q` — по релевантности.
+        Только для участников (иначе 404); работает и для своих системных групп. Без `q` — по времени
+        публикации, с `q` — по релевантности.
         Курсор действует только с теми же фильтрами; курсор другого режима — 400.
       security: [{ bearerAuth: [] }]
       parameters:
@@ -995,6 +914,7 @@ paths:
         '401': { $ref: '#/components/responses/Problem' }
         '403': { $ref: '#/components/responses/Problem' }
         '404': { $ref: '#/components/responses/Problem' }
+        '409': { $ref: '#/components/responses/Problem' }
         '429': { $ref: '#/components/responses/RateLimited' }
         '426': { $ref: '#/components/responses/UpgradeRequired' }
 
@@ -1016,6 +936,7 @@ paths:
         '401': { $ref: '#/components/responses/Problem' }
         '403': { $ref: '#/components/responses/Problem' }
         '404': { $ref: '#/components/responses/Problem' }
+        '409': { $ref: '#/components/responses/Problem' }
         '429': { $ref: '#/components/responses/RateLimited' }
         '426': { $ref: '#/components/responses/UpgradeRequired' }
 
@@ -1047,7 +968,7 @@ paths:
       tags: [invitations]
       operationId: sharePreview
       summary: Предпросмотр переноса своих рекомендаций в группу, куда ведёт приглашение
-      description: Ничего не меняет. Для записей без соответствия категории в новой группе возвращает список `unmatched`.
+      description: Ничего не меняет. Отбираются только групповые рекомендации пользователя (личные не переносятся).
       security: [{ bearerAuth: [] }]
       requestBody:
         required: true
@@ -1072,8 +993,8 @@ paths:
       summary: Вступить в группу по приглашению
       security: [{ bearerAuth: [] }]
       description: |
-        Необязательное `share` переносит рекомендации пользователя в новую группу по правилу (см. `share-preview`);
-        рекомендации без соответствия категории переносятся, только если для них есть назначение в `assignments`.
+        Необязательное `share` публикует групповые рекомендации пользователя в новой группе по правилу
+        (см. `share-preview`); личные не переносятся.
       requestBody:
         required: true
         content:
@@ -1110,11 +1031,6 @@ components:
       in: path
       required: true
       schema: { type: string, format: uuid }
-    CategoryId:
-      name: categoryId
-      in: path
-      required: true
-      schema: { type: string, format: uuid }
     ReviewId:
       name: reviewId
       in: path
@@ -1133,7 +1049,7 @@ components:
     CategoryIds:
       name: categoryIds
       in: query
-      description: Категории (вместе с подкатегориями), через запятую.
+      description: Категории набора через запятую; корень включает подкатегории.
       style: form
       explode: false
       schema:
@@ -1223,10 +1139,7 @@ components:
             - ALREADY_MEMBER
             - LIMIT_EXCEEDED
             - CONFIRMATION_REQUIRED
-            - CATEGORY_NAME_TAKEN
-            - CATEGORY_CYCLE
-            - CATEGORY_TOO_DEEP
-            - CATEGORY_HAS_FOREIGN_REVIEWS
+            - SYSTEM_GROUP
             - UPGRADE_REQUIRED
             - INTERNAL_ERROR
         errors:
@@ -1302,7 +1215,7 @@ components:
 
     UserProfile:
       type: object
-      required: [id, email, username, displayName, bio, locale]
+      required: [id, email, username, displayName, bio, locale, personalGroupId, favoritesGroupId]
       properties:
         id: { type: string, format: uuid }
         email: { type: string }
@@ -1310,6 +1223,8 @@ components:
         displayName: { type: string }
         bio: { type: string }
         locale: { type: string, enum: [ru, en] }
+        personalGroupId: { type: string, format: uuid, description: Системная группа «Личное». }
+        favoritesGroupId: { type: string, format: uuid, description: Системная группа «Избранное». }
 
     UpdateProfileRequest:
       type: object
@@ -1394,43 +1309,27 @@ components:
         description: { type: string, maxLength: 255, nullable: true }
         admin: { type: boolean, nullable: true }
 
-    CategoryInfo:
+    Category:
       type: object
-      required: [id, parentId, name, description]
+      required: [id, key, parentId, name, sortOrder, system]
       properties:
         id: { type: string, format: uuid }
+        key: { type: string, description: 'Стабильный ключ из docs/categories.md (`food.coffee`).' }
         parentId: { type: string, format: uuid, nullable: true }
-        name: { type: string }
-        description: { type: string }
+        name: { type: string, description: Название на запрошенном языке. }
+        sortOrder: { type: integer }
+        system: { type: boolean, description: '«Без категории» (`key = none`): только для личных рекомендаций.' }
+        archived: { type: boolean, default: false, description: Скрыта из выбора; нужна только для подписи старых рекомендаций. }
 
-    CreateCategoryRequest:
+    CategorySet:
       type: object
-      required: [name]
+      required: [version, items]
       properties:
-        name: { type: string, maxLength: 100 }
-        description: { type: string, maxLength: 500 }
-        parentId: { type: string, format: uuid, nullable: true }
-
-    UpdateCategoryRequest:
-      type: object
-      properties:
-        name: { type: string, maxLength: 100, nullable: true }
-        description: { type: string, maxLength: 500, nullable: true }
-
-    MoveCategoryRequest:
-      type: object
-      properties:
-        parentId: { type: string, format: uuid, nullable: true }
-
-    CategoryDeleteImpact:
-      type: object
-      required: [subcategories, publications, foreignPublications]
-      properties:
-        subcategories: { type: integer }
-        publications: { type: integer }
-        foreignPublications:
-          type: integer
-          description: Из публикаций — чужие; если больше нуля, удалить категорию нельзя (409 `CATEGORY_HAS_FOREIGN_REVIEWS`).
+        version: { type: string, description: 'Версия набора, совпадает с `ETag`.' }
+        items:
+          type: array
+          description: Корни и подкатегории вперемешку в порядке `sortOrder`; дерево строится по `parentId`.
+          items: { $ref: '#/components/schemas/Category' }
 
     ReviewAuthor:
       type: object
@@ -1442,53 +1341,50 @@ components:
 
     PublicationInfo:
       type: object
-      required: [groupId, categoryId, sharedAt]
+      required: [groupId, sharedAt]
       properties:
         groupId: { type: string, format: uuid }
-        categoryId: { type: string, format: uuid }
         sharedAt: { type: string, format: date-time }
-
-    PublicationRequest:
-      type: object
-      required: [groupId, categoryId]
-      properties:
-        groupId: { type: string, format: uuid }
-        categoryId: { type: string, format: uuid }
 
     ReviewDetails:
       type: object
-      required: [id, title, description, rating, tags, author, createdAt, updatedAt, publications]
+      required: [id, title, description, rating, categoryId, tags, author, createdAt, updatedAt, personal, publications]
       properties:
         id: { type: string, format: uuid }
         title: { type: string }
         description: { type: string }
         rating: { type: integer, minimum: 1, maximum: 10 }
+        categoryId: { type: string, format: uuid }
         tags:
           type: array
           items: { type: string }
         author: { $ref: '#/components/schemas/ReviewAuthor' }
         createdAt: { type: string, format: date-time }
         updatedAt: { type: string, format: date-time }
+        personal: { type: boolean, description: 'Личная: опубликована только в «Личном».' }
         publications:
           type: array
-          description: Автору — все публикации, остальным — только в их группах.
+          description: Только обычные группы; автору — все публикации, остальным — только в их группах.
           items: { $ref: '#/components/schemas/PublicationInfo' }
 
     CreateReviewRequest:
       type: object
-      required: [title, rating]
+      required: [title, rating, categoryId]
       properties:
         title: { type: string, maxLength: 200 }
         description: { type: string, maxLength: 5000 }
         rating: { type: integer, minimum: 1, maximum: 10 }
+        categoryId: { type: string, format: uuid }
         tags:
           type: array
           maxItems: 10
-          description: Без `#`; регистр не учитывается, повторы убираются.
+          description: Без `#`; регистр и различие «е»/«ё» не учитываются, повторы убираются.
           items: { type: string, maxLength: 31 }
-        publications:
+        groupIds:
           type: array
-          items: { $ref: '#/components/schemas/PublicationRequest' }
+          maxItems: 50
+          description: Обычные группы, где я участник. Пусто или нет поля — рекомендация личная.
+          items: { type: string, format: uuid }
 
     UpdateReviewRequest:
       type: object
@@ -1496,6 +1392,7 @@ components:
         title: { type: string, maxLength: 200, nullable: true }
         description: { type: string, maxLength: 5000, nullable: true }
         rating: { type: integer, minimum: 1, maximum: 10, nullable: true }
+        categoryId: { type: string, format: uuid, nullable: true }
         tags:
           type: array
           nullable: true
@@ -1504,15 +1401,16 @@ components:
 
     SetPublicationsRequest:
       type: object
-      required: [publications]
+      required: [groupIds]
       properties:
-        publications:
+        groupIds:
           type: array
-          items: { $ref: '#/components/schemas/PublicationRequest' }
+          maxItems: 50
+          items: { type: string, format: uuid }
 
     ReviewCard:
       type: object
-      required: [id, title, excerpt, rating, tags, author, createdAt]
+      required: [id, title, excerpt, rating, tags, author, createdAt, categoryId]
       properties:
         id: { type: string, format: uuid }
         title: { type: string }
@@ -1523,7 +1421,7 @@ components:
           items: { type: string }
         author: { $ref: '#/components/schemas/ReviewAuthor' }
         createdAt: { type: string, format: date-time }
-        categoryId: { type: string, format: uuid, nullable: true }
+        categoryId: { type: string, format: uuid }
         sharedAt: { type: string, format: date-time, nullable: true }
         groupId: { type: string, format: uuid, nullable: true }
 
@@ -1592,16 +1490,13 @@ components:
         categoryIds:
           type: array
           maxItems: 20
-          description: 'Категории исходных групп пользователя (для `CATEGORIES` и `CATEGORIES_EXCEPT`).'
+          description: 'Категории набора (для `CATEGORIES` и `CATEGORIES_EXCEPT`); корень включает подкатегории.'
           items: { type: string, format: uuid }
         tags:
           type: array
           maxItems: 10
           description: 'Теги (для `TAGS` и `TAGS_EXCEPT`): достаточно любого из них.'
           items: { type: string }
-        withSubcategories:
-          type: boolean
-          default: true
 
     SharePreviewRequest:
       type: object
@@ -1610,35 +1505,24 @@ components:
         token: { type: string, maxLength: 200 }
         share: { $ref: '#/components/schemas/ShareRule' }
 
-    UnmatchedReview:
+    SharePreviewItem:
       type: object
-      required: [reviewId, title]
+      required: [reviewId, title, categoryId]
       properties:
         reviewId: { type: string, format: uuid }
         title: { type: string }
-        sourceCategory: { type: string, description: 'Категория в исходной группе; нет — рекомендация личная.' }
+        categoryId: { type: string, format: uuid }
 
     SharePreview:
       type: object
-      required: [total, matched, unmatched, categories]
+      required: [total, items]
       properties:
         total: { type: integer, description: Сколько рекомендаций отобрано правилом. }
-        matched: { type: integer, description: Из них категория в новой группе подобрана автоматически. }
-        unmatched:
+        items:
           type: array
           maxItems: 100
-          items: { $ref: '#/components/schemas/UnmatchedReview' }
-        categories:
-          type: array
-          description: Категории новой группы для ручного выбора.
-          items: { $ref: '#/components/schemas/CategoryInfo' }
-
-    ShareAssignment:
-      type: object
-      required: [reviewId, categoryId]
-      properties:
-        reviewId: { type: string, format: uuid }
-        categoryId: { type: string, format: uuid }
+          description: Первые из них — для списка «Будет опубликовано».
+          items: { $ref: '#/components/schemas/SharePreviewItem' }
 
     AcceptInvitationRequest:
       type: object
@@ -1646,10 +1530,6 @@ components:
       properties:
         token: { type: string, maxLength: 200 }
         share: { $ref: '#/components/schemas/ShareRule' }
-        assignments:
-          type: array
-          maxItems: 200
-          items: { $ref: '#/components/schemas/ShareAssignment' }
 
     ReviewsFate:
       type: string

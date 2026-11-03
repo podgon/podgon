@@ -1,22 +1,19 @@
 package app.podgon.reviews.domain
 
 import app.podgon.common.validationFailed
-import app.podgon.contract.CategoryInfo
 import app.podgon.contract.FieldError
 import app.podgon.contract.FieldErrorReason
 import app.podgon.contract.ShareMode
 import app.podgon.contract.SharePreview
+import app.podgon.contract.SharePreviewItem
 import app.podgon.contract.SharePreviewRequest
 import app.podgon.contract.ShareRule
-import app.podgon.contract.UnmatchedReview
 import app.podgon.contract.Validation
-import app.podgon.groups.GroupAccess
 import app.podgon.groups.InvitationGroups
 import app.podgon.groups.MemberJoined
 import app.podgon.reviews.persistence.ShareCandidate
 import app.podgon.reviews.persistence.ShareSelector
 import app.podgon.reviews.persistence.SharingRepository
-import app.podgon.reviews.persistence.TargetCategory
 import org.springframework.context.event.EventListener
 import org.springframework.stereotype.Service
 import java.time.Clock
@@ -26,19 +23,18 @@ import java.util.UUID
 private data class Selection(
     val selector: ShareSelector,
     val categoryIds: Set<UUID>,
-    val withSubcategories: Boolean,
     val tags: List<String>,
 )
 
 /**
- * Перенос рекомендаций пользователя в новую группу при вступлении: предпросмотр (ничего не меняет) и
- * применение внутри транзакции вступления (обработчик [MemberJoined]).
+ * Перенос своих групповых рекомендаций в новую группу при вступлении: предпросмотр (ничего не меняет) и
+ * применение внутри транзакции вступления (обработчик [MemberJoined]). Категория — на рекомендации,
+ * поэтому сопоставлять ничего не нужно.
  */
 @Service
 class SharingService(
     private val sharing: SharingRepository,
     private val invitations: InvitationGroups,
-    private val access: GroupAccess,
     private val clock: Clock,
 ) {
     fun preview(
@@ -46,46 +42,21 @@ class SharingService(
         request: SharePreviewRequest,
     ): SharePreview {
         val groupId = invitations.resolve(userId, request.token)
-        val categories = sharing.categoriesOf(groupId)
         val candidates = candidates(userId, groupId, request.share)
-        val unmatched = candidates.filter { it.targetCategoryId == null }
-        val shown = unmatched.take(Validation.SHARE_UNMATCHED_MAX).map(::unmatchedDto)
         return SharePreview(
             total = candidates.size,
-            matched = candidates.size - unmatched.size,
-            unmatched = shown,
-            categories = categories.map(::categoryDto),
+            items = candidates.take(Validation.SHARE_PREVIEW_MAX).map(::itemDto),
         )
     }
 
-    private fun unmatchedDto(c: ShareCandidate) = UnmatchedReview(c.reviewId.toString(), c.title, c.sourceCategory)
+    private fun itemDto(c: ShareCandidate) = SharePreviewItem(c.reviewId.toString(), c.title, c.categoryId.toString())
 
-    private fun categoryDto(c: TargetCategory) =
-        CategoryInfo(c.id.toString(), c.parentId?.toString(), c.name, c.description)
-
-    /**
-     * Публикует отобранные рекомендации. Для тех, у кого категория не подобрана, берётся назначение пользователя
-     * (если категория принадлежит группе); остальные не переносятся.
-     */
     @EventListener
     fun onJoined(event: MemberJoined) {
         val rule = event.share ?: return
         if (rule.mode == ShareMode.NONE) return
         val candidates = candidates(event.userId, event.groupId, rule)
-        val groupCategories = sharing.categoriesOf(event.groupId).map { it.id }.toSet()
-        val assigned =
-            event.assignments
-                .mapNotNull { a ->
-                    val review = a.reviewId.toUuidOrNull()
-                    val category = a.categoryId.toUuidOrNull()
-                    if (review != null && category != null && category in groupCategories) review to category else null
-                }.toMap()
-        val items =
-            candidates.mapNotNull { c ->
-                val category = c.targetCategoryId ?: assigned[c.reviewId]
-                category?.let { c.reviewId to it }
-            }
-        sharing.publish(event.groupId, items, clock.instant())
+        sharing.publish(event.groupId, candidates.map { it.reviewId }, clock.instant())
     }
 
     private fun candidates(
@@ -98,10 +69,8 @@ class SharingService(
         return sharing.candidates(
             userId = userId,
             targetGroupId = targetGroupId,
-            sourceGroupIds = access.memberGroupIds(userId) - targetGroupId,
             selector = selection.selector,
             categoryIds = selection.categoryIds,
-            withSubcategories = selection.withSubcategories,
             tags = selection.tags,
         )
     }
@@ -129,7 +98,7 @@ class SharingService(
                 ShareMode.TAGS -> ShareSelector.WITH_TAGS
                 ShareMode.TAGS_EXCEPT -> ShareSelector.WITHOUT_TAGS
             }
-        return Selection(selector, categoryIds, rule.withSubcategories, tags)
+        return Selection(selector, categoryIds, tags)
     }
 
     private fun String.toUuidOrNull(): UUID? = runCatching { UUID.fromString(this) }.getOrNull()

@@ -42,7 +42,6 @@ import app.podgon.mobile.designsystem.FormScaffold
 import app.podgon.mobile.feature.auth.ui.ErrorText
 import app.podgon.mobile.feature.auth.ui.message
 import app.podgon.mobile.feature.groups.RetryError
-import app.podgon.mobile.feature.groups.flattenTree
 import app.podgon.mobile.resources.Res
 import app.podgon.mobile.resources.action_cancel
 import app.podgon.mobile.resources.action_delete
@@ -58,6 +57,7 @@ import app.podgon.mobile.resources.filters_button_count
 import app.podgon.mobile.resources.filters_reset
 import app.podgon.mobile.resources.filters_title
 import app.podgon.mobile.resources.review_author
+import app.podgon.mobile.resources.review_category_label
 import app.podgon.mobile.resources.review_category_missing
 import app.podgon.mobile.resources.review_delete_text
 import app.podgon.mobile.resources.review_delete_title
@@ -72,6 +72,7 @@ import app.podgon.mobile.resources.review_load_more
 import app.podgon.mobile.resources.review_my_title
 import app.podgon.mobile.resources.review_new
 import app.podgon.mobile.resources.review_offline
+import app.podgon.mobile.resources.review_personal_hint
 import app.podgon.mobile.resources.review_pick_category
 import app.podgon.mobile.resources.review_published_in
 import app.podgon.mobile.resources.review_rating
@@ -431,7 +432,7 @@ fun ReviewFormScreen(
     LaunchedEffect(viewModel) {
         viewModel.effects.collect { if (it is ReviewFormEffect.Saved) onSaved(it.reviewId) }
     }
-    var pickingFor by remember { mutableStateOf<String?>(null) }
+    var picking by remember { mutableStateOf(false) }
     FormScaffold {
         Column(
             modifier = Modifier.verticalScroll(rememberScrollState()),
@@ -470,6 +471,13 @@ fun ReviewFormScreen(
                 valueRange = Validation.RATING_MIN.toFloat()..Validation.RATING_MAX.toFloat(),
                 steps = Validation.RATING_MAX - Validation.RATING_MIN - 1,
             )
+            Text(stringResource(Res.string.review_category_label), style = MaterialTheme.typography.titleSmall)
+            OutlinedButton(onClick = { picking = true }, modifier = Modifier.fillMaxWidth()) {
+                Text(state.category?.name ?: stringResource(Res.string.review_pick_category))
+            }
+            if (state.categoryMissing) {
+                Text(stringResource(Res.string.review_category_missing), color = MaterialTheme.colorScheme.error)
+            }
             OutlinedTextField(
                 value = state.tagsText,
                 onValueChange = viewModel::setTagsText,
@@ -486,23 +494,16 @@ fun ReviewFormScreen(
             Text(stringResource(Res.string.review_groups_label), style = MaterialTheme.typography.titleSmall)
             if (!state.loading && state.groups.isEmpty()) Text(stringResource(Res.string.review_groups_none))
             state.groups.forEach { group ->
-                val chosen = group.id in state.selected
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Checkbox(checked = chosen, onCheckedChange = { viewModel.toggleGroup(group.id) })
+                    Checkbox(
+                        checked = group.id in state.selected,
+                        onCheckedChange = { viewModel.toggleGroup(group.id) },
+                    )
                     Text(group.name, modifier = Modifier.weight(1f))
-                    if (chosen) {
-                        val categoryName =
-                            state.categories[group.id]
-                                ?.firstOrNull { it.id == state.selected[group.id] }
-                                ?.name
-                        TextButton(onClick = { pickingFor = group.id }) {
-                            Text(categoryName ?: stringResource(Res.string.review_pick_category))
-                        }
-                    }
                 }
             }
-            if (state.categoryMissing) {
-                Text(stringResource(Res.string.review_category_missing), color = MaterialTheme.colorScheme.error)
+            if (state.selected.isEmpty()) {
+                Text(stringResource(Res.string.review_personal_hint), style = MaterialTheme.typography.bodySmall)
             }
             ErrorText(state.error)
             Button(onClick = viewModel::save, enabled = !state.saving, modifier = Modifier.fillMaxWidth()) {
@@ -510,17 +511,17 @@ fun ReviewFormScreen(
             }
         }
     }
-    pickingFor?.let { groupId ->
+    if (picking) {
         AlertDialog(
-            onDismissRequest = { pickingFor = null },
+            onDismissRequest = { picking = false },
             title = { Text(stringResource(Res.string.review_pick_category)) },
             text = {
                 LazyColumn {
-                    items(flattenTree(state.categories[groupId].orEmpty()), key = { it.category.id }) { node ->
+                    items(state.choices, key = { it.category.id }) { node ->
                         TextButton(
                             onClick = {
-                                viewModel.setCategory(groupId, node.category.id)
-                                pickingFor = null
+                                viewModel.setCategory(node.category.id)
+                                picking = false
                             },
                             modifier = Modifier.padding(start = (node.depth * 12).dp),
                         ) { Text(node.category.name) }
@@ -530,7 +531,7 @@ fun ReviewFormScreen(
             confirmButton = {},
             dismissButton = {
                 TextButton(
-                    onClick = { pickingFor = null },
+                    onClick = { picking = false },
                 ) { Text(stringResource(Res.string.action_cancel)) }
             },
         )

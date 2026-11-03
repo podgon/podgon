@@ -8,6 +8,7 @@ import app.podgon.contract.FieldErrorReason
 import app.podgon.contract.UpdateProfileRequest
 import app.podgon.contract.UserProfile
 import app.podgon.contract.Validation
+import app.podgon.identity.SystemGroups
 import app.podgon.identity.persistence.UserRepository
 import app.podgon.identity.persistence.UserRow
 import org.springframework.dao.DuplicateKeyException
@@ -19,6 +20,7 @@ import java.util.UUID
 @Service
 class ProfileService(
     private val users: UserRepository,
+    private val systemGroups: SystemGroups,
     private val clock: Clock,
 ) {
     fun get(userId: UUID): UserProfile =
@@ -65,7 +67,20 @@ class ProfileService(
         return get(userId)
     }
 
-    private fun UserRow.toProfile() = UserProfile(id.toString(), email, username, displayName, bio, locale)
+    private fun UserRow.toProfile(): UserProfile {
+        // создаются при регистрации (и миграцией V8 для старых пользователей), поэтому есть всегда
+        val system = checkNotNull(systemGroups.of(id)) { "нет системных групп у пользователя $id" }
+        return UserProfile(
+            id = id.toString(),
+            email = email,
+            username = username,
+            displayName = displayName,
+            bio = bio,
+            locale = locale,
+            personalGroupId = system.personal.toString(),
+            favoritesGroupId = system.favorites.toString(),
+        )
+    }
 
     private companion object {
         val LOCALES = setOf("ru", "en")

@@ -10,6 +10,10 @@ data class UserProfile(
     val displayName: String,
     val bio: String,
     val locale: String,
+    /** Системная группа «Личное»: её лента — личные рекомендации. */
+    val personalGroupId: String,
+    /** Системная группа «Избранное». */
+    val favoritesGroupId: String,
 )
 
 /** Частичное обновление профиля: `null` — поле не менять; пустой [bio] очищает биографию. */

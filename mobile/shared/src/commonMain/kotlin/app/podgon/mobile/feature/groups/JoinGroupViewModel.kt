@@ -2,8 +2,8 @@ package app.podgon.mobile.feature.groups
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import app.podgon.contract.CATEGORY_NONE_KEY
 import app.podgon.contract.InvitationPreview
-import app.podgon.contract.ShareAssignment
 import app.podgon.contract.ShareMode
 import app.podgon.contract.SharePreview
 import app.podgon.contract.ShareRule
@@ -11,6 +11,9 @@ import app.podgon.contract.Validation
 import app.podgon.mobile.core.error.AppError
 import app.podgon.mobile.core.error.appError
 import app.podgon.mobile.core.network.GroupsApi
+import app.podgon.mobile.feature.reviews.CategoryNode
+import app.podgon.mobile.feature.reviews.CategoryRepository
+import app.podgon.mobile.feature.reviews.flattenTree
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -20,12 +23,6 @@ import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
-/** Категория одной из групп пользователя, из которой можно переносить рекомендации. */
-data class SourceCategory(
-    val id: String,
-    val label: String,
-)
-
 data class JoinGroupState(
     val token: String = "",
     /** Сведения о группе после проверки кода: пользователь подтверждает вступление. */
@@ -34,14 +31,12 @@ data class JoinGroupState(
     val error: AppError? = null,
     val mode: ShareMode = ShareMode.NONE,
     val selectedCategories: Set<String> = emptySet(),
-    val withSubcategories: Boolean = true,
     val tagsText: String = "",
-    val sourceCategories: List<SourceCategory> = emptyList(),
+    /** Категории набора для правил «из категорий» и «кроме категорий» (без «Без категории»: она только у личных). */
+    val categories: List<CategoryNode> = emptyList(),
     /** Что будет перенесено по текущему правилу (`null` — правило не задано или ещё считается). */
     val sharePreview: SharePreview? = null,
     val sharePreviewLoading: Boolean = false,
-    /** Ручные назначения категорий новой группы: идентификатор рекомендации → категория. */
-    val assignments: Map<String, String> = emptyMap(),
 ) {
     val tags: List<String>
         get() =
@@ -61,7 +56,7 @@ data class JoinGroupState(
                 ShareMode.CATEGORIES, ShareMode.CATEGORIES_EXCEPT ->
                     selectedCategories
                         .takeIf { it.isNotEmpty() }
-                        ?.let { ShareRule(mode, categoryIds = it.toList(), withSubcategories = withSubcategories) }
+                        ?.let { ShareRule(mode, categoryIds = it.toList()) }
                 ShareMode.TAGS, ShareMode.TAGS_EXCEPT ->
                     tags.takeIf { it.isNotEmpty() }?.let {
                         ShareRule(
@@ -75,6 +70,7 @@ data class JoinGroupState(
 /** Вступление по коду: ввод кода → предпросмотр группы → правило переноса своих рекомендаций → подтверждение. */
 class JoinGroupViewModel(
     private val api: GroupsApi,
+    private val categorySet: CategoryRepository,
 ) : ViewModel() {
     private val _state = MutableStateFlow(JoinGroupState())
     val state: StateFlow<JoinGroupState> = _state.asStateFlow()
@@ -100,8 +96,8 @@ class JoinGroupViewModel(
     }
 
     fun setMode(mode: ShareMode) {
-        _state.update { it.copy(mode = mode, assignments = emptyMap()) }
-        if (mode == ShareMode.CATEGORIES || mode == ShareMode.CATEGORIES_EXCEPT) loadSourceCategories()
+        _state.update { it.copy(mode = mode) }
+        if (mode == ShareMode.CATEGORIES || mode == ShareMode.CATEGORIES_EXCEPT) loadCategories()
         refreshSharePreview()
     }
 
@@ -121,11 +117,6 @@ class JoinGroupViewModel(
         refreshSharePreview()
     }
 
-    fun setWithSubcategories(value: Boolean) {
-        _state.update { it.copy(withSubcategories = value) }
-        refreshSharePreview()
-    }
-
     fun onTagsChange(value: String) {
         _state.update { it.copy(tagsText = value) }
     }
@@ -135,7 +126,7 @@ class JoinGroupViewModel(
         previewJob?.cancel()
         val rule = _state.value.rule
         if (rule == null) {
-            _state.update { it.copy(sharePreview = null, sharePreviewLoading = false, assignments = emptyMap()) }
+            _state.update { it.copy(sharePreview = null, sharePreviewLoading = false) }
             return
         }
         _state.update { it.copy(sharePreviewLoading = true, error = null) }
@@ -147,69 +138,29 @@ class JoinGroupViewModel(
                         sharePreviewLoading = false,
                         sharePreview = result.getOrNull(),
                         error = result.appError(),
-                        assignments = emptyMap(),
                     )
                 }
             }
     }
 
-    /** `categoryId == null` — отказаться от переноса этой рекомендации. */
-    fun assign(
-        reviewId: String,
-        categoryId: String?,
-    ) {
-        _state.update {
-            it.copy(
-                assignments =
-                    if (categoryId ==
-                        null
-                    ) {
-                        it.assignments - reviewId
-                    } else {
-                        it.assignments + (reviewId to categoryId)
-                    },
-            )
-        }
-    }
-
     fun confirm() {
         val current = _state.value
         if (current.loading || current.preview == null) return
-        val shown =
-            current.sharePreview
-                ?.unmatched
-                ?.map { it.reviewId }
-                ?.toSet()
-                .orEmpty()
-        val assignments = current.assignments.filterKeys { it in shown }.map { ShareAssignment(it.key, it.value) }
         _state.update { it.copy(loading = true, error = null) }
         viewModelScope.launch {
-            val result =
-                api.acceptInvitation(
-                    current.token,
-                    current.rule.takeIf { current.sharePreview != null },
-                    assignments,
-                )
+            val result = api.acceptInvitation(current.token, current.rule.takeIf { current.sharePreview != null })
             _state.update { it.copy(loading = false, error = result.appError()) }
             result.getOrNull()?.let { _joined.send(it.id) }
         }
     }
 
-    /** Категории всех своих групп — для выбора в правилах «из категорий» и «кроме категорий». */
-    private fun loadSourceCategories() {
-        if (_state.value.sourceCategories.isNotEmpty()) return
+    /** Категории общего набора — для выбора в правилах «из категорий» и «кроме категорий». */
+    private fun loadCategories() {
+        if (_state.value.categories.isNotEmpty()) return
         viewModelScope.launch {
-            val groups = api.list().getOrNull().orEmpty()
-            val all =
-                groups.flatMap { group ->
-                    api
-                        .categories(
-                            group.id,
-                        ).getOrNull()
-                        .orEmpty()
-                        .map { SourceCategory(it.id, "${group.name} › ${it.name}") }
-                }
-            _state.update { it.copy(sourceCategories = all) }
+            val result = categorySet.set()
+            val nodes = flattenTree(result.getOrNull()?.items.orEmpty()).filter { it.category.key != CATEGORY_NONE_KEY }
+            _state.update { it.copy(categories = nodes, error = it.error ?: result.appError()) }
         }
     }
 }

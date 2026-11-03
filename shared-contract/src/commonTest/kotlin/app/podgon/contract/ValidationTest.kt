@@ -45,4 +45,10 @@ class ValidationTest {
         assertEquals(FieldErrorReason.INVALID_FORMAT, Validation.code("12345a"))
         assertEquals(FieldErrorReason.REQUIRED, Validation.code(""))
     }
+
+    @Test
+    fun `тег - без решётки и регистра и ё равно е`() {
+        assertEquals("ёлка".replace('ё', 'е'), Validation.normalizeTag(" #Ёлка "))
+        assertEquals("кофе", Validation.normalizeTag("#КОФЕ"))
+    }
 }

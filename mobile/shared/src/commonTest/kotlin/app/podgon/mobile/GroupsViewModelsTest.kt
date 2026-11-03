@@ -114,7 +114,7 @@ class GroupsViewModelsTest {
                         else -> json(groupJson("g7", "Бегуны", MEMBER_ROLE, 4))
                     }
                 }
-            val vm = JoinGroupViewModel(fixture.api)
+            val vm = JoinGroupViewModel(fixture.api, fixture.categories)
             vm.onTokenChange("  abc123 ")
             vm.check()
             val checked = vm.state.first { it.preview != null }
@@ -132,7 +132,7 @@ class GroupsViewModelsTest {
     fun `неверный код приглашения - ошибка и предпросмотра нет и вступить нельзя`() =
         runTest(dispatcher) {
             val fixture = GroupsFixture { json(problem(400, "INVALID_INVITATION"), HttpStatusCode.BadRequest) }
-            val vm = JoinGroupViewModel(fixture.api)
+            val vm = JoinGroupViewModel(fixture.api, fixture.categories)
             vm.onTokenChange("bad")
             vm.check()
             val failed = vm.state.first { it.error != null }

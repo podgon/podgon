@@ -24,7 +24,8 @@ import kotlin.test.assertNull
 
 class TokenRefreshTest {
     private val profileJson =
-        """{"id":"u1","email":"a@example.com","username":"alice","displayName":"Alice","bio":"","locale":"ru"}"""
+        """{"id":"u1","email":"a@example.com","username":"alice","displayName":"Alice","bio":"","locale":"ru",
+        "personalGroupId":"g-p","favoritesGroupId":"g-f"}"""
 
     private class Setup(
         val storage: FakeTokenStorage,

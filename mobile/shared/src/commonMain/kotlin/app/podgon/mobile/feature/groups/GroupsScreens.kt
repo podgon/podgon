@@ -61,7 +61,6 @@ import app.podgon.mobile.resources.action_retry
 import app.podgon.mobile.resources.action_revoke_invite
 import app.podgon.mobile.resources.action_save
 import app.podgon.mobile.resources.create_group_title
-import app.podgon.mobile.resources.group_categories
 import app.podgon.mobile.resources.group_description_label
 import app.podgon.mobile.resources.group_invitations
 import app.podgon.mobile.resources.group_member_count
@@ -306,7 +305,6 @@ fun JoinGroupScreen(
 fun GroupScreen(
     viewModel: GroupViewModel,
     onReviews: () -> Unit,
-    onCategories: (canEdit: Boolean) -> Unit,
     onRoles: () -> Unit,
     onInvitations: () -> Unit,
     onClosed: () -> Unit,
@@ -334,9 +332,6 @@ fun GroupScreen(
             if (group != null) {
                 Button(onClick = onReviews, modifier = Modifier.fillMaxWidth()) {
                     Text(stringResource(Res.string.group_reviews))
-                }
-                OutlinedButton(onClick = { onCategories(state.isAdmin) }, modifier = Modifier.fillMaxWidth()) {
-                    Text(stringResource(Res.string.group_categories))
                 }
             }
             if (state.isAdmin) {

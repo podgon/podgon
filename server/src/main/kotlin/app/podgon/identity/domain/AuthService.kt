@@ -7,11 +7,13 @@ import app.podgon.contract.FieldError
 import app.podgon.contract.OtpVerifyResponse
 import app.podgon.contract.TokenPair
 import app.podgon.contract.Validation
+import app.podgon.identity.SystemGroups
 import app.podgon.identity.persistence.UserRepository
 import app.podgon.identity.persistence.UserRow
 import org.springframework.dao.DuplicateKeyException
 import org.springframework.http.HttpStatus
 import org.springframework.stereotype.Service
+import org.springframework.transaction.support.TransactionTemplate
 import java.time.Clock
 import java.util.UUID
 
@@ -22,7 +24,9 @@ class AuthService(
     private val users: UserRepository,
     private val sessions: SessionService,
     private val tokenService: TokenService,
+    private val systemGroups: SystemGroups,
     private val clock: Clock,
+    private val tx: TransactionTemplate,
 ) {
     /** Код верен → токены существующего пользователя либо токен для завершения регистрации. */
     fun verifyOtp(
@@ -68,7 +72,11 @@ class AuthService(
                 locale = locale,
             )
         try {
-            users.insert(user, clock.instant())
+            // пользователь без системных групп («Личное», «Избранное») не появляется
+            tx.executeWithoutResult {
+                users.insert(user, clock.instant())
+                systemGroups.create(user.id)
+            }
         } catch (e: DuplicateKeyException) {
             throw duplicate(e)
         }

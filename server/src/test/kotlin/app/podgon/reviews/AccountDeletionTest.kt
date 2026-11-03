@@ -20,30 +20,23 @@ class AccountDeletionTest : GroupsTestBase() {
 
     private fun account(name: String) = Account(name, registerUser("$name@example.com", name))
 
-    private fun cat(
-        access: String,
-        groupId: String,
-    ) = body(get("/groups/$groupId/categories", access))[0]["id"].asString()
-
     private fun review(
         access: String,
         title: String,
         groupId: String? = null,
     ): String {
-        val publications =
-            if (groupId ==
-                null
-            ) {
-                emptyList()
-            } else {
-                listOf(mapOf("groupId" to groupId, "categoryId" to cat(access, groupId)))
-            }
         val r =
             call(
                 HttpMethod.POST,
                 "/reviews",
                 access,
-                mapOf("title" to title, "rating" to 6, "tags" to listOf("тест"), "publications" to publications),
+                mapOf(
+                    "title" to title,
+                    "rating" to 6,
+                    "categoryId" to category("film.movies"),
+                    "tags" to listOf("тест"),
+                    "groupIds" to listOfNotNull(groupId),
+                ),
             )
         check(status(r) == 201) { r.response.contentAsString }
         return body(r)["id"].asString()
@@ -119,6 +112,12 @@ class AccountDeletionTest : GroupsTestBase() {
         val published = review(leaver.access, "Опубликованная", g)
         val personal = review(leaver.access, "Личная")
         val leaverId = userId(leaver.access)
+        val systemGroups = listOf(personalGroup(leaver.access), favoritesGroup(leaver.access))
+        jdbc
+            .sql("insert into review_groups (review_id, group_id, shared_at) values (:r, :g, now())")
+            .param("r", java.util.UUID.fromString(published))
+            .param("g", java.util.UUID.fromString(favoritesGroup(admin.access)))
+            .update()
 
         assertEquals(2, body(get("/me/delete-impact", leaver.access))["reviews"].asInt())
         assertEquals(204, status(deleteAccount(leaver, requestCode(leaver))))
@@ -126,6 +125,24 @@ class AccountDeletionTest : GroupsTestBase() {
         val card = body(get("/reviews/$published", admin.access))
         assertEquals("deleted_user", card["author"]["username"].asString())
         assertEquals(404, status(get("/reviews/$personal", admin.access)))
+        assertEquals(
+            0,
+            jdbc
+                .sql(
+                    "select count(*) from reviews where id = :id",
+                ).param("id", java.util.UUID.fromString(personal))
+                .query(Int::class.java)
+                .single(),
+        )
+        val favorites = body(get("/groups/${favoritesGroup(admin.access)}/reviews", admin.access))["items"]
+        assertEquals(listOf(published), favorites.toList().map { it["id"].asString() }, "в чужом «Избранном» осталась")
+        val left =
+            jdbc
+                .sql("select count(*) from groups where id in (:ids)")
+                .param("ids", systemGroups.map(java.util.UUID::fromString))
+                .query(Int::class.java)
+                .single()
+        assertEquals(0, left, "«Личное» и «Избранное» удалены")
         assertEquals(1, members(admin.access, g).size())
         assertTrue(members(admin.access, g).none { it["userId"].asString() == leaverId })
 

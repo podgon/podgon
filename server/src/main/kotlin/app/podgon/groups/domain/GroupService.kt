@@ -9,13 +9,11 @@ import app.podgon.contract.GroupSummary
 import app.podgon.contract.ReviewsFate
 import app.podgon.contract.UpdateGroupRequest
 import app.podgon.contract.Validation
-import app.podgon.groups.GroupCreated
 import app.podgon.groups.GroupDeleting
 import app.podgon.groups.GroupsProperties
 import app.podgon.groups.MemberLeft
 import app.podgon.groups.persistence.GroupRepository
 import app.podgon.groups.persistence.RoleRow
-import app.podgon.identity.UserDirectory
 import org.springframework.context.ApplicationEventPublisher
 import org.springframework.http.HttpStatus
 import org.springframework.stereotype.Service
@@ -29,7 +27,6 @@ class GroupService(
     private val policy: GroupPolicy,
     private val admins: AdminGuard,
     private val props: GroupsProperties,
-    private val users: UserDirectory,
     private val events: ApplicationEventPublisher,
     private val clock: Clock,
     private val tx: TransactionTemplate,
@@ -56,7 +53,6 @@ class GroupService(
                 groups.insertRole(adminRole, now)
                 groups.insertRole(systemRole(id, "MEMBER", "Участник", admin = false), now)
                 groups.insertMember(id, userId, adminRole.id, now)
-                events.publishEvent(GroupCreated(id, userId, users.find(userId)?.locale ?: "en"))
                 id
             }!!
         return policy.member(userId, groupId).toDto()
@@ -95,8 +91,8 @@ class GroupService(
     }
 
     /**
-     * Физическое удаление с каскадом (участники, роли, категории, приглашения, публикации). Судьбу
-     * рекомендаций, опубликованных только здесь, выбирает администратор: остаются личными или удаляются.
+     * Физическое удаление с каскадом (участники, роли, приглашения, публикации). Судьбу рекомендаций,
+     * опубликованных только здесь, выбирает администратор: возвращаются авторам в «Личное» или удаляются.
      */
     fun delete(
         userId: UUID,

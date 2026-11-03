@@ -14,18 +14,13 @@ import kotlin.test.assertTrue
 class SearchTest : GroupsTestBase() {
     private fun enc(value: String) = URLEncoder.encode(value, Charsets.UTF_8)
 
-    private fun categoryId(
-        access: String,
-        groupId: String,
-        index: Int = 0,
-    ): String = body(get("/groups/$groupId/categories", access))[index]["id"].asString()
-
     private fun addReview(
         access: String,
         title: String,
         description: String = "",
         tags: List<String> = emptyList(),
-        publications: List<Pair<String, String>> = emptyList(),
+        groups: List<String> = emptyList(),
+        categoryId: String = category("books.sf"),
     ): String {
         val r =
             call(
@@ -36,8 +31,9 @@ class SearchTest : GroupsTestBase() {
                     "title" to title,
                     "description" to description,
                     "rating" to 8,
+                    "categoryId" to categoryId,
                     "tags" to tags,
-                    "publications" to publications.map { (g, c) -> mapOf("groupId" to g, "categoryId" to c) },
+                    "groupIds" to groups,
                 ),
             )
         check(status(r) == 201) { r.response.contentAsString }
@@ -76,9 +72,8 @@ class SearchTest : GroupsTestBase() {
     fun `морфология русского - по слову в другой форме находится рекомендация`() {
         val u = newUser("s_user1")
         val g = createGroup(u)["id"].asString()
-        val c = categoryId(u, g)
-        addReview(u, "Дюна", "Отличная научная фантастика про пустыню", publications = listOf(g to c))
-        addReview(u, "Кофейня", "Хороший завтрак", publications = listOf(g to c))
+        addReview(u, "Дюна", "Отличная научная фантастика про пустыню", groups = listOf(g))
+        addReview(u, "Кофейня", "Хороший завтрак", groups = listOf(g))
         assertEquals(listOf("Дюна"), titles(search(u, "/groups/$g/reviews?q=${enc("фантастики")}")))
         assertEquals(listOf("Кофейня"), titles(search(u, "/groups/$g/reviews?q=${enc("завтраки")}")))
         assertEquals(emptyList(), titles(search(u, "/groups/$g/reviews?q=${enc("неттакого")}")))
@@ -88,9 +83,8 @@ class SearchTest : GroupsTestBase() {
     fun `подстроки и опечатки в названии`() {
         val u = newUser("s_user2")
         val g = createGroup(u)["id"].asString()
-        val c = categoryId(u, g)
-        addReview(u, "Интерстеллар", "Фильм", publications = listOf(g to c))
-        addReview(u, "Матрица", "Фильм", publications = listOf(g to c))
+        addReview(u, "Интерстеллар", "Фильм", groups = listOf(g))
+        addReview(u, "Матрица", "Фильм", groups = listOf(g))
         assertEquals(listOf("Интерстеллар"), titles(search(u, "/groups/$g/reviews?q=${enc("терстел")}")))
         assertEquals(listOf("Интерстеллар"), titles(search(u, "/groups/$g/reviews?q=${enc("Интерстелар")}")))
         assertEquals(listOf("Матрица"), titles(search(u, "/groups/$g/reviews?q=${enc("матрица")}")))
@@ -100,9 +94,8 @@ class SearchTest : GroupsTestBase() {
     fun `буквы ё и е в поиске не различаются`() {
         val u = newUser("s_user_yo")
         val g = createGroup(u)["id"].asString()
-        val c = categoryId(u, g)
-        addReview(u, "Ёлки-палки", "Трактир с печёной картошкой", publications = listOf(g to c))
-        addReview(u, "Пельменная", "Обычная еда", publications = listOf(g to c))
+        addReview(u, "Ёлки-палки", "Трактир с печёной картошкой", groups = listOf(g))
+        addReview(u, "Пельменная", "Обычная еда", groups = listOf(g))
         // подстрока и опечатка в названии
         assertEquals(listOf("Ёлки-палки"), titles(search(u, "/groups/$g/reviews?q=${enc("елки")}")))
         assertEquals(listOf("Ёлки-палки"), titles(search(u, "/groups/$g/reviews?q=${enc("Елки-палки")}")))
@@ -115,10 +108,9 @@ class SearchTest : GroupsTestBase() {
     fun `название весит больше описания и выдача упорядочена по релевантности`() {
         val u = newUser("s_user3")
         val g = createGroup(u)["id"].asString()
-        val c = categoryId(u, g)
-        addReview(u, "Про путешествия", "Много слов про космос и звёзды, космос везде", publications = listOf(g to c))
-        addReview(u, "Космос", "Кратко", publications = listOf(g to c))
-        addReview(u, "Другое", "Один раз космос", publications = listOf(g to c))
+        addReview(u, "Про путешествия", "Много слов про космос и звёзды, космос везде", groups = listOf(g))
+        addReview(u, "Космос", "Кратко", groups = listOf(g))
+        addReview(u, "Другое", "Один раз космос", groups = listOf(g))
         val result = titles(search(u, "/groups/$g/reviews?q=${enc("космос")}"))
         assertEquals("Космос", result.first(), "совпадение в названии выше совпадений в описании")
         assertEquals(3, result.size)
@@ -128,10 +120,9 @@ class SearchTest : GroupsTestBase() {
     fun `спецсимволы запроса не работают как шаблоны`() {
         val u = newUser("s_user4")
         val g = createGroup(u)["id"].asString()
-        val c = categoryId(u, g)
-        addReview(u, "Скидка 100% на всё", publications = listOf(g to c))
-        addReview(u, "Обычная", publications = listOf(g to c))
-        addReview(u, "Имя_с_подчёркиванием", publications = listOf(g to c))
+        addReview(u, "Скидка 100% на всё", groups = listOf(g))
+        addReview(u, "Обычная", groups = listOf(g))
+        addReview(u, "Имя_с_подчёркиванием", groups = listOf(g))
         assertEquals(listOf("Скидка 100% на всё"), titles(search(u, "/groups/$g/reviews?q=${enc("100%")}")))
         // «%» и «_» ищутся как обычные символы, а не как шаблон «любой текст»
         assertEquals(listOf("Скидка 100% на всё"), titles(search(u, "/groups/$g/reviews?q=${enc("%")}")))
@@ -145,21 +136,21 @@ class SearchTest : GroupsTestBase() {
     fun `фильтр по категории включает подкатегории`() {
         val u = newUser("s_user5")
         val g = createGroup(u)["id"].asString()
-        val parent = categoryId(u, g, 0)
-        val other = categoryId(u, g, 1)
-        val child =
-            body(
-                call(HttpMethod.POST, "/groups/$g/categories", u, mapOf("name" to "Дочерняя", "parentId" to parent)),
-            )["id"].asString()
-        addReview(u, "В родителе", publications = listOf(g to parent))
-        addReview(u, "В дочерней", publications = listOf(g to child))
-        addReview(u, "В другой", publications = listOf(g to other))
+        val parent = category("books")
+        val child = category("books.sf")
+        val other = category("film.movies")
+        addReview(u, "В родителе", groups = listOf(g), categoryId = parent)
+        addReview(u, "В дочерней", groups = listOf(g), categoryId = child)
+        addReview(u, "В другой", groups = listOf(g), categoryId = other)
         assertEquals(
             setOf("В родителе", "В дочерней"),
             titles(search(u, "/groups/$g/reviews?categoryIds=$parent")).toSet(),
         )
         assertEquals(listOf("В дочерней"), titles(search(u, "/groups/$g/reviews?categoryIds=$child")))
         assertEquals(3, search(u, "/groups/$g/reviews?categoryIds=$parent,$other")["items"].size())
+        assertTrue(
+            search(u, "/reviews?categoryIds=$child")["items"].all { it["categoryId"].asString() == child },
+        )
     }
 
     @Test
@@ -168,10 +159,9 @@ class SearchTest : GroupsTestBase() {
         val other = newUser("s_other6")
         val g = createGroup(author)["id"].asString()
         join(author, g, other)
-        val c = categoryId(author, g)
-        addReview(author, "Оба тега", tags = listOf("a", "b"), publications = listOf(g to c))
-        addReview(author, "Только a", tags = listOf("a"), publications = listOf(g to c))
-        addReview(other, "Чужой с a", tags = listOf("A"), publications = listOf(g to c))
+        addReview(author, "Оба тега", tags = listOf("a", "b"), groups = listOf(g))
+        addReview(author, "Только a", tags = listOf("a"), groups = listOf(g))
+        addReview(other, "Чужой с a", tags = listOf("A"), groups = listOf(g))
         assertEquals(listOf("Оба тега"), titles(search(author, "/groups/$g/reviews?tags=a,b")))
         assertEquals(3, search(author, "/groups/$g/reviews?tags=a,b&tagMode=ANY")["items"].size())
         assertEquals(
@@ -188,8 +178,7 @@ class SearchTest : GroupsTestBase() {
     fun `страницы поиска идут без повторов в обоих режимах а чужой курсор отвергается`() {
         val u = newUser("s_user7")
         val g = createGroup(u)["id"].asString()
-        val c = categoryId(u, g)
-        repeat(7) { addReview(u, "Книга номер $it", "Про книги", publications = listOf(g to c)) }
+        repeat(7) { addReview(u, "Книга номер $it", "Про книги", groups = listOf(g)) }
 
         for (query in listOf("", "&q=${enc("книга")}")) {
             val seen = mutableListOf<String>()
@@ -219,11 +208,9 @@ class SearchTest : GroupsTestBase() {
         val g1 = createGroup(u, "Первая")["id"].asString()
         val g2 = createGroup(u, "Вторая")["id"].asString()
         val foreign = createGroup(stranger, "Чужая")["id"].asString()
-        val c1 = categoryId(u, g1)
-        val c2 = categoryId(u, g2)
-        addReview(u, "Везде", publications = listOf(g1 to c1, g2 to c2))
-        addReview(u, "Только первая", publications = listOf(g1 to c1))
-        addReview(stranger, "Чужая рекомендация", publications = listOf(foreign to categoryId(stranger, foreign)))
+        addReview(u, "Везде", groups = listOf(g1, g2))
+        addReview(u, "Только первая", groups = listOf(g1))
+        addReview(stranger, "Чужая рекомендация", groups = listOf(foreign))
 
         val all = search(u, "/reviews")
         assertEquals(3, all["items"].size(), "«Везде» — двумя карточками")
@@ -255,9 +242,8 @@ class SearchTest : GroupsTestBase() {
         val u = newUser("s_user10")
         val outsider = newUser("s_out10")
         val g = createGroup(u)["id"].asString()
-        val c = categoryId(u, g)
-        addReview(u, "Один", tags = listOf("фантастика", "книги"), publications = listOf(g to c))
-        addReview(u, "Два", tags = listOf("фантастика"), publications = listOf(g to c))
+        addReview(u, "Один", tags = listOf("фантастика", "книги"), groups = listOf(g))
+        addReview(u, "Два", tags = listOf("фантастика"), groups = listOf(g))
         addReview(u, "Личный", tags = listOf("секрет"))
         val tags = search(u, "/groups/$g/tags")
         assertEquals(
@@ -285,5 +271,29 @@ class SearchTest : GroupsTestBase() {
             assertEquals(400, status(get("/groups/$g/reviews?authorId=не-uuid", u)))
             assertEquals(400, status(get("/groups/$g/reviews?tags=${(1..11).joinToString(",") { "t$it" }}", u)))
         }
+    }
+
+    @Test
+    fun `системные группы читаются только владельцем и не входят во Все`() {
+        val u = newUser("s_user10")
+        val other = newUser("s_other10")
+        val g = createGroup(u)["id"].asString()
+        val personal = personalGroup(u)
+        addReview(u, "Личная ёлка", tags = listOf("ёлка"))
+        addReview(u, "Групповая", tags = listOf("елка"), groups = listOf(g))
+
+        assertEquals(listOf("Групповая"), titles(search(u, "/reviews")), "«Личное» не входит во «Все»")
+        assertEquals(listOf("Личная ёлка"), titles(search(u, "/reviews?groupIds=$personal")))
+        assertEquals(listOf("Личная ёлка"), titles(search(u, "/groups/$personal/reviews?q=${enc("елка")}")))
+        assertEquals(
+            listOf("елка"),
+            body(get("/groups/$personal/tags", u)).toList().map { it["name"].asString() },
+            "«ё» и «е» в тегах не различаются",
+        )
+        assertEquals(1, search(u, "/groups/$g/reviews?tags=${enc("ёлка")}")["items"].size())
+        assertEquals(0, body(get("/groups/${favoritesGroup(u)}/reviews", u))["items"].size())
+        assertEquals(404, status(get("/groups/$personal/reviews", other)))
+        assertEquals(404, status(get("/groups/$personal/tags", other)))
+        assertEquals(404, status(get("/reviews?groupIds=$personal", other)))
     }
 }

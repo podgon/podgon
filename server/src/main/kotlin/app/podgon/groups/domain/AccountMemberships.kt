@@ -16,7 +16,8 @@ const val GROUPS_FIRST = 10
 
 /**
  * Снимает членства удаляемого пользователя. Единственный администратор группы с другими участниками
- * удалиться не может (409 `LAST_ADMIN`); группа, где он один, удаляется целиком — её рекомендации остаются личными.
+ * удалиться не может (409 `LAST_ADMIN`); группа, где он один, удаляется целиком — её рекомендации возвращаются
+ * авторам в «Личное». Системные группы пользователя удаляются вместе с публикациями в них.
  */
 @Component
 class AccountMemberships(
@@ -35,5 +36,6 @@ class AccountMemberships(
             groups.delete(groupId)
         }
         groups.deleteMembershipsOf(userId)
+        groups.deleteSystemGroupsOf(userId)
     }
 }

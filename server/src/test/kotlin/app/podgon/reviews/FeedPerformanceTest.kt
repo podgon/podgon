@@ -11,27 +11,27 @@ class FeedPerformanceTest : GroupsTestBase() {
     fun `лента группы на тысячах публикаций читается по индексу`() {
         val author = newUser("perf_author")
         val groupId = createGroup(author)["id"].asString()
-        val categoryId = body(get("/groups/$groupId/categories", author))[0]["id"].asString()
+        val categoryId = category("books.sf")
         val authorId = userId(author)
 
         jdbc
             .sql(
                 """
-                insert into reviews (id, author_id, title, description, rating, created_at, updated_at)
-                select gen_random_uuid(), :author, 'Рекомендация ' || n, 'Описание ' || n, 1 + n % 10,
+                insert into reviews (id, author_id, title, description, rating, category_id, created_at, updated_at)
+                select gen_random_uuid(), :author, 'Рекомендация ' || n, 'Описание ' || n, 1 + n % 10, :category,
                        now() - make_interval(secs => n), now()
                 from generate_series(1, 30000) n
                 """.trimIndent(),
             ).param("author", java.util.UUID.fromString(authorId))
+            .param("category", java.util.UUID.fromString(categoryId))
             .update()
         jdbc
             .sql(
                 """
-                insert into review_groups (review_id, group_id, category_id, shared_at)
-                select id, :group, :category, created_at from reviews where author_id = :author
+                insert into review_groups (review_id, group_id, shared_at)
+                select id, :group, created_at from reviews where author_id = :author
                 """.trimIndent(),
             ).param("group", java.util.UUID.fromString(groupId))
-            .param("category", java.util.UUID.fromString(categoryId))
             .param("author", java.util.UUID.fromString(authorId))
             .update()
         jdbc.sql("analyze review_groups").update()

@@ -2,40 +2,29 @@ package app.podgon.contract
 
 import kotlinx.serialization.Serializable
 
-/** Категория группы; иерархия задаётся [parentId] (`null` — корневая). Список приходит упорядоченным. */
+/**
+ * Категория общего набора (ADR-011). Два уровня: корень и подкатегория ([parentId]). Названия — на языке
+ * запроса; [system] — «Без категории» (только для личных рекомендаций), [archived] — скрыта из выбора,
+ * но нужна для подписи старых рекомендаций.
+ */
 @Serializable
-data class CategoryInfo(
+data class Category(
     val id: String,
+    /** Стабильный ключ из `docs/categories.md` (`food.coffee`). */
+    val key: String,
     val parentId: String?,
     val name: String,
-    val description: String,
+    val sortOrder: Int,
+    val system: Boolean,
+    val archived: Boolean = false,
 )
 
+/** Весь набор: корни и подкатегории вперемешку в порядке [Category.sortOrder]; [version] совпадает с `ETag`. */
 @Serializable
-data class CreateCategoryRequest(
-    val name: String,
-    val description: String = "",
-    val parentId: String? = null,
+data class CategorySet(
+    val version: String,
+    val items: List<Category>,
 )
 
-/** Частичное обновление: `null` — поле не менять. */
-@Serializable
-data class UpdateCategoryRequest(
-    val name: String? = null,
-    val description: String? = null,
-)
-
-/** Перенос категории; `null` — сделать корневой. */
-@Serializable
-data class MoveCategoryRequest(
-    val parentId: String? = null,
-)
-
-/** Что будет удалено вместе с категорией (без неё самой): основа для диалога подтверждения. */
-@Serializable
-data class CategoryDeleteImpact(
-    val subcategories: Int,
-    val publications: Int,
-    /** Из них опубликованных другими участниками: если их больше нуля, удалить категорию нельзя. */
-    val foreignPublications: Int,
-)
+/** Ключ системной категории «Без категории». */
+const val CATEGORY_NONE_KEY = "none"
