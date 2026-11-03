@@ -8,7 +8,10 @@ import app.podgon.mobile.feature.reviews.ReviewFilter
 import app.podgon.mobile.testing.GroupsFixture
 import app.podgon.mobile.testing.groupJson
 import app.podgon.mobile.testing.json
+import io.ktor.client.engine.mock.respond
+import io.ktor.client.engine.mock.respondError
 import io.ktor.client.request.HttpRequestData
+import io.ktor.http.HttpMethod
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.delay
@@ -150,6 +153,62 @@ class HomeViewModelTest {
                         it.url.parameters["titleOnly"] == "true"
                 }
             }
+        }
+
+    @Test
+    fun `сердечко добавляет в избранное сразу и откатывается при ошибке`() =
+        runTest(dispatcher) {
+            var fail = false
+            val f =
+                GroupsFixture { r ->
+                    val path = r.url.encodedPath
+                    when {
+                        path.startsWith("/api/v1/me/favorites/") ->
+                            if (fail) {
+                                respondError(io.ktor.http.HttpStatusCode.NotFound)
+                            } else {
+                                respond("", io.ktor.http.HttpStatusCode.NoContent)
+                            }
+                        path.endsWith("/categories") -> json(SET)
+                        path.endsWith("/feed") -> json(TOC)
+                        path == "/api/v1/groups" -> json("[${groupJson("g1", "Клуб")}]")
+                        else -> json("""{"items":[${card("a")}]}""")
+                    }
+                }
+            val home = vm(f)
+            val card =
+                home.state
+                    .first { s -> s.sections.isNotEmpty() && s.sections[0].loaded }
+                    .sections[0]
+                    .items[0]
+            assertEquals(false, card.favorite)
+
+            home.toggleFavorite(card)
+            assertTrue(
+                home.state.value.sections[0]
+                    .items[0]
+                    .favorite,
+                "сердечко меняется сразу",
+            )
+            awaitUntil {
+                f.snapshot().any {
+                    it.method == HttpMethod.Put &&
+                        it.url.encodedPath == "/api/v1/me/favorites/a"
+                }
+            }
+
+            fail = true
+            home.toggleFavorite(
+                home.state.value.sections[0]
+                    .items[0],
+            )
+            home.state.first { it.error != null }
+            assertTrue(
+                home.state.value.sections[0]
+                    .items[0]
+                    .favorite,
+                "при ошибке возвращается",
+            )
         }
 
     @Test

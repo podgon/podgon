@@ -55,6 +55,7 @@ import app.podgon.mobile.feature.home.shortDate
 import app.podgon.mobile.resources.Res
 import app.podgon.mobile.resources.a11y_back
 import app.podgon.mobile.resources.a11y_favorite_add
+import app.podgon.mobile.resources.a11y_favorite_remove
 import app.podgon.mobile.resources.action_cancel
 import app.podgon.mobile.resources.action_delete
 import app.podgon.mobile.resources.months_short
@@ -129,13 +130,14 @@ fun ReviewScreen(
                     color = c.ink,
                     modifier = Modifier.weight(1f),
                 )
-                // избранное — backlog: сердце видно и ничего не делает (правило прототипа)
                 PodgonIconButton(
-                    PodgonIcons.Heart,
-                    stringResource(Res.string.a11y_favorite_add),
-                    {},
+                    if (review.favorite) PodgonIcons.HeartFilled else PodgonIcons.Heart,
+                    stringResource(
+                        if (review.favorite) Res.string.a11y_favorite_remove else Res.string.a11y_favorite_add,
+                    ),
+                    viewModel::toggleFavorite,
                     iconSize = 30.dp,
-                    tint = c.muted,
+                    tint = if (review.favorite) c.accent else c.muted,
                 )
             }
             Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {

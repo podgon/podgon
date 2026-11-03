@@ -170,7 +170,7 @@ class ReviewService(
         val ranked = parsed.query != null
         val after = decodeSearchCursor(params.cursor, ranked)
         val rows = if (groups.isEmpty()) emptyList() else reviews.search(groups, parsed, after, size + 1)
-        return page(rows, size) { encodeSearchCursor(it, ranked) }
+        return page(userId, rows, size) { encodeSearchCursor(it, ranked) }
     }
 
     /** Теги группы (в том числе своей системной) для автодополнения и панели фильтров. */
@@ -199,6 +199,28 @@ class ReviewService(
         return reviews.tags(groups, normalized, TAGS_LIMIT).map { TagCount(it.name, it.count) }
     }
 
+    /**
+     * Добавляет видимую мне рекомендацию в моё «Избранное» (в том числе свою); невидимая — 404. Дата добавления —
+     * время публикации в «Избранном» (по ней лента «Избранного» идёт новыми сверху).
+     */
+    fun addFavorite(
+        userId: UUID,
+        reviewId: UUID,
+    ) {
+        val favorites = system(userId).favorites
+        inTransaction {
+            val row = reviews.find(reviewId) ?: throw notFound()
+            visibleTo(userId, reviewId, row)
+            reviews.addPublication(reviewId, favorites, now())
+        }
+    }
+
+    /** Убирает рекомендацию из моего «Избранного»; если её там нет — ничего не меняет. */
+    fun removeFavorite(
+        userId: UUID,
+        reviewId: UUID,
+    ) = reviews.removePublication(reviewId, system(userId).favorites)
+
     /** «Мои рекомендации»: групповые, где я автор (И21); личные — в ленте личной группы. */
     fun mine(
         userId: UUID,
@@ -207,7 +229,7 @@ class ReviewService(
     ): ReviewPage {
         val size = pageSize(limit)
         val rows = reviews.byAuthor(userId, decodeCursor(cursor), size + 1)
-        return page(rows, size) { encodeCursor(it.review.createdAt, it.review.id) }
+        return page(userId, rows, size) { encodeCursor(it.review.createdAt, it.review.id) }
     }
 
     // --- внутреннее ---
@@ -278,6 +300,7 @@ class ReviewService(
                         roles[it.groupId],
                     )
                 },
+            favorite = reviews.publishedIn(system(userId).favorites, listOf(reviewId)).isNotEmpty(),
         )
     }
 
@@ -359,6 +382,7 @@ class ReviewService(
 
     /** [rows] содержит на одну строку больше размера страницы: она нужна, чтобы понять, есть ли следующая. */
     private fun page(
+        userId: UUID,
         rows: List<CardRow>,
         size: Int,
         cursorOf: (CardRow) -> String,
@@ -366,6 +390,7 @@ class ReviewService(
         val pageRows = rows.take(size)
         val ids = pageRows.map { it.review.id }
         val tags = reviews.tagsOf(ids)
+        val favorites = reviews.publishedIn(system(userId).favorites, ids)
         val authors = authors(pageRows.map { it.review.authorId }.distinct())
         val items =
             pageRows.map { r ->
@@ -380,6 +405,7 @@ class ReviewService(
                     categoryId = r.review.categoryId.toString(),
                     sharedAt = r.sharedAt.toString(),
                     groupIds = r.groupIds.map(UUID::toString),
+                    favorite = r.review.id in favorites,
                 )
             }
         val next = if (rows.size > size) cursorOf(pageRows.last()) else null

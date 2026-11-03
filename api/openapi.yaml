@@ -1,7 +1,7 @@
 openapi: 3.0.3
 info:
   title: Podgon API
-  version: 0.10.0
+  version: 0.11.0
   description: |
     Контракт API Podgon (contract-first, ADR-005). Этап 2: вход по одноразовому коду, регистрация,
     токены, профиль и сессии устройств. Этап 4: группы, участники, роли, приглашения. Этап 5: категории групп. Этап 6: рекомендации, публикации в группы, лента. Этап 7: поиск и фильтры.
@@ -21,7 +21,8 @@ info:
     счётчики `facets`, сохранённые фильтры и закрепления `/me/filters`.
 
     Этап 8.3 (0.10.0): поиск только по названиям (`titleOnly`), роль автора в публикациях рекомендации
-    (`PublicationInfo.authorRole`).
+    (`PublicationInfo.authorRole`). 0.11.0: избранное — `PUT/DELETE /me/favorites/{reviewId}`, признак `favorite`
+    в карточке и подробностях рекомендации.
 
     Ошибки — `application/problem+json` (RFC 9457) с машинным полем `code` (см. `ErrorCode`
     в shared-contract); текст для пользователя формирует клиент.
@@ -768,6 +769,34 @@ paths:
         '204': { description: Рекомендация удалена }
         '401': { $ref: '#/components/responses/Problem' }
         '403': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+        '429': { $ref: '#/components/responses/RateLimited' }
+        '426': { $ref: '#/components/responses/UpgradeRequired' }
+
+  /me/favorites/{reviewId}:
+    parameters:
+      - $ref: '#/components/parameters/ReviewId'
+    put:
+      tags: [reviews]
+      operationId: addFavorite
+      summary: Добавить рекомендацию в «Избранное» (этап 8.3)
+      description: Только видимую мне рекомендацию (в том числе свою); повторное добавление ничего не меняет.
+      security: [{ bearerAuth: [] }]
+      responses:
+        '204': { description: Рекомендация в «Избранном» }
+        '401': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+        '429': { $ref: '#/components/responses/RateLimited' }
+        '426': { $ref: '#/components/responses/UpgradeRequired' }
+    delete:
+      tags: [reviews]
+      operationId: removeFavorite
+      summary: Убрать рекомендацию из «Избранного» (этап 8.3)
+      description: Если её там нет — ничего не меняет.
+      security: [{ bearerAuth: [] }]
+      responses:
+        '204': { description: Рекомендации нет в «Избранном» }
+        '401': { $ref: '#/components/responses/Problem' }
         '404': { $ref: '#/components/responses/Problem' }
         '429': { $ref: '#/components/responses/RateLimited' }
         '426': { $ref: '#/components/responses/UpgradeRequired' }
@@ -1651,6 +1680,7 @@ components:
           type: array
           description: Только обычные группы; автору — все публикации, остальным — только в их группах.
           items: { $ref: '#/components/schemas/PublicationInfo' }
+        favorite: { type: boolean, default: false, description: 'Этап 8.3. В моём «Избранном».' }
 
     CreateReviewRequest:
       type: object
@@ -1715,6 +1745,7 @@ components:
           type: array
           description: Группы публикации в области запроса (на «Все» — мои группы, в группе — одна).
           items: { type: string, format: uuid }
+        favorite: { type: boolean, default: false, description: 'Этап 8.3. В моём «Избранном».' }
 
     TagCount:
       type: object

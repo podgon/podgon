@@ -210,8 +210,8 @@
     <string name="theme_dark">Dark</string>
     <string name="settings_version">Version %1$s</string>
     <string name="tab_all">All</string>
-    <string name="favorites_stub_title">Favorites will live here</string>
-    <string name="favorites_stub_text">Tap the heart on a review to collect it here. Coming soon.</string>
+    <string name="favorites_stub_title">No favorites yet</string>
+    <string name="favorites_stub_text">Tap the heart on a review to collect it here.</string>
     <string name="personal_empty_title">No personal reviews yet</string>
     <string name="personal_empty_text">Reviews without groups are visible only to you.</string>
     <string name="stub_soon">Coming soon</string>

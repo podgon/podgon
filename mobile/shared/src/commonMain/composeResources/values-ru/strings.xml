@@ -210,8 +210,8 @@
     <string name="theme_dark">Тёмная</string>
     <string name="settings_version">Версия %1$s</string>
     <string name="tab_all">Все</string>
-    <string name="favorites_stub_title">Здесь будет избранное</string>
-    <string name="favorites_stub_text">Отмечайте рекомендации сердцем — они соберутся здесь. Скоро.</string>
+    <string name="favorites_stub_title">В избранном пока пусто</string>
+    <string name="favorites_stub_text">Отмечайте рекомендации сердечком — они соберутся здесь.</string>
     <string name="personal_empty_title">Личных рекомендаций пока нет</string>
     <string name="personal_empty_text">Рекомендации без групп видите только вы.</string>
     <string name="stub_soon">Скоро</string>

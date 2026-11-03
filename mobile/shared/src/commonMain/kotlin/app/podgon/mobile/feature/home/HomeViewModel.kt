@@ -129,6 +129,36 @@ class HomeViewModel(
             restoreFilter()
             reload()
         }
+        viewModelScope.launch { repository.favoriteChanges.collect { markFavorite(it.reviewId, it.favorite) } }
+    }
+
+    /**
+     * Сердечко в строке: меняется сразу, при ошибке возвращается обратно. В «Избранном» убранная строка остаётся
+     * до обновления — её можно вернуть.
+     */
+    fun toggleFavorite(card: ReviewCard) {
+        val favorite = !card.favorite
+        markFavorite(card.id, favorite)
+        viewModelScope.launch {
+            val result = repository.setFavorite(card.id, favorite)
+            if (result.isFailure) {
+                markFavorite(card.id, !favorite)
+                _state.update { it.copy(error = result.appError()) }
+            }
+        }
+    }
+
+    private fun markFavorite(
+        reviewId: String,
+        favorite: Boolean,
+    ) {
+        val mark = { c: ReviewCard -> if (c.id == reviewId) c.copy(favorite = favorite) else c }
+        _state.update { s ->
+            s.copy(
+                results = s.results.map(mark),
+                sections = s.sections.map { section -> section.copy(items = section.items.map(mark)) },
+            )
+        }
     }
 
     private val scope: FeedScope

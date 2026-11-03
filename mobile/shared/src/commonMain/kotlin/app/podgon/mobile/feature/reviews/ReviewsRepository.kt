@@ -8,6 +8,15 @@ import app.podgon.mobile.core.cache.ResponseCache
 import app.podgon.mobile.core.error.AppError
 import app.podgon.mobile.core.error.appError
 import app.podgon.mobile.core.network.ReviewsApi
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.flow.asSharedFlow
+
+/** Рекомендация [reviewId] добавлена в «Избранное» или убрана из него. */
+data class FavoriteChange(
+    val reviewId: String,
+    val favorite: Boolean,
+)
 
 /** Результат чтения: само значение и признак, что оно взято из локального кэша (нет сети). */
 data class Cached<T>(
@@ -108,6 +117,24 @@ class ReviewsRepository(
                 if (cached != null) Result.success(Cached(cached, fromCache = true)) else Result.failure(it)
             },
         )
+    }
+
+    private val _favoriteChanges = MutableSharedFlow<FavoriteChange>(extraBufferCapacity = 16)
+
+    /** Изменения «Избранного» с любого экрана: открытые ленты обновляют сердечко у себя. */
+    val favoriteChanges: SharedFlow<FavoriteChange> = _favoriteChanges.asSharedFlow()
+
+    /** Добавить в «Избранное» или убрать (только онлайн); сохранённая карточка устаревает. */
+    suspend fun setFavorite(
+        reviewId: String,
+        favorite: Boolean,
+    ): Result<Unit> {
+        val result = api.setFavorite(reviewId, favorite)
+        if (result.isSuccess) {
+            cache.remove(reviewKey(reviewId))
+            _favoriteChanges.emit(FavoriteChange(reviewId, favorite))
+        }
+        return result
     }
 
     suspend fun delete(reviewId: String): Result<Unit> {

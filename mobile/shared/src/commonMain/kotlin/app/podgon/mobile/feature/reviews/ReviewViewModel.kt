@@ -82,6 +82,20 @@ class ReviewViewModel(
         }
     }
 
+    /** Сердечко: меняется сразу, при ошибке возвращается обратно. */
+    fun toggleFavorite() {
+        val review = _state.value.review ?: return
+        if (_state.value.offline) return
+        val favorite = !review.favorite
+        _state.update { it.copy(review = review.copy(favorite = favorite), error = null) }
+        viewModelScope.launch {
+            val result = repository.setFavorite(reviewId, favorite)
+            if (result.isFailure) {
+                _state.update { s -> s.copy(review = s.review?.copy(favorite = !favorite), error = result.appError()) }
+            }
+        }
+    }
+
     fun delete() {
         viewModelScope.launch {
             val result = repository.delete(reviewId)

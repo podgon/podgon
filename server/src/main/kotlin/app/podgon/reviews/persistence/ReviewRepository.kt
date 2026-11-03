@@ -222,6 +222,49 @@ class ReviewRepository(
                 )
             }.list()
 
+    /** Добавляет рекомендацию в группу (избранное); повторное добавление ничего не меняет. */
+    fun addPublication(
+        reviewId: UUID,
+        groupId: UUID,
+        now: Instant,
+    ) {
+        jdbc
+            .sql(
+                """
+                insert into review_groups (review_id, group_id, shared_at) values (:review, :group, :now)
+                on conflict (review_id, group_id) do nothing
+                """.trimIndent(),
+            ).param("review", reviewId)
+            .param("group", groupId)
+            .param("now", now.toSql())
+            .update()
+    }
+
+    fun removePublication(
+        reviewId: UUID,
+        groupId: UUID,
+    ) {
+        jdbc
+            .sql("delete from review_groups where review_id = :review and group_id = :group")
+            .param("review", reviewId)
+            .param("group", groupId)
+            .update()
+    }
+
+    /** Какие из [reviewIds] опубликованы в группе [groupId]. */
+    fun publishedIn(
+        groupId: UUID,
+        reviewIds: Collection<UUID>,
+    ): Set<UUID> {
+        if (reviewIds.isEmpty()) return emptySet()
+        return jdbc
+            .sql("select review_id from review_groups where group_id = :group and review_id in (:ids)")
+            .param("group", groupId)
+            .param("ids", reviewIds)
+            .query { rs, _ -> rs.getObject("review_id", UUID::class.java) }
+            .set()
+    }
+
     /**
      * Задаёт, где рекомендация видна: в обычных группах [groupIds] либо, если набор пуст, только в личной группе
      * автора [personalGroupId] (Л1). Остальные публикации в обычных группах и в личной снимаются; у сохранённых

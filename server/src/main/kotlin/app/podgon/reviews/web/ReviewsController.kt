@@ -59,6 +59,20 @@ class ReviewsController(
         @RequestBody body: SetPublicationsRequest,
     ): ReviewDetails = reviews.setPublications(user.userId, reviewId.uuid(), body)
 
+    @PutMapping("/me/favorites/{reviewId}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    fun addFavorite(
+        @AuthenticationPrincipal user: AuthenticatedUser,
+        @PathVariable reviewId: String,
+    ) = reviews.addFavorite(user.userId, reviewId.uuid())
+
+    @DeleteMapping("/me/favorites/{reviewId}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    fun removeFavorite(
+        @AuthenticationPrincipal user: AuthenticatedUser,
+        @PathVariable reviewId: String,
+    ) = reviews.removeFavorite(user.userId, reviewId.uuid())
+
     @DeleteMapping("/reviews/{reviewId}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     fun delete(

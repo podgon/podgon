@@ -286,7 +286,7 @@ private fun FeedList(
         }
         if (state.searching) {
             items(state.results, key = { "r:" + it.id }) { card ->
-                Row(card, state, months, showAuthor, inCategory = false, actions)
+                Row(card, state, months, showAuthor, inCategory = false, actions, viewModel::toggleFavorite)
             }
             if (state.resultsCursor != null) item { LaunchedEffect(state.results.size) { viewModel.loadMoreResults() } }
             return@LazyColumn
@@ -309,7 +309,15 @@ private fun FeedList(
             }
             if (section.expanded) {
                 items(section.items, key = { section.section + ":" + it.id }) { card ->
-                    Row(card, state, months, showAuthor, inCategory = section.kind == FeedSectionKind.CATEGORY, actions)
+                    Row(
+                        card,
+                        state,
+                        months,
+                        showAuthor,
+                        inCategory = section.kind == FeedSectionKind.CATEGORY,
+                        actions,
+                        viewModel::toggleFavorite,
+                    )
                 }
                 if (section.nextCursor != null || !section.loaded) {
                     item(key = "more:" + section.section) {
@@ -330,6 +338,7 @@ private fun Row(
     showAuthor: Boolean,
     inCategory: Boolean,
     actions: HomeActions,
+    onFavorite: (ReviewCard) -> Unit,
 ) {
     val author = card.author.displayName.ifBlank { card.author.username }
     ReviewRow(
@@ -339,8 +348,8 @@ private fun Row(
         category = state.categoryLabel(card, inCategory),
         author = author.takeIf { showAuthor },
         date = shortDate(card.sharedAt, months),
-        // избранное — backlog: сердце видно, но ничего не делает (правило прототипа)
-        favorite = false,
+        favorite = card.favorite,
+        onFavorite = { onFavorite(card) },
     )
 }
 

@@ -36,6 +36,8 @@ data class ReviewDetails(
     val updatedAt: String,
     val personal: Boolean,
     val publications: List<PublicationInfo>,
+    /** Рекомендация в моём «Избранном». */
+    val favorite: Boolean = false,
 )
 
 /**
@@ -88,6 +90,8 @@ data class ReviewCard(
     val categoryId: String,
     val sharedAt: String,
     val groupIds: List<String>,
+    /** Рекомендация в моём «Избранном» (сердечко в строке). */
+    val favorite: Boolean = false,
 )
 
 /** Страница списка; [nextCursor] — `null`, если страница последняя. */

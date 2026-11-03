@@ -47,6 +47,16 @@ class ReviewsApi(
             client.delete("api/v1/reviews/$reviewId").bodyOrThrow<Unit>()
         }
 
+    /** Добавить в «Избранное» или убрать из него; повтор ничего не меняет. */
+    suspend fun setFavorite(
+        reviewId: String,
+        favorite: Boolean,
+    ): Result<Unit> =
+        apiCall {
+            val path = "api/v1/me/favorites/$reviewId"
+            (if (favorite) client.put(path) else client.delete(path)).bodyOrThrow<Unit>()
+        }
+
     suspend fun mine(cursor: String? = null): Result<ReviewPage> =
         apiCall { client.get("api/v1/me/reviews") { cursor?.let { parameter("cursor", it) } }.bodyOrThrow() }
 
