@@ -39,6 +39,7 @@ kotlin {
             implementation(libs.compose.material3)
             implementation(libs.compose.ui)
             implementation(libs.compose.components.resources)
+            implementation(libs.compose.ui.tooling.preview)
             implementation(libs.kotlinx.coroutines.core)
             implementation(libs.ktor.client.core)
             implementation(libs.ktor.client.content.negotiation)

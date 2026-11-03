@@ -96,7 +96,7 @@ class GroupsFixture(
             requests += request
             handler(request)
         }
-    private val client = createPublicClient(engine, TestConfig)
+    val client = createPublicClient(engine, TestConfig)
     val api = GroupsApi(client)
     val me = MeApi(client)
     val reviews = ReviewsApi(client)

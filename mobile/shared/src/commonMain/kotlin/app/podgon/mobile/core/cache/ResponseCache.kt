@@ -7,7 +7,7 @@ import kotlin.time.Clock
 /**
  * Кэш ответов сервера для чтения без сети. Хранит JSON под строковым ключом; повреждённая или устаревшая
  * по формату запись читается как отсутствующая. Данные личные (рекомендации групп), поэтому при выходе
- * из аккаунта кэш очищается ([clear]).
+ * из аккаунта кэш очищается ([clear]); настройки устройства хранятся здесь же с префиксом [PREF_PREFIX].
  */
 class ResponseCache(
     val dao: CachedResponseDao,
@@ -29,9 +29,20 @@ class ResponseCache(
 
     suspend fun remove(key: String) = dao.delete(key)
 
-    suspend fun clear() = dao.clear()
+    /** Удаляет сохранённые ответы; настройки устройства (ключи `pref:`) не личные и остаются. */
+    suspend fun clear() {
+        val prefs = dao.keys(PREF_PREFIX)
+        if (prefs.isEmpty()) {
+            dao.clear()
+        } else {
+            dao.keys("").filter { it !in prefs }.forEach { dao.delete(it) }
+        }
+    }
 
     suspend fun keys(prefix: String): List<String> = dao.keys(prefix)
 
     fun timestamp(): Long = now()
 }
+
+/** Префикс ключей настроек устройства (тема): они переживают выход из аккаунта. */
+const val PREF_PREFIX = "pref:"

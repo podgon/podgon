@@ -13,6 +13,7 @@ import app.podgon.mobile.core.network.SavedFiltersApi
 import app.podgon.mobile.core.network.UpdateGate
 import app.podgon.mobile.core.network.createAuthorizedClient
 import app.podgon.mobile.core.network.createPublicClient
+import app.podgon.mobile.core.settings.ThemeSettings
 import app.podgon.mobile.feature.auth.data.AuthRepository
 import app.podgon.mobile.feature.auth.data.CaptchaProvider
 import app.podgon.mobile.feature.auth.ui.CodeViewModel
@@ -24,6 +25,7 @@ import app.podgon.mobile.feature.groups.GroupsViewModel
 import app.podgon.mobile.feature.groups.InvitationsViewModel
 import app.podgon.mobile.feature.groups.JoinGroupViewModel
 import app.podgon.mobile.feature.groups.RolesViewModel
+import app.podgon.mobile.feature.main.MainNavigationViewModel
 import app.podgon.mobile.feature.profile.ProfileViewModel
 import app.podgon.mobile.feature.reviews.CategoryRepository
 import app.podgon.mobile.feature.reviews.FeedScope
@@ -31,6 +33,7 @@ import app.podgon.mobile.feature.reviews.FeedViewModel
 import app.podgon.mobile.feature.reviews.ReviewFormViewModel
 import app.podgon.mobile.feature.reviews.ReviewViewModel
 import app.podgon.mobile.feature.reviews.ReviewsRepository
+import app.podgon.mobile.feature.settings.SettingsViewModel
 import io.ktor.client.HttpClient
 import org.koin.core.module.dsl.viewModel
 import org.koin.core.qualifier.named
@@ -48,6 +51,7 @@ val appModule =
         single { ResponseCache(get<CacheDatabase>().responses()) }
         single { ReviewsRepository(get(), get()) }
         single { CategoryRepository(get(), get()) }
+        single { ThemeSettings(get()) }
         single { SessionManager(get()) { get<ResponseCache>().clear() } }
         single { ApiEndpoints(get()) }
         single { UpdateGate() }
@@ -74,6 +78,8 @@ val appModule =
             GroupsViewModel(get()) { reviews.retainGroups(it) }
         }
         viewModel { CreateGroupViewModel(get()) }
+        viewModel { MainNavigationViewModel(get()) }
+        viewModel { SettingsViewModel(get(), get(), get()) }
         viewModel { JoinGroupViewModel(get(), get()) }
         viewModel { (groupId: String) -> GroupViewModel(groupId, get(), get()) }
         viewModel { (scope: FeedScope) -> FeedViewModel(scope, get(), get(), get()) }
