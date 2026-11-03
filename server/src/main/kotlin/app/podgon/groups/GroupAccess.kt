@@ -1,6 +1,7 @@
 package app.podgon.groups
 
 import app.podgon.contract.GroupRef
+import app.podgon.contract.RoleInfo
 import java.util.UUID
 
 /**
@@ -26,6 +27,12 @@ interface GroupAccess {
 
     /** Все обычные группы пользователя (для проверки видимости чужих рекомендаций); системные не входят. */
     fun memberGroupIds(userId: UUID): Set<UUID>
+
+    /** Роль пользователя в каждой из [groupIds], где он участник; остальных групп в ответе нет. */
+    fun rolesOf(
+        userId: UUID,
+        groupIds: Collection<UUID>,
+    ): Map<UUID, RoleInfo>
 
     /** Группы, где пользователь единственный администратор, а участников больше одного: из них нельзя просто уйти. */
     fun soleAdminGroups(userId: UUID): List<GroupRef>

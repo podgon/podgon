@@ -14,6 +14,8 @@ data class ReviewFilter(
     val authorIds: Set<String> = emptySet(),
     val minRating: Int? = null,
     val maxRating: Int? = null,
+    /** Искать [query] только в названиях. */
+    val titleOnly: Boolean = false,
 ) {
     val isEmpty: Boolean get() = query.isBlank() && panelCount == 0
 
@@ -24,6 +26,7 @@ data class ReviewFilter(
             tags.isNotEmpty(),
             authorIds.isNotEmpty(),
             minRating != null || maxRating != null,
+            titleOnly,
         ).count { it }
 }
 

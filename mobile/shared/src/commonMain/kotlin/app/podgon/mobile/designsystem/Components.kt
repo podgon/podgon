@@ -86,6 +86,7 @@ import app.podgon.mobile.resources.a11y_pinned
 import app.podgon.mobile.resources.a11y_profile
 import app.podgon.mobile.resources.a11y_remove_filter
 import app.podgon.mobile.resources.a11y_saved_filter
+import app.podgon.mobile.resources.a11y_saved_filters
 import app.podgon.mobile.resources.a11y_search
 import app.podgon.mobile.resources.a11y_section_menu
 import app.podgon.mobile.resources.app_name_short
@@ -134,6 +135,8 @@ fun PodgonIconButton(
     tint: Color = podgonColors.ink,
     outlined: Boolean = false,
     badge: Int? = null,
+    onLongClick: (() -> Unit)? = null,
+    longClickLabel: String? = null,
 ) {
     val c = podgonColors
     TooltipBox(
@@ -146,8 +149,13 @@ fun PodgonIconButton(
                 Modifier
                     .size(size)
                     .then(if (outlined) Modifier.podgonElevation(CircleShape, 4.dp) else Modifier.clip(CircleShape))
-                    .combinedClickable(role = Role.Button, onClickLabel = description, onClick = onClick)
-                    .semantics { contentDescription = description },
+                    .combinedClickable(
+                        role = Role.Button,
+                        onClickLabel = description,
+                        onLongClick = onLongClick,
+                        onLongClickLabel = longClickLabel,
+                        onClick = onClick,
+                    ).semantics { contentDescription = description },
                 contentAlignment = Alignment.Center,
             ) {
                 Icon(icon, contentDescription = null, tint = tint, modifier = Modifier.size(iconSize))
@@ -269,6 +277,7 @@ fun SearchRow(
     onFilters: () -> Unit,
     modifier: Modifier = Modifier,
     onFocusChange: (Boolean) -> Unit = {},
+    onFiltersLongPress: (() -> Unit)? = null,
 ) {
     val c = podgonColors
     var focused by remember { mutableStateOf(false) }
@@ -316,6 +325,8 @@ fun SearchRow(
             onFilters,
             outlined = true,
             badge = activeFilters,
+            onLongClick = onFiltersLongPress,
+            longClickLabel = onFiltersLongPress?.let { stringResource(Res.string.a11y_saved_filters) },
         )
     }
 }

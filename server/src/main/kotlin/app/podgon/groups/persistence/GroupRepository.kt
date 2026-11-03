@@ -298,6 +298,24 @@ class GroupRepository(
             .query { rs, _ -> MemberRow(rs.getObject("user_id", UUID::class.java), role(rs), rs.instant("joined_at")) }
             .list()
 
+    fun rolesOf(
+        userId: UUID,
+        groupIds: Collection<UUID>,
+    ): Map<UUID, RoleRow> =
+        jdbc
+            .sql(
+                """
+                select m.group_id, $roleColumns
+                from memberships m
+                join group_roles r on r.id = m.role_id
+                where m.user_id = :u and m.group_id in (:g)
+                """.trimIndent(),
+            ).param("u", userId)
+            .param("g", groupIds)
+            .query { rs, _ -> rs.getObject("group_id", UUID::class.java) to role(rs) }
+            .list()
+            .toMap()
+
     fun member(
         groupId: UUID,
         userId: UUID,

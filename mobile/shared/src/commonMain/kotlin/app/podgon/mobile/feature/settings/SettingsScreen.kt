@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
@@ -31,8 +32,11 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import app.podgon.mobile.core.settings.AppLanguage
 import app.podgon.mobile.designsystem.Divider
 import app.podgon.mobile.designsystem.PodgonIcons
 import app.podgon.mobile.designsystem.PodgonShapes
@@ -40,8 +44,11 @@ import app.podgon.mobile.designsystem.ThemeMode
 import app.podgon.mobile.designsystem.podgonColors
 import app.podgon.mobile.designsystem.podgonElevation
 import app.podgon.mobile.resources.Res
+import app.podgon.mobile.resources.language_system
+import app.podgon.mobile.resources.language_system_full
 import app.podgon.mobile.resources.settings_groups
 import app.podgon.mobile.resources.settings_groups_count
+import app.podgon.mobile.resources.settings_language
 import app.podgon.mobile.resources.settings_sections
 import app.podgon.mobile.resources.settings_theme
 import app.podgon.mobile.resources.settings_title
@@ -62,6 +69,7 @@ fun SettingsScreen(
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val mode by viewModel.themeMode.collectAsStateWithLifecycle()
+    val language by viewModel.language.collectAsStateWithLifecycle()
     LaunchedEffect(viewModel) { viewModel.load() }
     val c = podgonColors
     Column(Modifier.fillMaxSize().background(c.background).verticalScroll(rememberScrollState())) {
@@ -94,6 +102,19 @@ fun SettingsScreen(
                     modifier = Modifier.weight(1f),
                 )
                 ThemeSwitch(mode, viewModel::setTheme)
+            }
+            Divider()
+            Row(
+                Modifier.fillMaxWidth().heightIn(min = 56.dp).padding(start = 18.dp, end = 10.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    stringResource(Res.string.settings_language),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = c.ink,
+                    modifier = Modifier.weight(1f),
+                )
+                LanguageSwitch(language, viewModel::setLanguage)
             }
         }
         Text(
@@ -142,6 +163,50 @@ fun ThemeSwitch(
         )
     Row(Modifier.clip(CircleShape).background(c.chip).padding(3.dp)) {
         options.forEach { (value, icon, label) -> ThemeOption(value == mode, icon, label) { onSelect(value) } }
+    }
+}
+
+/** Переключатель языка: как в системе · русский · English (названия языков — на самих языках). */
+@Composable
+fun LanguageSwitch(
+    language: AppLanguage,
+    onSelect: (AppLanguage) -> Unit,
+) {
+    val c = podgonColors
+    val options =
+        listOf(
+            AppLanguage.SYSTEM to stringResource(Res.string.language_system),
+            AppLanguage.RU to "RU",
+            AppLanguage.EN to "EN",
+        )
+    val names =
+        mapOf(
+            AppLanguage.SYSTEM to stringResource(Res.string.language_system_full),
+            AppLanguage.RU to "Русский",
+            AppLanguage.EN to "English",
+        )
+    Row(Modifier.clip(CircleShape).background(c.chip).padding(3.dp)) {
+        options.forEach { (value, label) ->
+            val on = value == language
+            Box(
+                Modifier
+                    .height(34.dp)
+                    .widthIn(min = 44.dp)
+                    .clip(CircleShape)
+                    .background(if (on) c.surface else Color.Transparent)
+                    .combinedClickable(
+                        role = Role.RadioButton,
+                        onClickLabel = names.getValue(value),
+                    ) { onSelect(value) }
+                    .semantics {
+                        contentDescription = names.getValue(value)
+                        selected = on
+                    }.padding(horizontal = 10.dp),
+                contentAlignment = Alignment.Center,
+            ) {
+                Text(label, fontSize = 13.sp, fontWeight = FontWeight.Bold, color = if (on) c.ink else c.muted)
+            }
+        }
     }
 }
 

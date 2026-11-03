@@ -311,4 +311,14 @@
     <string name="home_new_user_text">Вступите в группу по коду приглашения или создайте свою — и делитесь рекомендациями с друзьями.</string>
     <string name="home_join_by_code">Вступить по коду</string>
     <string name="home_create_group">Создать группу</string>
+    <string name="filters_title_only">Искать только в названиях</string>
+    <string name="filters_title_only_hint">Без поиска по описаниям</string>
+    <string name="home_title_only_chip">Только в названиях</string>
+    <string name="settings_language">Язык</string>
+    <string name="language_system">Авто</string>
+    <string name="language_system_full">Как в системе</string>
+    <string name="review_share_footer">Рекомендация из Podgon</string>
+    <string name="invite_share_text">Присоединяйтесь к моей группе в Podgon. Код приглашения: %1$s</string>
+    <string name="a11y_saved_filters">Сохранённые фильтры</string>
+    <string name="home_saved_filters_empty">Сохранённых фильтров пока нет. Сохранить фильтр можно в панели фильтров.</string>
 </resources>

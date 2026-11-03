@@ -4,6 +4,8 @@ import app.podgon.mobile.core.auth.IosTokenStorage
 import app.podgon.mobile.core.auth.TokenStorage
 import app.podgon.mobile.core.cache.CacheDatabase
 import app.podgon.mobile.core.cache.buildCacheDatabase
+import app.podgon.mobile.core.settings.IosLanguageStore
+import app.podgon.mobile.core.settings.LanguageStore
 import app.podgon.mobile.feature.auth.data.DeviceInfoProvider
 import io.ktor.client.engine.HttpClientEngine
 import io.ktor.client.engine.darwin.Darwin
@@ -16,6 +18,7 @@ val iosPlatformModule =
         single<HttpClientEngine> { Darwin.create() }
         single<CacheDatabase> { buildCacheDatabase() }
         single<TokenStorage> { IosTokenStorage() }
+        single<LanguageStore> { IosLanguageStore() }
         single {
             DeviceInfoProvider {
                 val device = UIDevice.currentDevice

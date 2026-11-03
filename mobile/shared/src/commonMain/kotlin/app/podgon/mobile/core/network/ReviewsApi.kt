@@ -112,7 +112,10 @@ class ReviewsApi(
         filter.query
             .trim()
             .takeIf { it.isNotEmpty() }
-            ?.let { parameter("q", it) }
+            ?.let {
+                parameter("q", it)
+                if (filter.titleOnly) parameter("titleOnly", true)
+            }
         if (filter.categoryIds.isNotEmpty()) parameter("categoryIds", filter.categoryIds.joinToString(","))
         if (filter.tags.isNotEmpty()) {
             parameter("tags", filter.tags.joinToString(","))

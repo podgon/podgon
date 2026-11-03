@@ -30,6 +30,8 @@ import app.podgon.mobile.core.auth.SessionManager
 import app.podgon.mobile.core.network.ApiConfig
 import app.podgon.mobile.core.network.UpdateGate
 import app.podgon.mobile.core.network.UpdateRequiredScreen
+import app.podgon.mobile.core.settings.LanguageSettings
+import app.podgon.mobile.core.settings.LocalizedContent
 import app.podgon.mobile.core.settings.ThemeSettings
 import app.podgon.mobile.designsystem.MainTab
 import app.podgon.mobile.designsystem.PodgonBottomBar
@@ -124,17 +126,20 @@ fun App() {
     val updateRequired by koinInject<UpdateGate>().required.collectAsStateWithLifecycle()
     val theme = koinInject<ThemeSettings>()
     val mode by theme.mode.collectAsStateWithLifecycle()
+    val language by koinInject<LanguageSettings>().language.collectAsStateWithLifecycle()
     LaunchedEffect(session) {
         theme.load()
         session.restore()
     }
-    PodgonTheme(mode) {
-        when {
-            updateRequired -> UpdateRequiredScreen(koinInject<ApiConfig>().updateUrl)
-            state == AuthState.Loading ->
-                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
-            state == AuthState.SignedOut -> SignedOutNavigation()
-            else -> SignedInNavigation()
+    LocalizedContent(language.code) {
+        PodgonTheme(mode) {
+            when {
+                updateRequired -> UpdateRequiredScreen(koinInject<ApiConfig>().updateUrl)
+                state == AuthState.Loading ->
+                    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
+                state == AuthState.SignedOut -> SignedOutNavigation()
+                else -> SignedInNavigation()
+            }
         }
     }
 }

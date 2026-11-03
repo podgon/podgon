@@ -1,7 +1,7 @@
 openapi: 3.0.3
 info:
   title: Podgon API
-  version: 0.9.0
+  version: 0.10.0
   description: |
     Контракт API Podgon (contract-first, ADR-005). Этап 2: вход по одноразовому коду, регистрация,
     токены, профиль и сессии устройств. Этап 4: группы, участники, роли, приглашения. Этап 5: категории групп. Этап 6: рекомендации, публикации в группы, лента. Этап 7: поиск и фильтры.
@@ -19,6 +19,9 @@ info:
     Лента (этап 8.2.2): в списках каждая рекомендация один раз (`groupIds`, `sharedAt` — самая свежая публикация
     в области), фильтры `authorIds`, `minRating`, `maxRating`, секции (`section`, оглавление `GET /feed`),
     счётчики `facets`, сохранённые фильтры и закрепления `/me/filters`.
+
+    Этап 8.3 (0.10.0): поиск только по названиям (`titleOnly`), роль автора в публикациях рекомендации
+    (`PublicationInfo.authorRole`).
 
     Ошибки — `application/problem+json` (RFC 9457) с машинным полем `code` (см. `ErrorCode`
     в shared-contract); текст для пользователя формирует клиент.
@@ -690,6 +693,7 @@ paths:
             maxItems: 50
             items: { type: string, format: uuid }
         - $ref: '#/components/parameters/SearchQuery'
+        - $ref: '#/components/parameters/TitleOnly'
         - $ref: '#/components/parameters/CategoryIds'
         - $ref: '#/components/parameters/Tags'
         - $ref: '#/components/parameters/TagMode'
@@ -923,6 +927,7 @@ paths:
             maxItems: 50
             items: { type: string, format: uuid }
         - $ref: '#/components/parameters/SearchQuery'
+        - $ref: '#/components/parameters/TitleOnly'
         - $ref: '#/components/parameters/CategoryIds'
         - $ref: '#/components/parameters/Tags'
         - $ref: '#/components/parameters/TagMode'
@@ -953,6 +958,7 @@ paths:
       security: [{ bearerAuth: [] }]
       parameters:
         - $ref: '#/components/parameters/SearchQuery'
+        - $ref: '#/components/parameters/TitleOnly'
         - $ref: '#/components/parameters/CategoryIds'
         - $ref: '#/components/parameters/Tags'
         - $ref: '#/components/parameters/TagMode'
@@ -1096,6 +1102,7 @@ paths:
       security: [{ bearerAuth: [] }]
       parameters:
         - $ref: '#/components/parameters/SearchQuery'
+        - $ref: '#/components/parameters/TitleOnly'
         - $ref: '#/components/parameters/CategoryIds'
         - $ref: '#/components/parameters/Tags'
         - $ref: '#/components/parameters/TagMode'
@@ -1294,6 +1301,11 @@ components:
       in: query
       description: Поиск по названию и описанию (морфология русского, опечатки, подстроки); с ним выдача упорядочена по релевантности.
       schema: { type: string, maxLength: 100 }
+    TitleOnly:
+      name: titleOnly
+      in: query
+      description: Этап 8.3. `true` — искать `q` только в названиях, без описаний.
+      schema: { type: boolean, default: false }
     CategoryIds:
       name: categoryIds
       in: query
@@ -1614,6 +1626,10 @@ components:
       properties:
         groupId: { type: string, format: uuid }
         sharedAt: { type: string, format: date-time }
+        authorRole:
+          description: Этап 8.3. Роль автора в группе; нет — автор уже не участник.
+          allOf: [{ $ref: '#/components/schemas/RoleInfo' }]
+          nullable: true
 
     ReviewDetails:
       type: object
@@ -1883,6 +1899,7 @@ components:
           items: { type: string, format: uuid }
         minRating: { type: integer, minimum: 1, maximum: 10, nullable: true }
         maxRating: { type: integer, minimum: 1, maximum: 10, nullable: true }
+        titleOnly: { type: boolean, default: false, description: 'Этап 8.3. Искать `q` только в названиях.' }
 
     SavedFilterKind:
       type: string

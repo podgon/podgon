@@ -14,10 +14,14 @@ data class Criteria(
     val maxRating: Int? = null,
 )
 
-/** Фильтры выборки: наборы условий и поисковый запрос (с ним выдача упорядочена по релевантности). */
+/**
+ * Фильтры выборки: наборы условий и поисковый запрос (с ним выдача упорядочена по релевантности);
+ * [titleOnly] — искать только в названиях.
+ */
 data class SearchFilters(
     val criteria: List<Criteria> = emptyList(),
     val query: String? = null,
+    val titleOnly: Boolean = false,
 )
 
 /**
@@ -54,14 +58,16 @@ internal class FilterSql(
         filters.query?.let { raw ->
             // «ё» = «е»: так же нормализованы search_vector и title_search (миграция V7)
             val q = raw.replace('ё', 'е').replace('Ё', 'Е')
+            // название в search_vector — с весом A: ts_filter оставляет только его
+            val vector = if (filters.titleOnly) "ts_filter(r.search_vector, '{a}')" else "r.search_vector"
             sql.append(
-                " and (r.search_vector @@ websearch_to_tsquery('russian', :q)" +
+                " and ($vector @@ websearch_to_tsquery('russian', :q)" +
                     " or r.title_search ilike :like escape '\\' or r.title_search % :q)",
             )
             params["q"] = q
             params["like"] = "%" + escapeLike(q) + "%"
             rank =
-                "cast(coalesce(ts_rank_cd(r.search_vector, websearch_to_tsquery('russian', :q)), 0)" +
+                "cast(coalesce(ts_rank_cd($vector, websearch_to_tsquery('russian', :q)), 0)" +
                 " + similarity(r.title_search, :q) as float8)"
         }
         where = sql.toString()

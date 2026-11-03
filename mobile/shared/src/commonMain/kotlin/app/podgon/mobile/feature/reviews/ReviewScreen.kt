@@ -40,6 +40,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import app.podgon.mobile.core.share.rememberTextSharer
+import app.podgon.mobile.core.share.reviewShareText
 import app.podgon.mobile.designsystem.Avatar
 import app.podgon.mobile.designsystem.PodgonBottomSheet
 import app.podgon.mobile.designsystem.PodgonIconButton
@@ -47,6 +49,7 @@ import app.podgon.mobile.designsystem.PodgonIcons
 import app.podgon.mobile.designsystem.SheetAction
 import app.podgon.mobile.designsystem.podgonColors
 import app.podgon.mobile.feature.groups.RetryError
+import app.podgon.mobile.feature.groups.displayTitle
 import app.podgon.mobile.feature.home.fullDate
 import app.podgon.mobile.feature.home.shortDate
 import app.podgon.mobile.resources.Res
@@ -66,6 +69,7 @@ import app.podgon.mobile.resources.review_published_at
 import app.podgon.mobile.resources.review_published_groups
 import app.podgon.mobile.resources.review_report
 import app.podgon.mobile.resources.review_share
+import app.podgon.mobile.resources.review_share_footer
 import app.podgon.mobile.resources.review_you
 import org.jetbrains.compose.resources.stringResource
 
@@ -255,8 +259,12 @@ fun ReviewScreen(
                     )
                     review.publications.forEach { p ->
                         state.groupNames[p.groupId]?.let { g ->
+                            val published =
+                                stringResource(Res.string.review_published_at, g, fullDate(p.sharedAt, months))
+                            // роль автора в этой группе; вышедший автор — без роли
+                            val role = p.authorRole?.displayTitle()
                             Text(
-                                stringResource(Res.string.review_published_at, g, fullDate(p.sharedAt, months)),
+                                if (role == null) published else "$published · $role",
                                 fontSize = 13.sp,
                                 color = c.muted,
                             )
@@ -302,6 +310,12 @@ fun ReviewScreen(
     }
     if (menu) {
         val review = state.review
+        val share = rememberTextSharer()
+        val footer = stringResource(Res.string.review_share_footer)
+        val shareReview = {
+            review?.let { share(reviewShareText(it, state.categories[it.categoryId]?.name, footer)) }
+            Unit
+        }
         PodgonBottomSheet(
             title = review?.title.orEmpty(),
             onDismiss = { menu = false },
@@ -312,8 +326,8 @@ fun ReviewScreen(
                             PodgonIcons.Edit,
                             stringResource(Res.string.review_edit),
                         ) { review?.let { onEdit(it.id) } },
-                        // «Поделиться» — после ссылок-приглашений (этап 9–11): пункт виден и ничего не делает
-                        SheetAction(PodgonIcons.Invite, stringResource(Res.string.review_share)) {},
+                        // пока текстом; ссылка на рекомендацию — после домена и App Links (этапы 9–11)
+                        SheetAction(PodgonIcons.Invite, stringResource(Res.string.review_share), shareReview),
                         SheetAction(
                             PodgonIcons.Close,
                             stringResource(Res.string.action_delete),
@@ -322,7 +336,7 @@ fun ReviewScreen(
                 } else {
                     listOf(
                         SheetAction(PodgonIcons.Offline, stringResource(Res.string.review_report)) {},
-                        SheetAction(PodgonIcons.Invite, stringResource(Res.string.review_share)) {},
+                        SheetAction(PodgonIcons.Invite, stringResource(Res.string.review_share), shareReview),
                     )
                 },
         )

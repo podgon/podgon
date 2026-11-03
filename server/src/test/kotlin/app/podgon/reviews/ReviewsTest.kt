@@ -137,6 +137,23 @@ class ReviewsTest : GroupsTestBase() {
     }
 
     @Test
+    fun `в публикациях видна роль автора в группе`() {
+        val author = newUser("rv_role_a")
+        val member = newUser("rv_role_m")
+        val g1 = createGroup(member, "Чужая")["id"].asString()
+        val g2 = createGroup(author, "Своя")["id"].asString()
+        join(member, g1, author)
+        join(author, g2, member)
+        val id = created(author, groupIds = listOf(g1, g2))["id"].asString()
+
+        val roles =
+            body(get("/reviews/$id", member))["publications"].toList().associate {
+                it["groupId"].asString() to it["authorRole"]["code"].asString()
+            }
+        assertEquals(mapOf(g1 to "MEMBER", g2 to "ADMIN"), roles)
+    }
+
+    @Test
     fun `публиковать можно только в свои обычные группы`() {
         val author = newUser("rv_author3")
         val stranger = newUser("rv_stranger3")

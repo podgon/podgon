@@ -56,6 +56,7 @@ class FeedController(
         @AuthenticationPrincipal user: AuthenticatedUser,
         @RequestParam(required = false) groupIds: List<String>?,
         @RequestParam(required = false) q: String?,
+        @RequestParam(required = false) titleOnly: Boolean?,
         @RequestParam(required = false) categoryIds: List<String>?,
         @RequestParam(required = false) tags: List<String>?,
         @RequestParam(required = false) tagMode: String?,
@@ -67,7 +68,17 @@ class FeedController(
         feed.facets(
             user.userId,
             groupIds?.map { it.uuid() },
-            SearchParams(q, categoryIds, tags, tagMode, authorIds, minRating, maxRating, section),
+            SearchParams(
+                q,
+                categoryIds,
+                tags,
+                tagMode,
+                authorIds,
+                minRating,
+                maxRating,
+                section,
+                titleOnly = titleOnly,
+            ),
         )
 
     @GetMapping("/groups/{groupId}/facets")
@@ -75,6 +86,7 @@ class FeedController(
         @AuthenticationPrincipal user: AuthenticatedUser,
         @PathVariable groupId: String,
         @RequestParam(required = false) q: String?,
+        @RequestParam(required = false) titleOnly: Boolean?,
         @RequestParam(required = false) categoryIds: List<String>?,
         @RequestParam(required = false) tags: List<String>?,
         @RequestParam(required = false) tagMode: String?,
@@ -86,7 +98,17 @@ class FeedController(
         feed.facets(
             user.userId,
             listOf(groupId.uuid()),
-            SearchParams(q, categoryIds, tags, tagMode, authorIds, minRating, maxRating, section),
+            SearchParams(
+                q,
+                categoryIds,
+                tags,
+                tagMode,
+                authorIds,
+                minRating,
+                maxRating,
+                section,
+                titleOnly = titleOnly,
+            ),
         )
 
     @GetMapping("/me/filters")

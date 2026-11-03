@@ -78,6 +78,7 @@ class ReviewsController(
         @AuthenticationPrincipal user: AuthenticatedUser,
         @PathVariable groupId: String,
         @RequestParam(required = false) q: String?,
+        @RequestParam(required = false) titleOnly: Boolean?,
         @RequestParam(required = false) categoryIds: List<String>?,
         @RequestParam(required = false) tags: List<String>?,
         @RequestParam(required = false) tagMode: String?,
@@ -91,7 +92,19 @@ class ReviewsController(
         reviews.feed(
             user.userId,
             groupId.uuid(),
-            SearchParams(q, categoryIds, tags, tagMode, authorIds, minRating, maxRating, section, cursor, limit),
+            SearchParams(
+                q,
+                categoryIds,
+                tags,
+                tagMode,
+                authorIds,
+                minRating,
+                maxRating,
+                section,
+                cursor,
+                limit,
+                titleOnly,
+            ),
         )
 
     @GetMapping("/reviews")
@@ -99,6 +112,7 @@ class ReviewsController(
         @AuthenticationPrincipal user: AuthenticatedUser,
         @RequestParam(required = false) groupIds: List<String>?,
         @RequestParam(required = false) q: String?,
+        @RequestParam(required = false) titleOnly: Boolean?,
         @RequestParam(required = false) categoryIds: List<String>?,
         @RequestParam(required = false) tags: List<String>?,
         @RequestParam(required = false) tagMode: String?,
@@ -112,7 +126,19 @@ class ReviewsController(
         reviews.search(
             user.userId,
             groupIds?.map { it.uuid() },
-            SearchParams(q, categoryIds, tags, tagMode, authorIds, minRating, maxRating, section, cursor, limit),
+            SearchParams(
+                q,
+                categoryIds,
+                tags,
+                tagMode,
+                authorIds,
+                minRating,
+                maxRating,
+                section,
+                cursor,
+                limit,
+                titleOnly,
+            ),
         )
 
     @GetMapping("/me/tags")

@@ -118,6 +118,20 @@ class SearchTest : GroupsTestBase() {
     }
 
     @Test
+    fun `режим только по названиям не ищет в описаниях`() {
+        val u = newUser("s_title_only")
+        val g = createGroup(u)["id"].asString()
+        addReview(u, "Космос", "Кратко", groups = listOf(g))
+        addReview(u, "Другое", "Один раз космос", groups = listOf(g))
+        val q = enc("космоса")
+        assertEquals(2, titles(search(u, "/groups/$g/reviews?q=$q")).size)
+        assertEquals(listOf("Космос"), titles(search(u, "/groups/$g/reviews?q=$q&titleOnly=true")))
+        assertEquals(listOf("Космос"), titles(search(u, "/reviews?q=$q&titleOnly=true")))
+        val facets = search(u, "/groups/$g/facets?q=$q&titleOnly=true")
+        assertEquals(1, facets["authors"][0]["count"].asInt())
+    }
+
+    @Test
     fun `спецсимволы запроса не работают как шаблоны`() {
         val u = newUser("s_user4")
         val g = createGroup(u)["id"].asString()

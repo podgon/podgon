@@ -5,6 +5,8 @@ import app.podgon.mobile.core.auth.AndroidTokenStorage
 import app.podgon.mobile.core.auth.TokenStorage
 import app.podgon.mobile.core.cache.CacheDatabase
 import app.podgon.mobile.core.cache.buildCacheDatabase
+import app.podgon.mobile.core.settings.AndroidLanguageStore
+import app.podgon.mobile.core.settings.LanguageStore
 import app.podgon.mobile.feature.auth.data.DeviceInfoProvider
 import io.ktor.client.engine.HttpClientEngine
 import io.ktor.client.engine.okhttp.OkHttp
@@ -17,5 +19,6 @@ val androidPlatformModule =
         single<HttpClientEngine> { OkHttp.create() }
         single<CacheDatabase> { buildCacheDatabase(androidContext()) }
         single<TokenStorage> { AndroidTokenStorage(androidContext()) }
+        single<LanguageStore> { AndroidLanguageStore(androidContext()) }
         single { DeviceInfoProvider { "${Build.MANUFACTURER} ${Build.MODEL}, Android ${Build.VERSION.RELEASE}" } }
     }

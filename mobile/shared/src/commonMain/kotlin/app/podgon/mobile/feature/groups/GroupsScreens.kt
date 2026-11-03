@@ -51,6 +51,7 @@ import app.podgon.contract.MemberInfo
 import app.podgon.contract.RoleInfo
 import app.podgon.mobile.core.error.AppError
 import app.podgon.mobile.core.error.message
+import app.podgon.mobile.core.share.rememberTextSharer
 import app.podgon.mobile.designsystem.Avatar
 import app.podgon.mobile.designsystem.BottomBarSpace
 import app.podgon.mobile.designsystem.Divider
@@ -99,6 +100,7 @@ import app.podgon.mobile.resources.invite_email_label
 import app.podgon.mobile.resources.invite_for
 import app.podgon.mobile.resources.invite_max_uses_label
 import app.podgon.mobile.resources.invite_new_title
+import app.podgon.mobile.resources.invite_share_text
 import app.podgon.mobile.resources.invite_status_active
 import app.podgon.mobile.resources.invite_status_inactive
 import app.podgon.mobile.resources.invite_status_revoked
@@ -109,6 +111,7 @@ import app.podgon.mobile.resources.join_invited_by
 import app.podgon.mobile.resources.join_preview_title
 import app.podgon.mobile.resources.join_title
 import app.podgon.mobile.resources.remove_member_confirm
+import app.podgon.mobile.resources.review_share
 import app.podgon.mobile.resources.role_admin_label
 import app.podgon.mobile.resources.role_admin_title
 import app.podgon.mobile.resources.role_builtin
@@ -757,6 +760,11 @@ fun InvitationsScreen(viewModel: InvitationsViewModel) {
                 TextButton(
                     onClick = viewModel::dismissCreated,
                 ) { Text(stringResource(Res.string.action_close)) }
+            },
+            dismissButton = {
+                val share = rememberTextSharer()
+                val text = stringResource(Res.string.invite_share_text, created.token)
+                TextButton(onClick = { share(text) }) { Text(stringResource(Res.string.review_share)) }
             },
         )
     }

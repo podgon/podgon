@@ -13,6 +13,7 @@ import app.podgon.mobile.core.network.SavedFiltersApi
 import app.podgon.mobile.core.network.UpdateGate
 import app.podgon.mobile.core.network.createAuthorizedClient
 import app.podgon.mobile.core.network.createPublicClient
+import app.podgon.mobile.core.settings.LanguageSettings
 import app.podgon.mobile.core.settings.ThemeSettings
 import app.podgon.mobile.feature.auth.data.AuthRepository
 import app.podgon.mobile.feature.auth.data.CaptchaProvider
@@ -57,12 +58,17 @@ val appModule =
         single { ReviewsRepository(get(), get()) }
         single { CategoryRepository(get(), get()) }
         single { ThemeSettings(get()) }
+        single { LanguageSettings(get()) }
         single { SessionManager(get()) { get<ResponseCache>().clear() } }
         single { ApiEndpoints(get()) }
         single { UpdateGate() }
-        single<HttpClient>(PUBLIC_CLIENT) { createPublicClient(get(), get(), get(), get()) }
+        single<HttpClient>(PUBLIC_CLIENT) {
+            val language = get<LanguageSettings>()
+            createPublicClient(get(), get(), get(), get()) { language.effective }
+        }
         single<HttpClient>(AUTHORIZED_CLIENT) {
-            createAuthorizedClient(get(), get(), get(), get(PUBLIC_CLIENT), get(), get())
+            val language = get<LanguageSettings>()
+            createAuthorizedClient(get(), get(), get(), get(PUBLIC_CLIENT), get(), get()) { language.effective }
         }
         single { AuthApi(get(PUBLIC_CLIENT)) }
         single { MeApi(get(AUTHORIZED_CLIENT)) }
@@ -87,7 +93,7 @@ val appModule =
         viewModel { SectionsViewModel(get(), get()) }
         viewModel { (groupId: String?, filter: ReviewFilter) -> FiltersViewModel(groupId, filter, get(), get(), get()) }
         viewModel { (area: HomeArea) -> HomeViewModel(area, get(), get(), get(), get(), get(), get()) }
-        viewModel { SettingsViewModel(get(), get(), get()) }
+        viewModel { SettingsViewModel(get(), get(), get(), get(), get()) }
         viewModel { JoinGroupViewModel(get(), get()) }
         viewModel { (groupId: String) -> GroupViewModel(groupId, get(), get()) }
         viewModel { (scope: FeedScope) -> FeedViewModel(scope, get(), get(), get()) }

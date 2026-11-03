@@ -20,6 +20,8 @@ data class FilterDefinition(
     val authorIds: List<String> = emptyList(),
     val minRating: Int? = null,
     val maxRating: Int? = null,
+    /** Искать [q] только в названиях (без описаний). */
+    val titleOnly: Boolean = false,
 )
 
 const val FILTER_DEFINITION_VERSION = 1

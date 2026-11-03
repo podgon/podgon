@@ -3,6 +3,7 @@ package app.podgon.groups.domain
 import app.podgon.common.ApiException
 import app.podgon.contract.ErrorCode
 import app.podgon.contract.GroupRef
+import app.podgon.contract.RoleInfo
 import app.podgon.groups.GroupAccess
 import app.podgon.groups.persistence.GroupRepository
 import app.podgon.groups.persistence.MyGroupRow
@@ -54,6 +55,12 @@ class GroupPolicy(
     ): Boolean = groups.findForMember(groupId, userId) != null
 
     override fun memberGroupIds(userId: UUID): Set<UUID> = groups.groupIdsOf(userId)
+
+    override fun rolesOf(
+        userId: UUID,
+        groupIds: Collection<UUID>,
+    ): Map<UUID, RoleInfo> =
+        if (groupIds.isEmpty()) emptyMap() else groups.rolesOf(userId, groupIds).mapValues { it.value.toDto() }
 
     override fun soleAdminGroups(userId: UUID): List<GroupRef> =
         groups.soleAdminGroups(userId).map { GroupRef(it.first.toString(), it.second) }

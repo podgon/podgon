@@ -8,6 +8,7 @@ import app.podgon.contract.FeedSection
 import app.podgon.contract.FeedSectionKind
 import app.podgon.contract.GroupSummary
 import app.podgon.contract.ReviewCard
+import app.podgon.contract.SavedFilter
 import app.podgon.contract.SavedFilterKind
 import app.podgon.contract.TagCount
 import app.podgon.mobile.core.cache.ResponseCache
@@ -76,6 +77,8 @@ data class HomeState(
     val categories: Map<String, Category> = emptyMap(),
     val recent: List<String> = emptyList(),
     val popularTags: List<TagCount> = emptyList(),
+    /** Сохранённые фильтры для быстрого выбора (без закреплённых категорий), по алфавиту. */
+    val savedFilters: List<SavedFilter> = emptyList(),
 ) {
     val searching: Boolean get() = query.isNotBlank()
 
@@ -313,10 +316,33 @@ class HomeViewModel(
 
     /** Популярные теги вкладки для подсказок поиска (И9). */
     fun loadSuggestions() {
+        loadSavedFilters()
         viewModelScope.launch {
             val facets = reviews.facets(scopeGroup).getOrNull() ?: return@launch
             _state.update { it.copy(popularTags = facets.tags.take(SUGGESTED_TAGS)) }
         }
+    }
+
+    /** Сохранённые фильтры для быстрого выбора: в подсказках поиска и по долгому нажатию на кнопку фильтров. */
+    fun loadSavedFilters() {
+        viewModelScope.launch {
+            val list = savedFilters.list().getOrNull() ?: return@launch
+            _state.update { s ->
+                s.copy(
+                    savedFilters = list.filter { it.kind == SavedFilterKind.FILTER }.sortedBy { it.name?.lowercase() },
+                )
+            }
+        }
+    }
+
+    /** Применяет сохранённый фильтр целиком: условия панели и, если сохранён, поисковый запрос. */
+    fun applySaved(filter: SavedFilter) {
+        val definition = filter.definition ?: return
+        val q = definition.q?.trim().orEmpty()
+        if (q.isNotEmpty()) rememberQuery(q)
+        _state.update { it.copy(query = q, results = emptyList()) }
+        val panel = definition.toFilter()
+        if (panel == _state.value.filter) reload() else setFilter(panel)
     }
 
     /** Новый фильтр панели: запоминается для вкладки, лента перезагружается. */

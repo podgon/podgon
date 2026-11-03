@@ -46,6 +46,7 @@ fun FilterDefinition.toFilter() =
         authorIds = authorIds.toSet(),
         minRating = minRating,
         maxRating = maxRating,
+        titleOnly = titleOnly,
     )
 
 fun ReviewFilter.toDefinition() =
@@ -57,6 +58,7 @@ fun ReviewFilter.toDefinition() =
         authorIds = authorIds.toList(),
         minRating = minRating,
         maxRating = maxRating,
+        titleOnly = titleOnly,
     )
 
 /**
@@ -126,6 +128,8 @@ class FiltersViewModel(
     fun toggleTag(tag: String) = edit { it.copy(tags = it.tags.toggle(tag)) }
 
     fun setAnyTag(any: Boolean) = edit { it.copy(anyTag = any) }
+
+    fun setTitleOnly(titleOnly: Boolean) = edit { it.copy(titleOnly = titleOnly) }
 
     fun toggleAuthor(id: String) = edit { it.copy(authorIds = it.authorIds.toggle(id)) }
 

@@ -121,6 +121,38 @@ class HomeViewModelTest {
         }
 
     @Test
+    fun `сохранённый фильтр применяется в одно касание вместе с запросом`() =
+        runTest(dispatcher) {
+            val f =
+                fixture { r ->
+                    if (r.url.encodedPath.endsWith("/me/filters")) {
+                        """[{"id":"f2","kind":"FILTER","inFeed":false,"name":"Б",
+                        "definition":{"v":1,"q":"кофе","minRating":7,"titleOnly":true}},
+                        {"id":"c","kind":"CATEGORY","inFeed":true,"categoryId":"c1"},
+                        {"id":"f1","kind":"FILTER","inFeed":false,"name":"А","definition":{"v":1}}]"""
+                    } else {
+                        """{"items":[${card("a")}]}"""
+                    }
+                }
+            val home = vm(f)
+            home.state.first { s -> s.sections.isNotEmpty() }
+            home.loadSavedFilters()
+            val saved = home.state.first { it.savedFilters.isNotEmpty() }.savedFilters
+            assertEquals(listOf("А", "Б"), saved.map { it.name }, "только фильтры, по алфавиту")
+
+            home.applySaved(saved[1])
+            val state = home.state.first { it.query == "кофе" && it.filter.minRating == 7 }
+            assertTrue(state.filter.titleOnly)
+            awaitUntil {
+                f.snapshot().any {
+                    it.url.parameters["q"] == "кофе" &&
+                        it.url.parameters["minRating"] == "7" &&
+                        it.url.parameters["titleOnly"] == "true"
+                }
+            }
+        }
+
+    @Test
     fun `свёрнутая секция запоминается и не грузится при следующем открытии`() =
         runTest(dispatcher) {
             val f = fixture()

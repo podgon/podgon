@@ -15,6 +15,8 @@ data class PublicationInfo(
     val groupId: String,
     /** Момент публикации в группе, ISO-8601 в UTC. */
     val sharedAt: String,
+    /** Роль автора в группе; `null` — автор уже не участник (вышел или аккаунт удалён). */
+    val authorRole: RoleInfo? = null,
 )
 
 /**

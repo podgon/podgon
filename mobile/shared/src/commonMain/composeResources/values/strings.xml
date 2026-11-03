@@ -311,4 +311,14 @@
     <string name="home_new_user_text">Join a group with an invitation code or create your own to share reviews with friends.</string>
     <string name="home_join_by_code">Join with a code</string>
     <string name="home_create_group">Create a group</string>
+    <string name="filters_title_only">Search titles only</string>
+    <string name="filters_title_only_hint">Descriptions are not searched</string>
+    <string name="home_title_only_chip">Titles only</string>
+    <string name="settings_language">Language</string>
+    <string name="language_system">Auto</string>
+    <string name="language_system_full">As on the device</string>
+    <string name="review_share_footer">Recommended in Podgon</string>
+    <string name="invite_share_text">Join my group in Podgon. Invitation code: %1$s</string>
+    <string name="a11y_saved_filters">Saved filters</string>
+    <string name="home_saved_filters_empty">No saved filters yet. Save one in the filters panel.</string>
 </resources>

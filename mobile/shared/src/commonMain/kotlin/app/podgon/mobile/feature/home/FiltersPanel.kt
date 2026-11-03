@@ -85,6 +85,8 @@ import app.podgon.mobile.resources.filters_tag_all
 import app.podgon.mobile.resources.filters_tag_any
 import app.podgon.mobile.resources.filters_tags
 import app.podgon.mobile.resources.filters_title
+import app.podgon.mobile.resources.filters_title_only
+import app.podgon.mobile.resources.filters_title_only_hint
 import org.jetbrains.compose.resources.stringResource
 
 /** Где действует фильтр — подпись в шапке («в группе „Друзья“», «во всех группах», «в Личном»). */
@@ -135,6 +137,9 @@ fun FiltersPanel(
                 }
                 SavedRow(state, onClick = { savedOpen = !savedOpen })
                 if (savedOpen) SavedList(state.saved, viewModel) { savedOpen = false }
+                Card {
+                    TitleOnlyRow(state.draft.titleOnly, viewModel::setTitleOnly)
+                }
                 Card {
                     RatingCard(state.draft, viewModel::setRating)
                 }
@@ -244,6 +249,26 @@ private fun Card(content: @Composable () -> Unit) {
             .padding(14.dp),
     ) {
         content()
+    }
+}
+
+/** Режим поиска «только по названиям» (без описаний). */
+@Composable
+private fun TitleOnlyRow(
+    checked: Boolean,
+    onChange: (Boolean) -> Unit,
+) {
+    val c = podgonColors
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Column(Modifier.weight(1f)) {
+            Text(
+                stringResource(Res.string.filters_title_only),
+                style = MaterialTheme.typography.titleSmall,
+                color = c.ink,
+            )
+            Text(stringResource(Res.string.filters_title_only_hint), fontSize = 12.sp, color = c.muted)
+        }
+        Switch(checked = checked, onCheckedChange = onChange)
     }
 }
 

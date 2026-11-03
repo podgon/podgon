@@ -2,6 +2,7 @@ package app.podgon.mobile
 
 import app.podgon.mobile.core.cache.ResponseCache
 import app.podgon.mobile.core.network.SavedFiltersApi
+import app.podgon.mobile.core.settings.LanguageSettings
 import app.podgon.mobile.core.settings.ThemeSettings
 import app.podgon.mobile.designsystem.MainTab
 import app.podgon.mobile.designsystem.ThemeMode
@@ -100,7 +101,14 @@ class Stage823NavigationTest {
                     }
                 }
             val theme = ThemeSettings(ResponseCache(fixture.cacheDao))
-            val vm = SettingsViewModel(fixture.api, SavedFiltersApi(fixture.client), theme)
+            val vm =
+                SettingsViewModel(
+                    fixture.api,
+                    SavedFiltersApi(fixture.client),
+                    theme,
+                    LanguageSettings(MemoryLanguageStore()),
+                    fixture.me,
+                )
             vm.load()
             val state = vm.state.first { it.groups != null }
             assertEquals(2, state.groups)

@@ -46,11 +46,12 @@ fun createPublicClient(
     config: ApiConfig,
     endpoints: ApiEndpoints = ApiEndpoints(config),
     gate: UpdateGate = UpdateGate(),
+    language: () -> String? = { null },
 ): HttpClient =
     HttpClient(engine) {
         install(ContentNegotiation) { json(ApiJson) }
         install(HttpTimeout) { requestTimeoutMillis = REQUEST_TIMEOUT_MS }
-        defaultRequest { apiDefaults(config) }
+        defaultRequest { apiDefaults(config, language()) }
         expectSuccess = false
     }.apply { installApiGuards(endpoints, gate) }
 
@@ -65,6 +66,7 @@ fun createAuthorizedClient(
     publicClient: HttpClient,
     endpoints: ApiEndpoints = ApiEndpoints(config),
     gate: UpdateGate = UpdateGate(),
+    language: () -> String? = { null },
 ): HttpClient =
     HttpClient(engine) {
         install(ContentNegotiation) { json(ApiJson) }
@@ -91,14 +93,21 @@ fun createAuthorizedClient(
                 }
             }
         }
-        defaultRequest { apiDefaults(config) }
+        defaultRequest { apiDefaults(config, language()) }
         expectSuccess = false
     }.apply { installApiGuards(endpoints, gate) }
 
-/** Общие для всех запросов адрес, тип тела и версия клиента (по ней сервер требует обновления — R1). */
-private fun DefaultRequest.DefaultRequestBuilder.apiDefaults(config: ApiConfig) {
+/**
+ * Общие для всех запросов адрес, тип тела, язык (письма и язык нового профиля) и версия клиента
+ * (по ней сервер требует обновления — R1).
+ */
+private fun DefaultRequest.DefaultRequestBuilder.apiDefaults(
+    config: ApiConfig,
+    language: String?,
+) {
     url(config.baseUrl.trimEnd('/') + "/")
     contentType(ContentType.Application.Json)
+    language?.let { header(HttpHeaders.AcceptLanguage, it) }
     if (config.platform.isNotBlank()) header(CLIENT_PLATFORM_HEADER, config.platform)
     if (config.appVersion > 0) header(CLIENT_VERSION_HEADER, config.appVersion.toString())
 }

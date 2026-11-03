@@ -69,6 +69,7 @@ import app.podgon.mobile.resources.a11y_close
 import app.podgon.mobile.resources.a11y_group_menu
 import app.podgon.mobile.resources.favorites_stub_text
 import app.podgon.mobile.resources.favorites_stub_title
+import app.podgon.mobile.resources.filters_saved
 import app.podgon.mobile.resources.filters_scope_all
 import app.podgon.mobile.resources.filters_scope_favorites
 import app.podgon.mobile.resources.filters_scope_group
@@ -98,8 +99,10 @@ import app.podgon.mobile.resources.home_popular_tags
 import app.podgon.mobile.resources.home_popular_tags_all
 import app.podgon.mobile.resources.home_recent
 import app.podgon.mobile.resources.home_reset_filters
+import app.podgon.mobile.resources.home_saved_filters_empty
 import app.podgon.mobile.resources.home_section_count
 import app.podgon.mobile.resources.home_section_order
+import app.podgon.mobile.resources.home_title_only_chip
 import app.podgon.mobile.resources.home_unpin
 import app.podgon.mobile.resources.months_short
 import app.podgon.mobile.resources.nav_favorites
@@ -140,6 +143,7 @@ fun HomeScreen(
     var sectionMenu by remember { mutableStateOf<SectionUi?>(null) }
     var groupMenu by remember { mutableStateOf<GroupSummary?>(null) }
     var filtersOpen by remember { mutableStateOf(false) }
+    var savedOpen by remember { mutableStateOf(false) }
     LaunchedEffect(state.tab) { actions.onTabChanged(state.tab) }
 
     Column(Modifier.fillMaxSize().background(c.background)) {
@@ -156,6 +160,10 @@ fun HomeScreen(
             onFocusChange = {
                 focused = it
                 if (it) viewModel.loadSuggestions()
+            },
+            onFiltersLongPress = {
+                viewModel.loadSavedFilters()
+                savedOpen = true
             },
         )
         FilterChips(state, viewModel)
@@ -218,6 +226,17 @@ fun HomeScreen(
                 filtersOpen = false
             },
             onDismiss = { filtersOpen = false },
+        )
+    }
+    if (savedOpen) {
+        PodgonBottomSheet(
+            title = stringResource(Res.string.filters_saved),
+            subtitle = if (state.savedFilters.isEmpty()) stringResource(Res.string.home_saved_filters_empty) else null,
+            onDismiss = { savedOpen = false },
+            actions =
+                state.savedFilters.map { f ->
+                    SheetAction(PodgonIcons.Bookmark, f.name.orEmpty()) { viewModel.applySaved(f) }
+                },
         )
     }
     groupMenu?.let { group ->
@@ -447,6 +466,7 @@ private fun FilterChips(
     if (f.minRating != null || f.maxRating != null) {
         chips += "★ ${f.minRating ?: 1}–${f.maxRating ?: 10}" to f.copy(minRating = null, maxRating = null)
     }
+    if (f.titleOnly) chips += stringResource(Res.string.home_title_only_chip) to f.copy(titleOnly = false)
     FilterChipsRow(chips.map { it.first }, onRemove = { viewModel.setFilter(chips[it].second) })
 }
 
@@ -459,7 +479,7 @@ private fun Suggestions(
     onPick: (String) -> Unit,
 ) {
     val c = podgonColors
-    if (state.recent.isEmpty() && state.popularTags.isEmpty()) return
+    if (state.recent.isEmpty() && state.popularTags.isEmpty() && state.savedFilters.isEmpty()) return
     Column(
         Modifier
             .padding(
@@ -537,6 +557,38 @@ private fun Suggestions(
                         contentAlignment = Alignment.Center,
                     ) {
                         Text("#${tag.name}", style = MaterialTheme.typography.labelMedium, color = c.ink)
+                    }
+                }
+            }
+        }
+        if (state.savedFilters.isNotEmpty()) {
+            Text(
+                stringResource(Res.string.filters_saved),
+                fontSize = 12.sp,
+                fontWeight = FontWeight.ExtraBold,
+                color = c.muted,
+                modifier = Modifier.padding(start = 10.dp, top = 10.dp, bottom = 6.dp),
+            )
+            FlowRow(
+                Modifier.padding(horizontal = 8.dp),
+                horizontalArrangement = Arrangement.spacedBy(5.dp),
+                verticalArrangement = Arrangement.spacedBy(5.dp),
+            ) {
+                state.savedFilters.forEach { f ->
+                    Row(
+                        Modifier
+                            .height(30.dp)
+                            .clip(CircleShape)
+                            .background(c.chip)
+                            .combinedClickable(role = Role.Button) {
+                                f.definition?.q?.let(onPick)
+                                viewModel.applySaved(f)
+                            }.padding(horizontal = 11.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(4.dp),
+                    ) {
+                        Icon(PodgonIcons.Bookmark, null, tint = c.accent, modifier = Modifier.size(13.dp))
+                        Text(f.name.orEmpty(), style = MaterialTheme.typography.labelMedium, color = c.ink)
                     }
                 }
             }

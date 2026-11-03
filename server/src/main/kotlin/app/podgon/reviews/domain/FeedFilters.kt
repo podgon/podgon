@@ -34,6 +34,7 @@ data class SearchParams(
     val section: String? = null,
     val cursor: String? = null,
     val limit: Int? = null,
+    val titleOnly: Boolean? = null,
 )
 
 /** Хранимый вид определения фильтра: значения по умолчанию тоже пишутся, неизвестные поля не мешают чтению. */
@@ -97,7 +98,7 @@ class FeedFilters(
         }
         if (errors.isNotEmpty()) throw validationFailed(errors)
         val section = params.section?.let { section(userId, it) }
-        return SearchFilters(listOfNotNull(panel.takeIf { it != Criteria() }, section), query)
+        return SearchFilters(listOfNotNull(panel.takeIf { it != Criteria() }, section), query, params.titleOnly == true)
     }
 
     /** Условия сохранённого фильтра в секции ленты: поиска нет, удалённые теги игнорируются. */

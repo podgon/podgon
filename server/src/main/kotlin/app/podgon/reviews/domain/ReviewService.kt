@@ -257,6 +257,8 @@ class ReviewService(
     ): ReviewDetails {
         val row = reviews.find(reviewId) ?: throw notFound()
         val publications = visibleTo(userId, reviewId, row)
+        val regular = publications.filter { it.kind == REGULAR }
+        val roles = access.rolesOf(row.authorId, regular.map { it.groupId })
         return ReviewDetails(
             id = row.id.toString(),
             title = row.title,
@@ -269,9 +271,13 @@ class ReviewService(
             updatedAt = row.updatedAt.toString(),
             personal = publications.any { it.kind == PERSONAL },
             publications =
-                publications
-                    .filter { it.kind == REGULAR }
-                    .map { PublicationInfo(it.groupId.toString(), it.sharedAt.toString()) },
+                regular.map {
+                    PublicationInfo(
+                        it.groupId.toString(),
+                        it.sharedAt.toString(),
+                        roles[it.groupId],
+                    )
+                },
         )
     }
 
