@@ -80,6 +80,7 @@ class MemberService(
             displayName = profile?.displayName ?: "",
             role = role.toDto(),
             joinedAt = joinedAt.toString(),
+            avatarId = profile?.avatarId?.toString(),
         )
     }
 }

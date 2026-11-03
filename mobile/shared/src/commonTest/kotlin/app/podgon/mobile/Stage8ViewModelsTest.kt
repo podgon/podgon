@@ -3,6 +3,7 @@ package app.podgon.mobile
 import app.cash.turbine.test
 import app.podgon.contract.ShareMode
 import app.podgon.mobile.core.auth.StoredTokens
+import app.podgon.mobile.core.media.MyProfile
 import app.podgon.mobile.feature.groups.GroupEffect
 import app.podgon.mobile.feature.groups.GroupViewModel
 import app.podgon.mobile.feature.groups.JoinGroupViewModel
@@ -18,6 +19,7 @@ import app.podgon.mobile.testing.json
 import app.podgon.mobile.testing.memberJson
 import io.ktor.client.engine.mock.respond
 import io.ktor.client.request.HttpRequestData
+import io.ktor.http.HttpMethod
 import io.ktor.http.HttpStatusCode
 import io.ktor.http.content.TextContent
 import kotlinx.coroutines.Dispatchers
@@ -219,6 +221,40 @@ class Stage8ViewModelsTest {
                     .url
                     .toString()
             assertTrue("reviews=DELETE" in url && "confirm=true" in url, url)
+        }
+
+    @Test
+    fun `аватар загружается и убирается а верхняя строка узнаёт о нём`() =
+        runTest(dispatcher) {
+            val storage = FakeTokenStorage(StoredTokens("a", "r"))
+            val auth = AuthFixture(storage) { json("{}") }
+            val withAvatar = ME_JSON.replace("\"locale\":\"ru\",", "\"locale\":\"ru\",\"avatarId\":\"a1\",")
+            val fixture =
+                GroupsFixture { request ->
+                    when {
+                        request.url.encodedPath == "/api/v1/me/avatar" && request.method == HttpMethod.Put ->
+                            json(
+                                withAvatar,
+                            )
+                        request.url.encodedPath == "/api/v1/me/sessions" -> json("[]")
+                        else -> json(ME_JSON)
+                    }
+                }
+            val profile = MyProfile()
+            val vm = ProfileViewModel(fixture.me, auth.repository, profile)
+            vm.state.first { !it.loading }
+            vm.setAvatar(byteArrayOf(9))
+            assertEquals(
+                "a1",
+                vm.state
+                    .first { it.profile?.avatarId != null }
+                    .profile
+                    ?.avatarId,
+            )
+            assertEquals("a1", profile.profile.value?.avatarId)
+            vm.setAvatar(null)
+            vm.state.first { it.profile?.avatarId == null && !it.avatarBusy }
+            assertTrue(fixture.calls().contains("DELETE /api/v1/me/avatar"))
         }
 
     private fun profileSetup(blocking: String = "[]"): Triple<ProfileViewModel, GroupsFixture, FakeTokenStorage> {

@@ -407,6 +407,39 @@ class ReviewsViewModelsTest {
         }
 
     @Test
+    fun `выбранное фото загружается после создания рекомендации`() =
+        runTest(dispatcher) {
+            val fixture =
+                GroupsFixture { r ->
+                    when {
+                        r.method == HttpMethod.Post -> json(details("new"), HttpStatusCode.Created)
+                        r.method == HttpMethod.Put -> json(details("new"))
+                        r.url.encodedPath.endsWith("/categories") -> json(CATEGORIES)
+                        else -> json("[${groupJson("g1", role = ADMIN_ROLE)}]")
+                    }
+                }
+            val vm = ReviewFormViewModel(null, "g1", fixture.reviews, fixture.api, fixture.categories)
+            vm.state.first { !it.loading }
+            vm.setTitle("Дюна")
+            vm.setRating(9)
+            vm.setCategory("c1")
+            vm.pickPhoto(byteArrayOf(1, 2, 3))
+            var saved: String? = null
+            val job = launchCollect(vm) { saved = it }
+            vm.save()
+            awaitUntil { saved != null }
+            job.cancel()
+            assertEquals(
+                listOf("POST /api/v1/reviews", "PUT /api/v1/reviews/new/photo"),
+                fixture.calls().filter {
+                    !it.startsWith("GET")
+                },
+            )
+            val upload = fixture.snapshot().single { it.method == HttpMethod.Put }
+            assertEquals("image/jpeg", upload.body.contentType.toString())
+        }
+
+    @Test
     fun `правка загружает рекомендацию и сохраняет полем и набором публикаций`() =
         runTest(dispatcher) {
             val fixture =

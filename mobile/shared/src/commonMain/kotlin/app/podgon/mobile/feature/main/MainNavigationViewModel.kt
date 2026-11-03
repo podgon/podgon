@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import app.podgon.mobile.core.error.AppError
 import app.podgon.mobile.core.error.appError
+import app.podgon.mobile.core.media.MyProfile
 import app.podgon.mobile.core.network.MeApi
 import app.podgon.mobile.designsystem.MainTab
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -36,6 +37,7 @@ data class MainNavState(
  */
 class MainNavigationViewModel(
     private val me: MeApi,
+    private val myProfile: MyProfile = MyProfile(),
 ) : ViewModel() {
     private val _state = MutableStateFlow(MainNavState())
     val state: StateFlow<MainNavState> = _state.asStateFlow()
@@ -50,6 +52,7 @@ class MainNavigationViewModel(
     fun loadProfile() {
         viewModelScope.launch {
             val result = me.me()
+            myProfile.set(result.getOrNull())
             _state.update {
                 val profile = result.getOrNull()
                 it.copy(

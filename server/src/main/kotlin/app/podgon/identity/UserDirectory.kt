@@ -11,6 +11,7 @@ data class UserSummary(
     val locale: String,
     /** Заблокированный пользователь не может вступать в группы. */
     val blocked: Boolean,
+    val avatarId: UUID? = null,
 )
 
 /**

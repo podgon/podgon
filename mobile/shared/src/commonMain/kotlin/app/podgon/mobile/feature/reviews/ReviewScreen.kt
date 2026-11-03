@@ -35,11 +35,14 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import app.podgon.mobile.core.media.avatarUrl
+import app.podgon.mobile.core.media.photoUrl
 import app.podgon.mobile.core.share.rememberTextSharer
 import app.podgon.mobile.core.share.reviewShareText
 import app.podgon.mobile.designsystem.Avatar
@@ -72,6 +75,7 @@ import app.podgon.mobile.resources.review_report
 import app.podgon.mobile.resources.review_share
 import app.podgon.mobile.resources.review_share_footer
 import app.podgon.mobile.resources.review_you
+import coil3.compose.AsyncImage
 import org.jetbrains.compose.resources.stringResource
 
 /**
@@ -97,20 +101,35 @@ fun ReviewScreen(
     var showPath by remember { mutableStateOf(false) }
     var details by remember { mutableStateOf(false) }
     Column(Modifier.fillMaxSize().background(c.background).verticalScroll(rememberScrollState())) {
-        Row(Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 10.dp)) {
-            PodgonIconButton(PodgonIcons.Back, stringResource(Res.string.a11y_back), onBack, outlined = true)
-            Spacer(Modifier.weight(1f))
-            if (state.review !=
-                null
-            ) {
-                PodgonIconButton(
-                    PodgonIcons.More,
-                    stringResource(Res.string.review_more),
-                    { menu = true },
-                    outlined = true,
+        // фото — сверху во всю ширину, кнопки шапки поверх него (без фото — над заголовком)
+        val photo = state.review?.let { photoUrl(it.id, it.photoId) }
+        Box(Modifier.fillMaxWidth()) {
+            if (photo != null) {
+                AsyncImage(
+                    photo,
+                    null,
+                    Modifier
+                        .fillMaxWidth()
+                        .height(225.dp)
+                        .clip(RoundedCornerShape(bottomStart = 28.dp, bottomEnd = 28.dp))
+                        .background(c.chip),
+                    contentScale = ContentScale.Crop,
                 )
             }
+            Row(Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 10.dp)) {
+                PodgonIconButton(PodgonIcons.Back, stringResource(Res.string.a11y_back), onBack, outlined = true)
+                Spacer(Modifier.weight(1f))
+                if (state.review != null) {
+                    PodgonIconButton(
+                        PodgonIcons.More,
+                        stringResource(Res.string.review_more),
+                        { menu = true },
+                        outlined = true,
+                    )
+                }
+            }
         }
+        if (photo != null) Spacer(Modifier.height(14.dp))
         if (state.loading && state.review == null) CircularProgressIndicator(Modifier.padding(20.dp))
         state.error?.let { RetryError(it, viewModel::load) }
         if (state.offline) {
@@ -233,7 +252,7 @@ fun ReviewScreen(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(10.dp),
             ) {
-                Avatar(30.dp)
+                Avatar(30.dp, url = avatarUrl(review.author.id, review.author.avatarId))
                 Text(name, style = MaterialTheme.typography.titleSmall, color = c.ink, modifier = Modifier.weight(1f))
                 Text(
                     shortDate(

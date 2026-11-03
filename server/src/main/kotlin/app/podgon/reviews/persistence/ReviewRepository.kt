@@ -16,6 +16,7 @@ data class ReviewRow(
     val categoryId: UUID,
     val createdAt: Instant,
     val updatedAt: Instant,
+    val photoId: UUID? = null,
 )
 
 /** Публикация в группе; [kind] — тип группы (`REGULAR`, `PERSONAL`, `FAVORITES`). */
@@ -66,7 +67,7 @@ class ReviewRepository(
     private val jdbc: JdbcClient,
 ) {
     private val reviewColumns =
-        "r.id, r.author_id, r.title, r.description, r.rating, r.category_id, r.created_at, r.updated_at"
+        "r.id, r.author_id, r.title, r.description, r.rating, r.category_id, r.created_at, r.updated_at, r.photo_id"
 
     private fun review(rs: ResultSet) =
         ReviewRow(
@@ -78,6 +79,7 @@ class ReviewRepository(
             categoryId = rs.getObject("category_id", UUID::class.java),
             createdAt = rs.getTimestamp("created_at").toInstant(),
             updatedAt = rs.getTimestamp("updated_at").toInstant(),
+            photoId = rs.getObject("photo_id", UUID::class.java),
         )
 
     fun insert(row: ReviewRow) {
@@ -132,6 +134,32 @@ class ReviewRepository(
     fun delete(id: UUID) {
         jdbc.sql("delete from reviews where id = :id").param("id", id).update()
     }
+
+    /** Новое фото ([photoId] `null` — убрать). */
+    fun setPhoto(
+        id: UUID,
+        photoId: UUID?,
+        now: Instant,
+    ) {
+        jdbc
+            .sql("update reviews set photo_id = :photo, updated_at = :now where id = :id")
+            .param("id", id)
+            .param("photo", photoId)
+            .param("now", now.toSql())
+            .update()
+    }
+
+    /** Фото, на которые есть ссылки (из [ids]). */
+    fun usedPhotos(ids: Collection<UUID>): Set<UUID> =
+        if (ids.isEmpty()) {
+            emptySet()
+        } else {
+            jdbc
+                .sql("select photo_id from reviews where photo_id in (:ids)")
+                .param("ids", ids)
+                .query { rs, _ -> rs.getObject("photo_id", UUID::class.java) }
+                .set()
+        }
 
     fun countByAuthor(authorId: UUID): Int =
         jdbc

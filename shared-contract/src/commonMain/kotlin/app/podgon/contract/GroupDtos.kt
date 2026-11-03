@@ -45,6 +45,7 @@ data class MemberInfo(
     val role: RoleInfo,
     /** Момент вступления, ISO-8601 в UTC. */
     val joinedAt: String,
+    val avatarId: String? = null,
 )
 
 @Serializable

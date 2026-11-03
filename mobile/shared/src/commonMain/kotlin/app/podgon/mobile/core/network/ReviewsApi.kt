@@ -18,6 +18,8 @@ import io.ktor.client.request.patch
 import io.ktor.client.request.post
 import io.ktor.client.request.put
 import io.ktor.client.request.setBody
+import io.ktor.http.ContentType
+import io.ktor.http.content.ByteArrayContent
 
 /** Рекомендации, публикации и ленты (`api/openapi.yaml`, тег reviews; клиент с авторизацией). */
 class ReviewsApi(
@@ -46,6 +48,22 @@ class ReviewsApi(
         apiCall {
             client.delete("api/v1/reviews/$reviewId").bodyOrThrow<Unit>()
         }
+
+    /** Фото рекомендации (автор): тело — JPEG (клиент уже уменьшил картинку). */
+    suspend fun uploadPhoto(
+        reviewId: String,
+        jpeg: ByteArray,
+    ): Result<ReviewDetails> =
+        apiCall {
+            client
+                .put(
+                    "api/v1/reviews/$reviewId/photo",
+                ) { setBody(ByteArrayContent(jpeg, ContentType.Image.JPEG)) }
+                .bodyOrThrow()
+        }
+
+    suspend fun removePhoto(reviewId: String): Result<ReviewDetails> =
+        apiCall { client.delete("api/v1/reviews/$reviewId/photo").bodyOrThrow() }
 
     /** Добавить в «Избранное» или убрать из него; повтор ничего не меняет. */
     suspend fun setFavorite(

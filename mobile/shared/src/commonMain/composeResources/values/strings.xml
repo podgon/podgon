@@ -275,7 +275,7 @@
     <string name="form_lock_open">Visible in groups</string>
     <string name="form_add_groups">Choose groups</string>
     <string name="form_done">Done</string>
-    <string name="form_photo">Add photo · coming soon</string>
+    <string name="form_photo">Add photo</string>
     <string name="form_missing">Missing: %1$s</string>
     <string name="form_close_lock_title">Make the review personal?</string>
     <string name="form_close_lock_text">It will disappear from these groups and other members won’t see it:</string>
@@ -329,4 +329,9 @@
     <string name="invite_by_email">For %1$s</string>
     <string name="invite_created_by">by @%1$s</string>
     <string name="invite_none">No invitations yet</string>
+    <string name="form_photo_replace">Replace photo</string>
+    <string name="form_photo_remove">Remove photo</string>
+    <string name="profile_avatar_change">Profile photo</string>
+    <string name="profile_avatar_pick">Choose photo</string>
+    <string name="profile_avatar_remove">Remove photo</string>
 </resources>

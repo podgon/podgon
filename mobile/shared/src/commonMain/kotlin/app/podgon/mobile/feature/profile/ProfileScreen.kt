@@ -23,6 +23,9 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -32,12 +35,16 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.podgon.mobile.core.error.message
+import app.podgon.mobile.core.media.avatarUrl
+import app.podgon.mobile.core.media.rememberImagePicker
 import app.podgon.mobile.designsystem.Avatar
 import app.podgon.mobile.designsystem.BottomBarSpace
 import app.podgon.mobile.designsystem.Divider
+import app.podgon.mobile.designsystem.PodgonBottomSheet
 import app.podgon.mobile.designsystem.PodgonIconButton
 import app.podgon.mobile.designsystem.PodgonIcons
 import app.podgon.mobile.designsystem.PodgonShapes
+import app.podgon.mobile.designsystem.SheetAction
 import app.podgon.mobile.designsystem.podgonColors
 import app.podgon.mobile.designsystem.podgonElevation
 import app.podgon.mobile.resources.Res
@@ -46,6 +53,9 @@ import app.podgon.mobile.resources.action_delete_account
 import app.podgon.mobile.resources.action_logout
 import app.podgon.mobile.resources.action_revoke
 import app.podgon.mobile.resources.my_reviews
+import app.podgon.mobile.resources.profile_avatar_change
+import app.podgon.mobile.resources.profile_avatar_pick
+import app.podgon.mobile.resources.profile_avatar_remove
 import app.podgon.mobile.resources.profile_devices
 import app.podgon.mobile.resources.session_current
 import app.podgon.mobile.resources.session_unknown_device
@@ -61,6 +71,23 @@ fun ProfileScreen(
     val state by viewModel.state.collectAsStateWithLifecycle()
     val c = podgonColors
     state.deletion?.let { DeleteAccountDialog(it, viewModel) }
+    var avatarMenu by remember { mutableStateOf(false) }
+    val pickAvatar = rememberImagePicker(maxSide = AVATAR_SOURCE_SIDE) { viewModel.setAvatar(it) }
+    if (avatarMenu) {
+        PodgonBottomSheet(
+            title = stringResource(Res.string.profile_avatar_change),
+            onDismiss = { avatarMenu = false },
+            actions =
+                listOfNotNull(
+                    SheetAction(PodgonIcons.Edit, stringResource(Res.string.profile_avatar_pick), pickAvatar),
+                    state.profile?.avatarId?.let {
+                        SheetAction(PodgonIcons.Close, stringResource(Res.string.profile_avatar_remove)) {
+                            viewModel.setAvatar(null)
+                        }
+                    },
+                ),
+        )
+    }
     Column(
         Modifier
             .fillMaxSize()
@@ -78,7 +105,19 @@ fun ProfileScreen(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(4.dp),
             ) {
-                Avatar(84.dp)
+                // нажатие на аватар — выбрать фото или убрать своё
+                Box(
+                    Modifier
+                        .clip(CircleShape)
+                        .combinedClickable(
+                            role = Role.Button,
+                            onClickLabel = stringResource(Res.string.profile_avatar_change),
+                        ) { avatarMenu = true },
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Avatar(84.dp, url = avatarUrl(profile.id, profile.avatarId))
+                    if (state.avatarBusy) CircularProgressIndicator(Modifier.size(32.dp))
+                }
                 Text(
                     profile.displayName.ifBlank { profile.username },
                     style = MaterialTheme.typography.headlineSmall,
@@ -178,3 +217,6 @@ private fun Card(content: @Composable () -> Unit) {
         content()
     }
 }
+
+/** Аватар на сервере — квадрат 256 px; больше передавать незачем. */
+private const val AVATAR_SOURCE_SIDE = 1024

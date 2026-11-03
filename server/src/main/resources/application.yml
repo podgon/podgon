@@ -36,6 +36,9 @@ podgon:
       ios: ${PODGON_CLIENT_MINVERSION_IOS:0}
   mail:
     from: ${PODGON_MAIL_FROM:Podgon <no-reply@podgon.local>}
+  media:
+    # Каталог фото и аватаров (этап 8.3.4); в контейнере — отдельный том
+    dir: ${PODGON_MEDIA_DIR:./data/media}
   auth:
     # Секреты обязательны и задаются только через окружение (в репозитории значений нет)
     code-hmac-secret: ${PODGON_CODE_HMAC_SECRET:}

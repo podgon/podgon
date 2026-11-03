@@ -14,3 +14,7 @@ Dockerfile, docker-compose (backend + PostgreSQL + Mailpit), конфигура�
 
 ## Версии клиента (R1)
 - `PODGON_CLIENT_MINVERSION_ANDROID`, `PODGON_CLIENT_MINVERSION_IOS` — минимальный номер сборки; более старые получают 426 и экран обновления. По умолчанию 0 (без ограничения).
+
+## Фото и аватары (этап 8.3.4)
+Файлы хранятся в каталоге `PODGON_MEDIA_DIR` (в образе — `/var/lib/podgon/media`, в `docker-compose` — том `media`).
+Том нужно включать в резервные копии вместе с БД; файлы без ссылок сервер удаляет сам раз в сутки.

@@ -17,7 +17,10 @@ import io.ktor.client.request.delete
 import io.ktor.client.request.get
 import io.ktor.client.request.patch
 import io.ktor.client.request.post
+import io.ktor.client.request.put
 import io.ktor.client.request.setBody
+import io.ktor.http.ContentType
+import io.ktor.http.content.ByteArrayContent
 
 /** Публичные операции входа (`api/openapi.yaml`, тег auth). Возвращают `Result` с [app.podgon.mobile.core.error.AppException]. */
 class AuthApi(
@@ -69,6 +72,18 @@ class MeApi(
 
     suspend fun update(request: UpdateProfileRequest): Result<UserProfile> =
         apiCall { client.patch("api/v1/me") { setBody(request) }.bodyOrThrow() }
+
+    /** Свой аватар: тело — JPEG (клиент уже уменьшил картинку). */
+    suspend fun uploadAvatar(jpeg: ByteArray): Result<UserProfile> =
+        apiCall {
+            client
+                .put(
+                    "api/v1/me/avatar",
+                ) { setBody(ByteArrayContent(jpeg, ContentType.Image.JPEG)) }
+                .bodyOrThrow()
+        }
+
+    suspend fun removeAvatar(): Result<UserProfile> = apiCall { client.delete("api/v1/me/avatar").bodyOrThrow() }
 
     suspend fun sessions(): Result<List<SessionInfo>> = apiCall { client.get("api/v1/me/sessions").bodyOrThrow() }
 

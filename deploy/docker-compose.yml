@@ -49,8 +49,11 @@ services:
       PODGON_CAPTCHA_MODE: disabled
       PODGON_CODE_HMAC_SECRET: ${PODGON_CODE_HMAC_SECRET:-dev-only-code-hmac-secret-change-me-0123456789}
       PODGON_AUTH_JWTKEYS_K1: ${PODGON_AUTH_JWTKEYS_K1:-ZGV2LW9ubHktand0LWtleS1jaGFuZ2UtbWUtMDEyMzQ1Njc4OWFiY2RlZg==}
+    volumes:
+      - media:/var/lib/podgon/media
     ports:
       - "127.0.0.1:8080:8080"
 
 volumes:
   pgdata:
+  media:

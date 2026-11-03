@@ -8,6 +8,7 @@ import app.podgon.contract.UserProfile
 import app.podgon.contract.Validation
 import app.podgon.mobile.core.error.AppError
 import app.podgon.mobile.core.error.appError
+import app.podgon.mobile.core.media.MyProfile
 import app.podgon.mobile.core.network.MeApi
 import app.podgon.mobile.feature.auth.data.AuthRepository
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -37,11 +38,14 @@ data class ProfileState(
     val error: AppError? = null,
     /** `null` — диалог удаления закрыт. */
     val deletion: DeletionState? = null,
+    /** Идёт загрузка аватара. */
+    val avatarBusy: Boolean = false,
 )
 
 class ProfileViewModel(
     private val me: MeApi,
     private val auth: AuthRepository,
+    private val myProfile: MyProfile = MyProfile(),
 ) : ViewModel() {
     private val _state = MutableStateFlow(ProfileState())
     val state: StateFlow<ProfileState> = _state.asStateFlow()
@@ -62,6 +66,18 @@ class ProfileViewModel(
                     sessions = sessions.getOrNull() ?: it.sessions,
                     error = profile.appError() ?: sessions.appError(),
                 )
+            }
+        }
+    }
+
+    /** Новый аватар (JPEG из галереи) или [jpeg] `null` — убрать свой; верхняя строка обновляется сразу. */
+    fun setAvatar(jpeg: ByteArray?) {
+        _state.update { it.copy(avatarBusy = true, error = null) }
+        viewModelScope.launch {
+            val result = if (jpeg == null) me.removeAvatar() else me.uploadAvatar(jpeg)
+            myProfile.set(result.getOrNull())
+            _state.update {
+                it.copy(avatarBusy = false, profile = result.getOrNull() ?: it.profile, error = result.appError())
             }
         }
     }

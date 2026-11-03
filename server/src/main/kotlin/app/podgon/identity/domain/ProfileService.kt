@@ -79,6 +79,7 @@ class ProfileService(
             locale = locale,
             personalGroupId = system.personal.toString(),
             favoritesGroupId = system.favorites.toString(),
+            avatarId = avatarId?.toString(),
         )
     }
 

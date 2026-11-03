@@ -19,6 +19,9 @@ import app.podgon.contract.Validation
 import app.podgon.groups.GroupAccess
 import app.podgon.identity.SystemGroupIds
 import app.podgon.identity.UserDirectory
+import app.podgon.media.Images
+import app.podgon.media.MediaKeys
+import app.podgon.media.MediaStorage
 import app.podgon.reviews.ReviewsProperties
 import app.podgon.reviews.persistence.CardRow
 import app.podgon.reviews.persistence.Position
@@ -63,6 +66,8 @@ class ReviewService(
     private val props: ReviewsProperties,
     private val clock: Clock,
     private val tx: TransactionTemplate,
+    private val storage: MediaStorage,
+    private val images: Images,
 ) {
     fun create(
         userId: UUID,
@@ -141,10 +146,12 @@ class ReviewService(
         userId: UUID,
         reviewId: UUID,
     ) {
+        var photoId: UUID? = null
         inTransaction {
-            requireAuthor(userId, reviewId)
+            photoId = requireAuthor(userId, reviewId).photoId
             reviews.delete(reviewId)
         }
+        photoId?.let { storage.delete(MediaKeys.photo(it.toString())) }
     }
 
     /** Лента одной группы с фильтрами (`GET /groups/{id}/reviews`). */
@@ -197,6 +204,45 @@ class ReviewService(
             throw validationFailed(listOf(FieldError("prefix", FieldErrorReason.TOO_LONG)))
         }
         return reviews.tags(groups, normalized, TAGS_LIMIT).map { TagCount(it.name, it.count) }
+    }
+
+    /**
+     * Фото рекомендации (автор): уменьшенный JPEG без метаданных. Файл пишется до ссылки в БД, прежний удаляется
+     * после; файлы без ссылок (удалённые рекомендации) убирает ночная чистка [PhotoCleanup].
+     */
+    fun setPhoto(
+        userId: UUID,
+        reviewId: UUID,
+        raw: ByteArray,
+    ): ReviewDetails {
+        val current = requireAuthor(userId, reviewId)
+        val photo = images.photo(raw)
+        val id = UUID.randomUUID()
+        storage.put(MediaKeys.photo(id.toString()), photo)
+        reviews.setPhoto(reviewId, id, now())
+        current.photoId?.let { storage.delete(MediaKeys.photo(it.toString())) }
+        return details(userId, reviewId)
+    }
+
+    fun removePhoto(
+        userId: UUID,
+        reviewId: UUID,
+    ): ReviewDetails {
+        val current = requireAuthor(userId, reviewId)
+        reviews.setPhoto(reviewId, null, now())
+        current.photoId?.let { storage.delete(MediaKeys.photo(it.toString())) }
+        return details(userId, reviewId)
+    }
+
+    /** Фото видимой мне рекомендации; невидимая или без фото — 404. */
+    fun photo(
+        userId: UUID,
+        reviewId: UUID,
+    ): ByteArray {
+        val row = reviews.find(reviewId) ?: throw notFound()
+        visibleTo(userId, reviewId, row)
+        val photoId = row.photoId ?: throw notFound()
+        return storage.get(MediaKeys.photo(photoId.toString())) ?: throw notFound()
     }
 
     /**
@@ -301,13 +347,16 @@ class ReviewService(
                     )
                 },
             favorite = reviews.publishedIn(system(userId).favorites, listOf(reviewId)).isNotEmpty(),
+            photoId = row.photoId?.toString(),
         )
     }
 
     private fun author(id: UUID): ReviewAuthor = authors(listOf(id)).getValue(id)
 
     private fun authors(ids: Collection<UUID>): Map<UUID, ReviewAuthor> =
-        users.findAll(ids).mapValues { (_, u) -> ReviewAuthor(u.id.toString(), u.username, u.displayName) }
+        users.findAll(ids).mapValues { (_, u) ->
+            ReviewAuthor(u.id.toString(), u.username, u.displayName, u.avatarId?.toString())
+        }
 
     private fun system(userId: UUID): SystemGroupIds = filters.system(userId)
 
@@ -406,6 +455,7 @@ class ReviewService(
                     sharedAt = r.sharedAt.toString(),
                     groupIds = r.groupIds.map(UUID::toString),
                     favorite = r.review.id in favorites,
+                    photoId = r.review.photoId?.toString(),
                 )
             }
         val next = if (rows.size > size) cursorOf(pageRows.last()) else null

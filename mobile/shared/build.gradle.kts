@@ -53,10 +53,13 @@ kotlin {
             implementation(libs.androidx.lifecycle.runtime.compose)
             implementation(libs.androidx.lifecycle.viewmodel.compose)
             implementation(libs.androidx.navigation.compose)
+            implementation(libs.coil.compose)
+            implementation(libs.coil.network.ktor3)
         }
         androidMain.dependencies {
             implementation(libs.ktor.client.okhttp)
             implementation(libs.koin.android)
+            implementation(libs.androidx.activity.compose)
         }
         iosMain.dependencies {
             implementation(libs.ktor.client.darwin)

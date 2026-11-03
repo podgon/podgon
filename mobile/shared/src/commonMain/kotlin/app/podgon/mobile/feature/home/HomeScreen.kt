@@ -43,6 +43,8 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.podgon.contract.FeedSectionKind
 import app.podgon.contract.GroupSummary
 import app.podgon.contract.ReviewCard
+import app.podgon.mobile.core.media.MyProfile
+import app.podgon.mobile.core.media.avatarUrl
 import app.podgon.mobile.designsystem.Avatar
 import app.podgon.mobile.designsystem.BottomBarSpace
 import app.podgon.mobile.designsystem.EmptyAction
@@ -111,6 +113,7 @@ import app.podgon.mobile.resources.personal_empty_text
 import app.podgon.mobile.resources.personal_empty_title
 import app.podgon.mobile.resources.tab_all
 import org.jetbrains.compose.resources.stringResource
+import org.koin.compose.koinInject
 import org.koin.compose.viewmodel.koinViewModel
 import org.koin.core.parameter.parametersOf
 
@@ -147,7 +150,13 @@ fun HomeScreen(
     LaunchedEffect(state.tab) { actions.onTabChanged(state.tab) }
 
     Column(Modifier.fillMaxSize().background(c.background)) {
-        PodgonTopBar(offline = state.offline, onNotifications = {}, onProfile = actions.openProfile)
+        val me by koinInject<MyProfile>().profile.collectAsStateWithLifecycle()
+        PodgonTopBar(
+            offline = state.offline,
+            onNotifications = {},
+            onProfile = actions.openProfile,
+            avatarUrl = me?.let { avatarUrl(it.id, it.avatarId) },
+        )
         SearchRow(
             query = query,
             onQueryChange = {

@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
@@ -59,6 +60,7 @@ import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
@@ -99,6 +101,7 @@ import app.podgon.mobile.resources.nav_personal
 import app.podgon.mobile.resources.nav_settings
 import app.podgon.mobile.resources.offline_hint
 import app.podgon.mobile.resources.rating_value
+import coil3.compose.AsyncImage
 import org.jetbrains.compose.resources.stringResource
 
 /** Мягкая тень капсул и карточек: только в светлой теме, в тёмной — линия (`docs/design.md`). */
@@ -193,15 +196,19 @@ fun PodgonLogo(size: Dp = 34.dp) {
     }
 }
 
-/** Аватар по умолчанию (свой аватар — backlog). */
+/** Аватар: картинка по [url] (этап 8.3.4), иначе буква [letter] или значок по умолчанию. */
 @Composable
 fun Avatar(
     size: Dp = 44.dp,
     letter: String? = null,
+    url: String? = null,
 ) {
     val c = podgonColors
     Box(Modifier.size(size).clip(CircleShape).background(c.chip), contentAlignment = Alignment.Center) {
-        if (letter != null) {
+        if (url != null) {
+            // до загрузки и при ошибке виден фон-заглушка
+            AsyncImage(url, null, Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
+        } else if (letter != null) {
             Text(
                 letter.take(1).uppercase(),
                 color = c.ink,
@@ -228,6 +235,7 @@ fun PodgonTopBar(
     offline: Boolean,
     onNotifications: () -> Unit,
     onProfile: () -> Unit,
+    avatarUrl: String? = null,
     modifier: Modifier = Modifier,
 ) {
     val c = podgonColors
@@ -265,7 +273,7 @@ fun PodgonTopBar(
                 .semantics { contentDescription = profile },
             contentAlignment = Alignment.Center,
         ) {
-            Avatar()
+            Avatar(url = avatarUrl)
         }
     }
 }

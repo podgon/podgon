@@ -43,6 +43,7 @@ import app.podgon.contract.MemberInfo
 import app.podgon.contract.RoleInfo
 import app.podgon.mobile.core.error.AppError
 import app.podgon.mobile.core.error.message
+import app.podgon.mobile.core.media.avatarUrl
 import app.podgon.mobile.designsystem.Avatar
 import app.podgon.mobile.designsystem.BottomBarSpace
 import app.podgon.mobile.designsystem.Divider
@@ -384,7 +385,7 @@ fun GroupScreen(
             title = member.displayName.ifBlank { member.username },
             subtitle = "@${member.username} · ${member.role.displayTitle()}",
             onDismiss = { roleFor = null },
-            leading = { Avatar(38.dp) },
+            leading = { Avatar(38.dp, url = avatarUrl(member.userId, member.avatarId)) },
             actions =
                 state.roles.filter { it.id != member.role.id }.map { role ->
                     SheetAction(PodgonIcons.Group, role.displayTitle()) { viewModel.setRole(member.userId, role.id) }
@@ -452,7 +453,7 @@ private fun MemberRow(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        Avatar(36.dp)
+        Avatar(36.dp, url = avatarUrl(member.userId, member.avatarId))
         Column(Modifier.weight(1f)) {
             Text(name, style = MaterialTheme.typography.titleSmall, color = c.ink)
             Text("@${member.username}", fontSize = 13.sp, color = c.muted)

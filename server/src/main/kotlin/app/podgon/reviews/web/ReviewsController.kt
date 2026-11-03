@@ -9,9 +9,13 @@ import app.podgon.contract.SetPublicationsRequest
 import app.podgon.contract.TagCount
 import app.podgon.contract.UpdateReviewRequest
 import app.podgon.identity.AuthenticatedUser
+import app.podgon.media.Images
+import app.podgon.media.imageResponse
 import app.podgon.reviews.domain.ReviewService
 import app.podgon.reviews.domain.SearchParams
+import jakarta.servlet.http.HttpServletRequest
 import org.springframework.http.HttpStatus
+import org.springframework.http.ResponseEntity
 import org.springframework.security.core.annotation.AuthenticationPrincipal
 import org.springframework.web.bind.annotation.DeleteMapping
 import org.springframework.web.bind.annotation.GetMapping
@@ -31,6 +35,7 @@ import java.util.UUID
 @RequestMapping("/api/v1")
 class ReviewsController(
     private val reviews: ReviewService,
+    private val images: Images,
 ) {
     @PostMapping("/reviews")
     @ResponseStatus(HttpStatus.CREATED)
@@ -58,6 +63,25 @@ class ReviewsController(
         @PathVariable reviewId: String,
         @RequestBody body: SetPublicationsRequest,
     ): ReviewDetails = reviews.setPublications(user.userId, reviewId.uuid(), body)
+
+    @PutMapping("/reviews/{reviewId}/photo", consumes = ["image/jpeg", "image/png"])
+    fun setPhoto(
+        @AuthenticationPrincipal user: AuthenticatedUser,
+        @PathVariable reviewId: String,
+        request: HttpServletRequest,
+    ): ReviewDetails = reviews.setPhoto(user.userId, reviewId.uuid(), images.read(request))
+
+    @DeleteMapping("/reviews/{reviewId}/photo")
+    fun removePhoto(
+        @AuthenticationPrincipal user: AuthenticatedUser,
+        @PathVariable reviewId: String,
+    ): ReviewDetails = reviews.removePhoto(user.userId, reviewId.uuid())
+
+    @GetMapping("/reviews/{reviewId}/photo", produces = ["image/jpeg"])
+    fun photo(
+        @AuthenticationPrincipal user: AuthenticatedUser,
+        @PathVariable reviewId: String,
+    ): ResponseEntity<ByteArray> = imageResponse(reviews.photo(user.userId, reviewId.uuid()))
 
     @PutMapping("/me/favorites/{reviewId}")
     @ResponseStatus(HttpStatus.NO_CONTENT)

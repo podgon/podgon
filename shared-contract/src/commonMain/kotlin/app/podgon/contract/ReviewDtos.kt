@@ -7,6 +7,8 @@ data class ReviewAuthor(
     val id: String,
     val username: String,
     val displayName: String,
+    /** Аватар (`GET /users/{id}/avatar?v=<avatarId>`); `null` — аватар по умолчанию. */
+    val avatarId: String? = null,
 )
 
 /** Публикация рекомендации в обычной группе. */
@@ -38,6 +40,8 @@ data class ReviewDetails(
     val publications: List<PublicationInfo>,
     /** Рекомендация в моём «Избранном». */
     val favorite: Boolean = false,
+    /** Фото (`GET /reviews/{id}/photo?v=<photoId>`); `null` — без фото. */
+    val photoId: String? = null,
 )
 
 /**
@@ -92,6 +96,7 @@ data class ReviewCard(
     val groupIds: List<String>,
     /** Рекомендация в моём «Избранном» (сердечко в строке). */
     val favorite: Boolean = false,
+    val photoId: String? = null,
 )
 
 /** Страница списка; [nextCursor] — `null`, если страница последняя. */

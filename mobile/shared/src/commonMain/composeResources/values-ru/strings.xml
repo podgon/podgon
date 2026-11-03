@@ -275,7 +275,7 @@
     <string name="form_lock_open">Видна в группах</string>
     <string name="form_add_groups">Выбрать группы</string>
     <string name="form_done">Готово</string>
-    <string name="form_photo">Добавить фото · скоро</string>
+    <string name="form_photo">Добавить фото</string>
     <string name="form_missing">Не заполнено: %1$s</string>
     <string name="form_close_lock_title">Сделать рекомендацию личной?</string>
     <string name="form_close_lock_text">Она пропадёт из групп, и другие участники перестанут её видеть:</string>
@@ -329,4 +329,9 @@
     <string name="invite_by_email">Для %1$s</string>
     <string name="invite_created_by">создал @%1$s</string>
     <string name="invite_none">Действующих приглашений нет</string>
+    <string name="form_photo_replace">Заменить фото</string>
+    <string name="form_photo_remove">Убрать фото</string>
+    <string name="profile_avatar_change">Фото профиля</string>
+    <string name="profile_avatar_pick">Выбрать фото</string>
+    <string name="profile_avatar_remove">Убрать фото</string>
 </resources>

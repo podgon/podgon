@@ -1,5 +1,7 @@
 # Профиль интеграционных тестов: секреты только тестовые, CAPTCHA выключена, фоновая отправка писем выключена
 podgon:
+  media:
+    dir: build/test-media
   mail:
     poll-enabled: false
     retry-backoff: 30s

@@ -11,11 +11,14 @@ RUN --mount=type=cache,target=/root/.gradle \
     for i in 1 2 3 4 5 6; do ./gradlew --no-daemon :server:bootJar -x test -PserverOnly && exit 0; echo "Попытка $i не удалась, повтор"; sleep 5; done; exit 1
 
 FROM eclipse-temurin:25-jre
-RUN useradd --system --uid 10001 --no-create-home podgon
+RUN useradd --system --uid 10001 --no-create-home podgon \
+    && mkdir -p /var/lib/podgon/media && chown 10001 /var/lib/podgon/media
 WORKDIR /app
 COPY --from=build /workspace/server/build/libs/*.jar app.jar
 USER 10001
 ENV JAVA_TOOL_OPTIONS="-Dfile.encoding=UTF-8 -XX:MaxRAMPercentage=75"
+# Фото и аватары (этап 8.3.4): каталог монтируется отдельным томом
+ENV PODGON_MEDIA_DIR=/var/lib/podgon/media
 EXPOSE 8080
 # Проверки живости/готовности выполняет оркестратор через /actuator/health/liveness и /readiness
 ENTRYPOINT ["java", "-jar", "app.jar"]

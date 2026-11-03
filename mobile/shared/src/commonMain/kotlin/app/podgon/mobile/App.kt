@@ -27,6 +27,10 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.toRoute
 import app.podgon.mobile.core.auth.AuthState
 import app.podgon.mobile.core.auth.SessionManager
+import app.podgon.mobile.core.media.LocalMediaUrls
+import app.podgon.mobile.core.media.MediaUrls
+import app.podgon.mobile.core.media.MyProfile
+import app.podgon.mobile.core.media.avatarUrl
 import app.podgon.mobile.core.network.ApiConfig
 import app.podgon.mobile.core.network.UpdateGate
 import app.podgon.mobile.core.network.UpdateRequiredScreen
@@ -37,6 +41,7 @@ import app.podgon.mobile.designsystem.MainTab
 import app.podgon.mobile.designsystem.PodgonBottomBar
 import app.podgon.mobile.designsystem.PodgonTheme
 import app.podgon.mobile.designsystem.PodgonTopBar
+import app.podgon.mobile.di.AUTHORIZED_CLIENT
 import app.podgon.mobile.feature.auth.ui.CodeScreen
 import app.podgon.mobile.feature.auth.ui.EmailScreen
 import app.podgon.mobile.feature.auth.ui.RegisterScreen
@@ -56,6 +61,11 @@ import app.podgon.mobile.feature.reviews.MyReviewsScreen
 import app.podgon.mobile.feature.reviews.ReviewFormScreen
 import app.podgon.mobile.feature.reviews.ReviewScreen
 import app.podgon.mobile.feature.settings.SettingsScreen
+import coil3.ImageLoader
+import coil3.compose.setSingletonImageLoaderFactory
+import coil3.network.ktor3.KtorNetworkFetcherFactory
+import coil3.request.crossfade
+import io.ktor.client.HttpClient
 import kotlinx.serialization.Serializable
 import org.koin.compose.koinInject
 import org.koin.compose.viewmodel.koinViewModel
@@ -121,14 +131,25 @@ fun App() {
         theme.load()
         session.restore()
     }
+    val client = koinInject<HttpClient>(AUTHORIZED_CLIENT)
+    setSingletonImageLoaderFactory { context ->
+        // картинки — через клиент с авторизацией: фото и аватары доступны только вошедшим
+        ImageLoader
+            .Builder(context)
+            .components { add(KtorNetworkFetcherFactory(httpClient = { client })) }
+            .crossfade(true)
+            .build()
+    }
     LocalizedContent(language.code) {
-        PodgonTheme(mode) {
-            when {
-                updateRequired -> UpdateRequiredScreen(koinInject<ApiConfig>().updateUrl)
-                state == AuthState.Loading ->
-                    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
-                state == AuthState.SignedOut -> SignedOutNavigation()
-                else -> SignedInNavigation()
+        CompositionLocalProvider(LocalMediaUrls provides koinInject<MediaUrls>()) {
+            PodgonTheme(mode) {
+                when {
+                    updateRequired -> UpdateRequiredScreen(koinInject<ApiConfig>().updateUrl)
+                    state == AuthState.Loading ->
+                        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
+                    state == AuthState.SignedOut -> SignedOutNavigation()
+                    else -> SignedInNavigation()
+                }
             }
         }
     }
@@ -247,7 +268,13 @@ private fun TabHost(
     openForm: (String?, String?) -> Unit,
 ) {
     val header: @Composable () -> Unit = {
-        PodgonTopBar(offline = false, onNotifications = {}, onProfile = { nav.navigate(ProfileRoute) })
+        val me by koinInject<MyProfile>().profile.collectAsStateWithLifecycle()
+        PodgonTopBar(
+            offline = false,
+            onNotifications = {},
+            onProfile = { nav.navigate(ProfileRoute) },
+            avatarUrl = me?.let { avatarUrl(it.id, it.avatarId) },
+        )
     }
     val start: Any =
         when (tab) {

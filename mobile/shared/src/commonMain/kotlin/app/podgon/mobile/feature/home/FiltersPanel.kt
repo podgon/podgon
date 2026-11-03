@@ -55,6 +55,7 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.podgon.contract.SavedFilter
+import app.podgon.mobile.core.media.avatarUrl
 import app.podgon.mobile.designsystem.Avatar
 import app.podgon.mobile.designsystem.Divider
 import app.podgon.mobile.designsystem.PodgonIconButton
@@ -192,7 +193,7 @@ fun FiltersPanel(
                                 ?: "…"
                         },
                         onToggle = viewModel::toggleAuthor,
-                        avatars = true,
+                        avatars = authors.associate { it.author.id to it.author.avatarId },
                     )
                 }
                 Spacer(Modifier.height(150.dp))
@@ -453,7 +454,8 @@ private fun ChoiceCard(
     labelOf: (String) -> String,
     onToggle: (String) -> Unit,
     trailingTitle: (@Composable () -> Unit)? = null,
-    avatars: Boolean = false,
+    /** Аватары у выбранных (авторы): id → `avatarId`; `null` — без аватаров. */
+    avatars: Map<String, String?>? = null,
 ) {
     val c = podgonColors
     var query by remember { mutableStateOf("") }
@@ -487,11 +489,11 @@ private fun ChoiceCard(
                             ).clip(
                                 CircleShape,
                             ).background(c.chip)
-                            .padding(start = if (avatars) 3.dp else 11.dp, end = 2.dp),
+                            .padding(start = if (avatars != null) 3.dp else 11.dp, end = 2.dp),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
-                        if (avatars) {
-                            Avatar(24.dp)
+                        if (avatars != null) {
+                            Avatar(24.dp, url = avatarUrl(id, avatars[id]))
                             Spacer(Modifier.width(6.dp))
                         }
                         Text(labelOf(id), style = MaterialTheme.typography.labelMedium, color = c.ink)

@@ -118,7 +118,9 @@ class FeedService(
         val counts = feed.authorCounts(scope, parsed)
         val known = users.findAll(counts.map { it.first })
         return counts.mapNotNull { (id, count) ->
-            known[id]?.let { AuthorCount(ReviewAuthor(it.id.toString(), it.username, it.displayName), count) }
+            known[id]?.let {
+                AuthorCount(ReviewAuthor(it.id.toString(), it.username, it.displayName, it.avatarId?.toString()), count)
+            }
         }
     }
 

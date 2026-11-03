@@ -3,6 +3,8 @@ package app.podgon.mobile.di
 import app.podgon.mobile.core.auth.SessionManager
 import app.podgon.mobile.core.cache.CacheDatabase
 import app.podgon.mobile.core.cache.ResponseCache
+import app.podgon.mobile.core.media.MediaUrls
+import app.podgon.mobile.core.media.MyProfile
 import app.podgon.mobile.core.network.ApiEndpoints
 import app.podgon.mobile.core.network.AuthApi
 import app.podgon.mobile.core.network.CategoriesApi
@@ -46,7 +48,7 @@ import org.koin.core.qualifier.named
 import org.koin.dsl.module
 
 private val PUBLIC_CLIENT = named("public")
-private val AUTHORIZED_CLIENT = named("authorized")
+internal val AUTHORIZED_CLIENT = named("authorized")
 
 /**
  * Общие зависимости. Платформа дополнительно предоставляет: `ApiConfig`, `HttpClientEngine`,
@@ -61,6 +63,8 @@ val appModule =
         single { LanguageSettings(get()) }
         single { SessionManager(get()) { get<ResponseCache>().clear() } }
         single { ApiEndpoints(get()) }
+        single { MediaUrls(get()) }
+        single { MyProfile() }
         single { UpdateGate() }
         single<HttpClient>(PUBLIC_CLIENT) {
             val language = get<LanguageSettings>()
@@ -83,13 +87,13 @@ val appModule =
         viewModel { EmailViewModel(get()) }
         viewModel { (email: String) -> CodeViewModel(email, get()) }
         viewModel { (registrationToken: String) -> RegisterViewModel(registrationToken, get()) }
-        viewModel { ProfileViewModel(get(), get()) }
+        viewModel { ProfileViewModel(get(), get(), get()) }
         viewModel {
             val reviews = get<ReviewsRepository>()
             GroupsViewModel(get()) { reviews.retainGroups(it) }
         }
         viewModel { CreateGroupViewModel(get()) }
-        viewModel { MainNavigationViewModel(get()) }
+        viewModel { MainNavigationViewModel(get(), get()) }
         viewModel { SectionsViewModel(get(), get()) }
         viewModel { (groupId: String?, filter: ReviewFilter) -> FiltersViewModel(groupId, filter, get(), get(), get()) }
         viewModel { (area: HomeArea) -> HomeViewModel(area, get(), get(), get(), get(), get(), get()) }

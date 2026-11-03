@@ -47,6 +47,8 @@ data class ReviewFormState(
     /** Категория не выбрана, или «Без категории» выбрана у рекомендации с группами. */
     val categoryMissing: Boolean = false,
     val error: AppError? = null,
+    /** Фото: сохранённое (при правке) или выбранное, но ещё не загруженное. */
+    val photo: PhotoDraft = PhotoDraft.None,
 ) {
     val tags: List<String> get() = parseTags(tagsText)
 
@@ -140,6 +142,7 @@ class ReviewFormViewModel(
                     selected = if (known) selected else it.selected,
                     lockOpen = if (known) selected.isNotEmpty() else it.lockOpen,
                     publishedIn = review?.publications?.map { p -> p.groupId }?.toSet() ?: it.publishedIn,
+                    photo = review?.photoId?.let { id -> PhotoDraft.Saved(review.id, id) } ?: it.photo,
                     title = review?.title ?: it.title,
                     description = review?.description ?: it.description,
                     rating = review?.rating ?: it.rating,
@@ -215,6 +218,36 @@ class ReviewFormViewModel(
 
     fun setCategory(categoryId: String) = _state.update { it.copy(categoryId = categoryId, categoryMissing = false) }
 
+    fun pickPhoto(jpeg: ByteArray) = _state.update { it.copy(photo = PhotoDraft.Picked(jpeg)) }
+
+    /** Убрать фото: выбранное — просто забыть, сохранённое — удалить при сохранении. */
+    fun removePhoto() =
+        _state.update {
+            it.copy(
+                photo =
+                    if (it.photo is PhotoDraft.Saved ||
+                        reviewId != null
+                    ) {
+                        PhotoDraft.Removed
+                    } else {
+                        PhotoDraft.None
+                    },
+            )
+        }
+
+    /**
+     * Загружает выбранное фото или удаляет убранное. Ошибка фото не отменяет сохранения текста: рекомендация
+     * сохранена, фото можно добавить правкой (ошибка покажется на карточке при следующей попытке).
+     */
+    private suspend fun applyPhoto(
+        id: String,
+        photo: PhotoDraft,
+    ) = when (photo) {
+        is PhotoDraft.Picked -> reviews.uploadPhoto(id, photo.jpeg).getOrNull()
+        PhotoDraft.Removed -> reviews.removePhoto(id).getOrNull()
+        else -> null
+    }
+
     fun save() {
         val s = _state.value
         if (s.saving) return
@@ -251,7 +284,8 @@ class ReviewFormViewModel(
                         reviews.update(reviewId, update).then { reviews.setPublications(reviewId, publish) }
                     }
                 }
-            val saved = result.getOrNull()
+            // фото — отдельным запросом после сохранения: нужна уже созданная рекомендация
+            val saved = result.getOrNull()?.let { r -> applyPhoto(r.id, s.photo) ?: r }
             if (saved != null) {
                 _state.update { it.copy(saving = false) }
                 _effects.send(ReviewFormEffect.Saved(saved.id))
@@ -260,6 +294,25 @@ class ReviewFormViewModel(
             }
         }
     }
+}
+
+/** Фото в форме. */
+sealed interface PhotoDraft {
+    data object None : PhotoDraft
+
+    /** Уже загруженное фото (при правке). */
+    data class Saved(
+        val reviewId: String,
+        val photoId: String,
+    ) : PhotoDraft
+
+    /** Выбранное в галерее, загрузится при сохранении. */
+    class Picked(
+        val jpeg: ByteArray,
+    ) : PhotoDraft
+
+    /** Сохранённое фото убрано, удалится при сохранении. */
+    data object Removed : PhotoDraft
 }
 
 private inline fun <T> Result<T>.then(next: () -> Result<T>): Result<T> = if (isSuccess) next() else this

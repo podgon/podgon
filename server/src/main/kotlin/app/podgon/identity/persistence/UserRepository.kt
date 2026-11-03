@@ -15,6 +15,7 @@ data class UserRow(
     val bio: String,
     val status: String,
     val locale: String,
+    val avatarId: UUID? = null,
 )
 
 @Repository
@@ -23,7 +24,7 @@ class UserRepository(
 ) {
     private val columns =
         "id, email::text as email, username::text as username, " +
-            "coalesce(display_name, '') as display_name, bio, status, locale"
+            "coalesce(display_name, '') as display_name, bio, status, locale, avatar_id"
 
     private fun map(
         rs: ResultSet,
@@ -36,6 +37,7 @@ class UserRepository(
         bio = rs.getString("bio"),
         status = rs.getString("status"),
         locale = rs.getString("locale"),
+        avatarId = rs.getObject("avatar_id", UUID::class.java),
     )
 
     /** Пользователь, который может входить: не удалён и не служебный. */
@@ -101,13 +103,39 @@ class UserRepository(
             .sql(
                 """
                 update users set email = 'deleted+' || id || '@invalid', username = 'deleted_' || replace(id::text, '-', ''),
-                       display_name = null, bio = '', status = 'DELETED', deleted_at = :now, updated_at = :now
+                       display_name = null, bio = '', avatar_id = null, status = 'DELETED', deleted_at = :now, updated_at = :now
                 where id = :id and deleted_at is null
                 """.trimIndent(),
             ).param("id", id)
             .param("now", now.toSql())
             .update()
     }
+
+    /** Новый аватар ([avatarId] `null` — убрать); файл прежнего удаляет ночная чистка или сервис. */
+    fun setAvatar(
+        id: UUID,
+        avatarId: UUID?,
+        now: Instant,
+    ) {
+        jdbc
+            .sql("update users set avatar_id = :avatar, updated_at = :now where id = :id and deleted_at is null")
+            .param("id", id)
+            .param("avatar", avatarId)
+            .param("now", now.toSql())
+            .update()
+    }
+
+    /** Аватары, на которые есть ссылки (из [ids]). */
+    fun usedAvatars(ids: Collection<UUID>): Set<UUID> =
+        if (ids.isEmpty()) {
+            emptySet()
+        } else {
+            jdbc
+                .sql("select avatar_id from users where avatar_id in (:ids)")
+                .param("ids", ids)
+                .query { rs, _ -> rs.getObject("avatar_id", UUID::class.java) }
+                .set()
+        }
 
     /** @throws org.springframework.dao.DuplicateKeyException при занятом username */
     fun updateProfile(

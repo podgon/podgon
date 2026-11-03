@@ -14,6 +14,8 @@ data class UserProfile(
     val personalGroupId: String,
     /** Системная группа «Избранное». */
     val favoritesGroupId: String,
+    /** Свой аватар; `null` — аватар по умолчанию. */
+    val avatarId: String? = null,
 )
 
 /** Частичное обновление профиля: `null` — поле не менять; пустой [bio] очищает биографию. */

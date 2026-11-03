@@ -27,5 +27,6 @@ class UserDirectoryImpl(
             locale,
             blocked =
                 status == "BLOCKED",
+            avatarId = avatarId,
         )
 }

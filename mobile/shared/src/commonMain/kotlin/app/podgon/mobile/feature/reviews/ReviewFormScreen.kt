@@ -49,6 +49,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.selected
@@ -60,6 +61,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.podgon.contract.Validation
+import app.podgon.mobile.core.media.photoUrl
+import app.podgon.mobile.core.media.rememberImagePicker
 import app.podgon.mobile.designsystem.Divider
 import app.podgon.mobile.designsystem.PodgonIconButton
 import app.podgon.mobile.designsystem.PodgonIcons
@@ -86,12 +89,15 @@ import app.podgon.mobile.resources.form_missing
 import app.podgon.mobile.resources.form_personal_hint
 import app.podgon.mobile.resources.form_personal_label
 import app.podgon.mobile.resources.form_photo
+import app.podgon.mobile.resources.form_photo_remove
+import app.podgon.mobile.resources.form_photo_replace
 import app.podgon.mobile.resources.form_rating
 import app.podgon.mobile.resources.form_tag_hint
 import app.podgon.mobile.resources.form_tags
 import app.podgon.mobile.resources.form_title_hint
 import app.podgon.mobile.resources.form_visibility
 import app.podgon.mobile.resources.review_pick_category
+import coil3.compose.AsyncImage
 import org.jetbrains.compose.resources.stringResource
 
 /**
@@ -159,7 +165,7 @@ fun ReviewFormScreen(
             }, onCloseLock = {
                 if (state.publishedIn.isNotEmpty()) confirmClose = true else viewModel.setLockOpen(false)
             })
-            PhotoStub()
+            PhotoField(state.photo, viewModel::pickPhoto, viewModel::removePhoto)
             ErrorText(state.error)
             state.errors["tags"]?.let {
                 Text(
@@ -532,20 +538,51 @@ private fun Visibility(
     }
 }
 
+/** Фото: пунктирная кнопка «Добавить фото», после выбора — превью с «Заменить» и «Убрать». */
 @Composable
-private fun PhotoStub() {
+private fun PhotoField(
+    photo: PhotoDraft,
+    onPick: (ByteArray) -> Unit,
+    onRemove: () -> Unit,
+) {
     val c = podgonColors
+    val pick = rememberImagePicker(onPicked = onPick)
+    val model: Any? =
+        when (photo) {
+            is PhotoDraft.Picked -> photo.jpeg
+            is PhotoDraft.Saved -> photoUrl(photo.reviewId, photo.photoId)
+            else -> null
+        }
+    if (model == null) {
+        Box(
+            Modifier
+                .padding(horizontal = 16.dp, vertical = 6.dp)
+                .fillMaxWidth()
+                .height(48.dp)
+                .clip(PodgonShapes.card)
+                .border(1.dp, c.line, PodgonShapes.card)
+                .combinedClickable(role = Role.Button, onClick = pick),
+            contentAlignment = Alignment.Center,
+        ) { Text(stringResource(Res.string.form_photo), fontSize = 14.sp, color = c.ink) }
+        return
+    }
     Box(
         Modifier
-            .padding(
-                horizontal = 16.dp,
-                vertical = 6.dp,
-            ).fillMaxWidth()
-            .height(48.dp)
+            .padding(horizontal = 16.dp, vertical = 6.dp)
+            .fillMaxWidth()
+            .height(180.dp)
             .clip(PodgonShapes.card)
-            .border(1.dp, c.line, PodgonShapes.card),
-        contentAlignment = Alignment.Center,
-    ) { Text(stringResource(Res.string.form_photo), fontSize = 14.sp, color = c.muted) }
+            .background(c.chip),
+    ) {
+        AsyncImage(model, null, Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
+        Row(
+            Modifier.align(Alignment.TopEnd).padding(8.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            PodgonIconButton(PodgonIcons.Edit, stringResource(Res.string.form_photo_replace), pick, outlined = true)
+            PodgonIconButton(PodgonIcons.Close, stringResource(Res.string.form_photo_remove), onRemove, outlined = true)
+        }
+    }
 }
 
 /** Выбор категории из общего набора с поиском (по названию и пути родителя). */

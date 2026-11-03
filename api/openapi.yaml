@@ -1,7 +1,7 @@
 openapi: 3.0.3
 info:
   title: Podgon API
-  version: 0.11.0
+  version: 0.12.0
   description: |
     Контракт API Podgon (contract-first, ADR-005). Этап 2: вход по одноразовому коду, регистрация,
     токены, профиль и сессии устройств. Этап 4: группы, участники, роли, приглашения. Этап 5: категории групп. Этап 6: рекомендации, публикации в группы, лента. Этап 7: поиск и фильтры.
@@ -22,7 +22,9 @@ info:
 
     Этап 8.3 (0.10.0): поиск только по названиям (`titleOnly`), роль автора в публикациях рекомендации
     (`PublicationInfo.authorRole`). 0.11.0: избранное — `PUT/DELETE /me/favorites/{reviewId}`, признак `favorite`
-    в карточке и подробностях рекомендации.
+    в карточке и подробностях рекомендации. 0.12.0: фото рекомендации (`/reviews/{reviewId}/photo`) и аватары
+    (`/me/avatar`, `/users/{userId}/avatar`); тело загрузки — сама картинка (JPEG или PNG, до 10 МБ), сервер
+    уменьшает её и перекодирует в JPEG без метаданных; картинка отдаётся с идентификатором в адресе (`?v=`).
 
     Ошибки — `application/problem+json` (RFC 9457) с машинным полем `code` (см. `ErrorCode`
     в shared-contract); текст для пользователя формирует клиент.
@@ -773,6 +775,126 @@ paths:
         '429': { $ref: '#/components/responses/RateLimited' }
         '426': { $ref: '#/components/responses/UpgradeRequired' }
 
+  /me/avatar:
+    put:
+      tags: [me]
+      operationId: uploadAvatar
+      summary: Загрузить свой аватар (этап 8.3)
+      description: Центральный квадрат 256 px; прежний аватар удаляется.
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          image/jpeg: { schema: { type: string, format: binary } }
+          image/png: { schema: { type: string, format: binary } }
+      responses:
+        '200':
+          description: Профиль с новым аватаром
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/UserProfile' }
+        '400': { $ref: '#/components/responses/Problem' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '415': { $ref: '#/components/responses/Problem' }
+        '429': { $ref: '#/components/responses/RateLimited' }
+        '426': { $ref: '#/components/responses/UpgradeRequired' }
+    delete:
+      tags: [me]
+      operationId: removeAvatar
+      summary: Убрать свой аватар (этап 8.3)
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200':
+          description: Профиль без аватара
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/UserProfile' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '429': { $ref: '#/components/responses/RateLimited' }
+        '426': { $ref: '#/components/responses/UpgradeRequired' }
+
+  /users/{userId}/avatar:
+    parameters:
+      - name: userId
+        in: path
+        required: true
+        schema: { type: string, format: uuid }
+      - $ref: '#/components/parameters/ImageVersion'
+    get:
+      tags: [me]
+      operationId: getAvatar
+      summary: Аватар пользователя (этап 8.3, всем вошедшим)
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200':
+          description: JPEG; кэшируется на устройстве надолго (адрес меняется вместе с аватаром)
+          content:
+            image/jpeg: { schema: { type: string, format: binary } }
+        '401': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+        '429': { $ref: '#/components/responses/RateLimited' }
+        '426': { $ref: '#/components/responses/UpgradeRequired' }
+
+  /reviews/{reviewId}/photo:
+    parameters:
+      - $ref: '#/components/parameters/ReviewId'
+    put:
+      tags: [reviews]
+      operationId: uploadReviewPhoto
+      summary: Загрузить фото рекомендации (автор, этап 8.3)
+      description: Длинная сторона до 1600 px; прежнее фото удаляется.
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          image/jpeg: { schema: { type: string, format: binary } }
+          image/png: { schema: { type: string, format: binary } }
+      responses:
+        '200':
+          description: Рекомендация с новым фото
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ReviewDetails' }
+        '400': { $ref: '#/components/responses/Problem' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+        '415': { $ref: '#/components/responses/Problem' }
+        '429': { $ref: '#/components/responses/RateLimited' }
+        '426': { $ref: '#/components/responses/UpgradeRequired' }
+    delete:
+      tags: [reviews]
+      operationId: removeReviewPhoto
+      summary: Убрать фото рекомендации (автор, этап 8.3)
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200':
+          description: Рекомендация без фото
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ReviewDetails' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+        '429': { $ref: '#/components/responses/RateLimited' }
+        '426': { $ref: '#/components/responses/UpgradeRequired' }
+    get:
+      tags: [reviews]
+      operationId: getReviewPhoto
+      summary: Фото видимой мне рекомендации (этап 8.3)
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: '#/components/parameters/ImageVersion'
+      responses:
+        '200':
+          description: JPEG; кэшируется на устройстве надолго (адрес меняется вместе с фото)
+          content:
+            image/jpeg: { schema: { type: string, format: binary } }
+        '401': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+        '429': { $ref: '#/components/responses/RateLimited' }
+        '426': { $ref: '#/components/responses/UpgradeRequired' }
+
   /me/favorites/{reviewId}:
     parameters:
       - $ref: '#/components/parameters/ReviewId'
@@ -1330,6 +1452,11 @@ components:
       in: query
       description: Поиск по названию и описанию (морфология русского, опечатки, подстроки); с ним выдача упорядочена по релевантности.
       schema: { type: string, maxLength: 100 }
+    ImageVersion:
+      name: v
+      in: query
+      description: Идентификатор картинки из `photoId`/`avatarId` — делает адрес уникальным для кэша; сервер его не проверяет.
+      schema: { type: string, maxLength: 64 }
     TitleOnly:
       name: titleOnly
       in: query
@@ -1534,6 +1661,7 @@ components:
         locale: { type: string, enum: [ru, en] }
         personalGroupId: { type: string, format: uuid, description: Системная группа «Личное». }
         favoritesGroupId: { type: string, format: uuid, description: Системная группа «Избранное». }
+        avatarId: { type: string, format: uuid, nullable: true, description: 'Этап 8.3. Свой аватар.' }
 
     UpdateProfileRequest:
       type: object
@@ -1597,6 +1725,7 @@ components:
         displayName: { type: string }
         role: { $ref: '#/components/schemas/RoleInfo' }
         joinedAt: { type: string, format: date-time }
+        avatarId: { type: string, format: uuid, nullable: true }
 
     SetMemberRoleRequest:
       type: object
@@ -1648,6 +1777,7 @@ components:
         id: { type: string, format: uuid }
         username: { type: string }
         displayName: { type: string }
+        avatarId: { type: string, format: uuid, nullable: true, description: 'Этап 8.3. Нет — аватар по умолчанию.' }
 
     PublicationInfo:
       type: object
@@ -1681,6 +1811,7 @@ components:
           description: Только обычные группы; автору — все публикации, остальным — только в их группах.
           items: { $ref: '#/components/schemas/PublicationInfo' }
         favorite: { type: boolean, default: false, description: 'Этап 8.3. В моём «Избранном».' }
+        photoId: { type: string, format: uuid, nullable: true, description: 'Этап 8.3. Фото; нет — без фото.' }
 
     CreateReviewRequest:
       type: object
@@ -1746,6 +1877,7 @@ components:
           description: Группы публикации в области запроса (на «Все» — мои группы, в группе — одна).
           items: { type: string, format: uuid }
         favorite: { type: boolean, default: false, description: 'Этап 8.3. В моём «Избранном».' }
+        photoId: { type: string, format: uuid, nullable: true, description: 'Этап 8.3. Фото; нет — без фото.' }
 
     TagCount:
       type: object
