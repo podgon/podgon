@@ -166,6 +166,12 @@ class FiltersViewModel(
         inFeed: Boolean,
     ) = change { savedFilters.update(filter.id, UpdateSavedFilterRequest(inFeed = inFeed)) }
 
+    /** Подписка на фильтр: уведомления о новых подходящих рекомендациях (этап 8.3.5). */
+    fun setSubscribed(
+        filter: SavedFilter,
+        subscribed: Boolean,
+    ) = change { savedFilters.update(filter.id, UpdateSavedFilterRequest(subscribed = subscribed)) }
+
     fun rename(
         filter: SavedFilter,
         name: String,

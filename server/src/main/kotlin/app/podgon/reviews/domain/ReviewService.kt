@@ -68,6 +68,7 @@ class ReviewService(
     private val tx: TransactionTemplate,
     private val storage: MediaStorage,
     private val images: Images,
+    private val subscriptions: SubscriptionMatcher,
 ) {
     fun create(
         userId: UUID,
@@ -93,6 +94,7 @@ class ReviewService(
             reviews.replaceTags(id, tags)
             applyVisibility(userId, system, id, groupIds, now)
         }
+        subscriptions.published(id, userId, title, groupIds)
         return details(userId, id)
     }
 
@@ -131,14 +133,26 @@ class ReviewService(
     ): ReviewDetails {
         val groupIds = parseGroups(request.groupIds)
         val system = system(userId)
+        var added = emptyList<UUID>()
+        var title = ""
         inTransaction {
             val current = requireAuthor(userId, reviewId)
             reviews.lock(reviewId)
             if (groupIds.isNotEmpty()) requireCategoryAllowed(current.categoryId, personal = false)
+            val before =
+                reviews
+                    .publications(reviewId)
+                    .filter { it.kind == REGULAR }
+                    .map { it.groupId }
+                    .toSet()
             applyVisibility(userId, system, reviewId, groupIds, now())
             // снятые публикации: рекомендация могла пропасть из чужого «Избранного» (Ф1)
             sharing.cleanupFavorites(reviewId = reviewId)
+            added = groupIds - before
+            title = current.title
         }
+        // подписки — только на новые для рекомендации группы
+        subscriptions.published(reviewId, userId, title, added)
         return details(userId, reviewId)
     }
 

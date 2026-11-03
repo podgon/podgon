@@ -10,6 +10,7 @@ import app.podgon.mobile.core.network.AuthApi
 import app.podgon.mobile.core.network.CategoriesApi
 import app.podgon.mobile.core.network.GroupsApi
 import app.podgon.mobile.core.network.MeApi
+import app.podgon.mobile.core.network.NotificationsApi
 import app.podgon.mobile.core.network.ReviewsApi
 import app.podgon.mobile.core.network.SavedFiltersApi
 import app.podgon.mobile.core.network.UpdateGate
@@ -33,6 +34,9 @@ import app.podgon.mobile.feature.home.HomeArea
 import app.podgon.mobile.feature.home.HomeViewModel
 import app.podgon.mobile.feature.home.SectionsViewModel
 import app.podgon.mobile.feature.main.MainNavigationViewModel
+import app.podgon.mobile.feature.notifications.NotificationSettingsViewModel
+import app.podgon.mobile.feature.notifications.NotificationsViewModel
+import app.podgon.mobile.feature.notifications.UnreadCounter
 import app.podgon.mobile.feature.profile.ProfileViewModel
 import app.podgon.mobile.feature.reviews.CategoryRepository
 import app.podgon.mobile.feature.reviews.FeedScope
@@ -80,6 +84,8 @@ val appModule =
         single { ReviewsApi(get(AUTHORIZED_CLIENT)) }
         single { CategoriesApi(get(AUTHORIZED_CLIENT)) }
         single { SavedFiltersApi(get(AUTHORIZED_CLIENT)) }
+        single { NotificationsApi(get(AUTHORIZED_CLIENT)) }
+        single { UnreadCounter(get()) }
         // Виджет SmartCaptcha подключается на этапе 9; пока токена нет
         single { CaptchaProvider { null } }
         single { AuthRepository(get(), get(), get(), get()) }
@@ -98,6 +104,8 @@ val appModule =
         viewModel { (groupId: String?, filter: ReviewFilter) -> FiltersViewModel(groupId, filter, get(), get(), get()) }
         viewModel { (area: HomeArea) -> HomeViewModel(area, get(), get(), get(), get(), get(), get()) }
         viewModel { SettingsViewModel(get(), get(), get(), get(), get()) }
+        viewModel { NotificationsViewModel(get(), get()) }
+        viewModel { NotificationSettingsViewModel(get()) }
         viewModel { JoinGroupViewModel(get(), get()) }
         viewModel { (groupId: String) -> GroupViewModel(groupId, get(), get()) }
         viewModel { (scope: FeedScope) -> FeedViewModel(scope, get(), get(), get()) }

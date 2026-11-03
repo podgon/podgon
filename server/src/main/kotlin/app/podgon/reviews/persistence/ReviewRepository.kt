@@ -376,6 +376,21 @@ class ReviewRepository(
             }.list()
     }
 
+    /** Рекомендация [reviewId] опубликована в [groupIds] и подходит под [filters] (подписки, этап 8.3.5). */
+    fun matches(
+        reviewId: UUID,
+        groupIds: Collection<UUID>,
+        filters: SearchFilters,
+    ): Boolean {
+        if (groupIds.isEmpty()) return false
+        val f = FilterSql(groupIds, filters)
+        return jdbc
+            .sql("select exists(select 1 from ${f.from} where r.id = :reviewId${f.where})")
+            .params(f.params + mapOf("reviewId" to reviewId))
+            .query(Boolean::class.java)
+            .single()
+    }
+
     /** Теги рекомендаций области [groupIds]: самые частые первыми, не больше [limit]; [prefix] — начало тега. */
     fun tags(
         groupIds: Collection<UUID>,

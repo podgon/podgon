@@ -100,9 +100,11 @@ data class InvitationInfo(
     val active: Boolean,
 )
 
+/** Приглашение по коду ([token]) или входящее адресное по [invitationId] (этап 8.3.5); нужно ровно одно. */
 @Serializable
 data class InvitationTokenRequest(
-    val token: String,
+    val token: String? = null,
+    val invitationId: String? = null,
 )
 
 /** Что увидит приглашённый до вступления. */

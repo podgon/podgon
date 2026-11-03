@@ -94,6 +94,7 @@ class SavedFilterService(
                     definition = request.definition?.let(filters::encode) ?: current.definition,
                     inFeed = inFeed,
                     position = position,
+                    subscribed = request.subscribed ?: current.subscribed,
                 )
             repository.update(row, clock.instant())
             toDto(row)
@@ -158,6 +159,7 @@ class SavedFilterService(
             definition = filters.encode(request.definition!!),
             inFeed = request.inFeed,
             position = null,
+            subscribed = request.subscribed,
         )
     }
 
@@ -166,7 +168,9 @@ class SavedFilterService(
         userId: UUID,
         request: CreateSavedFilterRequest,
     ): SavedFilterRow {
-        if (request.name != null || request.definition != null) fail("kind", FieldErrorReason.INVALID_FORMAT)
+        if (request.name != null || request.definition != null || request.subscribed) {
+            fail("kind", FieldErrorReason.INVALID_FORMAT)
+        }
         val id =
             request.categoryId?.let { runCatching { UUID.fromString(it) }.getOrNull() }
                 ?: fail(
@@ -194,6 +198,7 @@ class SavedFilterService(
             categoryId = row.categoryId?.toString(),
             definition = row.definition?.let(filters::decode),
             position = row.position,
+            subscribed = row.subscribed,
         )
 
     private fun fail(

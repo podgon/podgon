@@ -34,6 +34,9 @@ interface GroupAccess {
         groupIds: Collection<UUID>,
     ): Map<UUID, RoleInfo>
 
+    /** Участники каждой из [groupIds] (обычных групп). */
+    fun members(groupIds: Collection<UUID>): Map<UUID, Set<UUID>>
+
     /** Группы, где пользователь единственный администратор, а участников больше одного: из них нельзя просто уйти. */
     fun soleAdminGroups(userId: UUID): List<GroupRef>
 }

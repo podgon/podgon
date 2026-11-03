@@ -1,7 +1,7 @@
 openapi: 3.0.3
 info:
   title: Podgon API
-  version: 0.12.0
+  version: 0.13.0
   description: |
     Контракт API Podgon (contract-first, ADR-005). Этап 2: вход по одноразовому коду, регистрация,
     токены, профиль и сессии устройств. Этап 4: группы, участники, роли, приглашения. Этап 5: категории групп. Этап 6: рекомендации, публикации в группы, лента. Этап 7: поиск и фильтры.
@@ -25,6 +25,9 @@ info:
     в карточке и подробностях рекомендации. 0.12.0: фото рекомендации (`/reviews/{reviewId}/photo`) и аватары
     (`/me/avatar`, `/users/{userId}/avatar`); тело загрузки — сама картинка (JPEG или PNG, до 10 МБ), сервер
     уменьшает её и перекодирует в JPEG без метаданных; картинка отдаётся с идентификатором в адресе (`?v=`).
+    0.13.0: уведомления в приложении (`/me/notifications`, настройки `/me/notification-settings`), подписка
+    на сохранённый фильтр (`subscribed`), входящие адресные приглашения (`GET /me/invitations`) и вступление
+    по `invitationId` вместо кода.
 
     Ошибки — `application/problem+json` (RFC 9457) с машинным полем `code` (см. `ErrorCode`
     в shared-contract); текст для пользователя формирует клиент.
@@ -772,6 +775,115 @@ paths:
         '401': { $ref: '#/components/responses/Problem' }
         '403': { $ref: '#/components/responses/Problem' }
         '404': { $ref: '#/components/responses/Problem' }
+        '429': { $ref: '#/components/responses/RateLimited' }
+        '426': { $ref: '#/components/responses/UpgradeRequired' }
+
+  /me/notifications:
+    get:
+      tags: [me]
+      operationId: listNotifications
+      summary: Мои уведомления, новые сверху (этап 8.3)
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: '#/components/parameters/Cursor'
+        - $ref: '#/components/parameters/Limit'
+      responses:
+        '200':
+          description: Страница уведомлений
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/NotificationPage' }
+        '400': { $ref: '#/components/responses/Problem' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '429': { $ref: '#/components/responses/RateLimited' }
+        '426': { $ref: '#/components/responses/UpgradeRequired' }
+
+  /me/notifications/unread:
+    get:
+      tags: [me]
+      operationId: unreadNotifications
+      summary: Число непрочитанных уведомлений (бейдж колокольчика)
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200':
+          description: Число
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/UnreadCount' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '429': { $ref: '#/components/responses/RateLimited' }
+        '426': { $ref: '#/components/responses/UpgradeRequired' }
+
+  /me/notifications/read:
+    post:
+      tags: [me]
+      operationId: markNotificationsRead
+      summary: Отметить уведомления прочитанными
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/MarkReadRequest' }
+      responses:
+        '204': { description: Отмечены }
+        '400': { $ref: '#/components/responses/Problem' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '429': { $ref: '#/components/responses/RateLimited' }
+        '426': { $ref: '#/components/responses/UpgradeRequired' }
+
+  /me/notification-settings:
+    get:
+      tags: [me]
+      operationId: getNotificationSettings
+      summary: О чём уведомлять
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200':
+          description: Настройки
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/NotificationSettings' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '429': { $ref: '#/components/responses/RateLimited' }
+        '426': { $ref: '#/components/responses/UpgradeRequired' }
+    put:
+      tags: [me]
+      operationId: saveNotificationSettings
+      summary: Сохранить, о чём уведомлять
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/NotificationSettings' }
+      responses:
+        '200':
+          description: Сохранённые настройки
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/NotificationSettings' }
+        '400': { $ref: '#/components/responses/Problem' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '429': { $ref: '#/components/responses/RateLimited' }
+        '426': { $ref: '#/components/responses/UpgradeRequired' }
+
+  /me/invitations:
+    get:
+      tags: [invitations]
+      operationId: listIncomingInvitations
+      summary: Входящие адресные приглашения на мой email (этап 8.3)
+      description: Действующие и только в группы, где я ещё не состою; вступить — `POST /invitations/accept` с `invitationId`.
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200':
+          description: Приглашения, новые сверху
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/IncomingInvitation' }
+        '401': { $ref: '#/components/responses/Problem' }
         '429': { $ref: '#/components/responses/RateLimited' }
         '426': { $ref: '#/components/responses/UpgradeRequired' }
 
@@ -1928,9 +2040,10 @@ components:
 
     InvitationTokenRequest:
       type: object
-      required: [token]
+      description: Нужно ровно одно из `token` и `invitationId` (этап 8.3); иначе 400 `INVALID_INVITATION`.
       properties:
-        token: { type: string, maxLength: 200 }
+        token: { type: string, maxLength: 200, nullable: true }
+        invitationId: { type: string, format: uuid, nullable: true, description: 'Входящее адресное приглашение.' }
 
     ShareMode:
       type: string
@@ -1954,9 +2067,10 @@ components:
 
     SharePreviewRequest:
       type: object
-      required: [token, share]
+      required: [share]
       properties:
-        token: { type: string, maxLength: 200 }
+        token: { type: string, maxLength: 200, nullable: true }
+        invitationId: { type: string, format: uuid, nullable: true }
         share: { $ref: '#/components/schemas/ShareRule' }
 
     SharePreviewItem:
@@ -1980,9 +2094,9 @@ components:
 
     AcceptInvitationRequest:
       type: object
-      required: [token]
       properties:
-        token: { type: string, maxLength: 200 }
+        token: { type: string, maxLength: 200, nullable: true }
+        invitationId: { type: string, format: uuid, nullable: true }
         share: { $ref: '#/components/schemas/ShareRule' }
 
     ReviewsFate:
@@ -2079,6 +2193,7 @@ components:
         categoryId: { type: string, format: uuid, nullable: true, description: Только у CATEGORY. }
         definition: { $ref: '#/components/schemas/FilterDefinition' }
         position: { type: integer, nullable: true, description: Порядок среди закреплённых своего вида. }
+        subscribed: { type: boolean, default: false, description: 'Этап 8.3. Уведомлять о новых подходящих рекомендациях.' }
 
     CreateSavedFilterRequest:
       type: object
@@ -2089,6 +2204,7 @@ components:
         definition: { $ref: '#/components/schemas/FilterDefinition' }
         inFeed: { type: boolean, default: false }
         categoryId: { type: string, format: uuid, nullable: true }
+        subscribed: { type: boolean, default: false, description: 'Только у FILTER.' }
 
     UpdateSavedFilterRequest:
       type: object
@@ -2096,6 +2212,70 @@ components:
         name: { type: string, maxLength: 60, nullable: true }
         definition: { $ref: '#/components/schemas/FilterDefinition' }
         inFeed: { type: boolean, nullable: true }
+        subscribed: { type: boolean, nullable: true }
+
+    NotificationKind:
+      type: string
+      enum: [INVITATION, FILTER_MATCH]
+
+    NotificationInfo:
+      type: object
+      description: Подписи сохранены при создании; объект мог уже измениться или стать недоступным.
+      required: [id, kind, createdAt, read]
+      properties:
+        id: { type: string, format: uuid }
+        kind: { $ref: '#/components/schemas/NotificationKind' }
+        createdAt: { type: string, format: date-time }
+        read: { type: boolean }
+        invitationId: { type: string, format: uuid, nullable: true }
+        groupName: { type: string, nullable: true }
+        invitedBy: { type: string, nullable: true }
+        reviewId: { type: string, format: uuid, nullable: true }
+        reviewTitle: { type: string, nullable: true }
+        filterName: { type: string, nullable: true }
+
+    NotificationPage:
+      type: object
+      required: [items, unread]
+      properties:
+        items:
+          type: array
+          items: { $ref: '#/components/schemas/NotificationInfo' }
+        unread: { type: integer }
+        nextCursor: { type: string, nullable: true }
+
+    UnreadCount:
+      type: object
+      required: [count]
+      properties:
+        count: { type: integer }
+
+    MarkReadRequest:
+      type: object
+      properties:
+        ids:
+          type: array
+          nullable: true
+          maxItems: 100
+          description: Нет — отметить все.
+          items: { type: string, format: uuid }
+
+    NotificationSettings:
+      type: object
+      properties:
+        invitations: { type: boolean, default: true }
+        filterMatches: { type: boolean, default: true }
+
+    IncomingInvitation:
+      type: object
+      required: [id, groupName, groupDescription, memberCount, invitedBy, expiresAt]
+      properties:
+        id: { type: string, format: uuid }
+        groupName: { type: string }
+        groupDescription: { type: string }
+        memberCount: { type: integer }
+        invitedBy: { type: string }
+        expiresAt: { type: string, format: date-time }
 
     SavedFilterOrderRequest:
       type: object

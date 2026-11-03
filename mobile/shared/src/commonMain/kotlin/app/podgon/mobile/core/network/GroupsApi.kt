@@ -6,6 +6,7 @@ import app.podgon.contract.CreateInvitationRequest
 import app.podgon.contract.CreateRoleRequest
 import app.podgon.contract.GroupDeleteImpact
 import app.podgon.contract.GroupSummary
+import app.podgon.contract.IncomingInvitation
 import app.podgon.contract.InvitationCreated
 import app.podgon.contract.InvitationInfo
 import app.podgon.contract.InvitationPreview
@@ -131,22 +132,42 @@ class GroupsApi(
         invitationId: String,
     ): Result<Unit> = apiCall { client.delete("api/v1/groups/$groupId/invitations/$invitationId").bodyOrThrow<Unit>() }
 
-    suspend fun previewInvitation(token: String): Result<InvitationPreview> =
-        apiCall { client.post("api/v1/invitations/preview") { setBody(InvitationTokenRequest(token)) }.bodyOrThrow() }
+    /** Приглашение — по коду [token] или входящее адресное по [invitationId] (этап 8.3.5). */
+    suspend fun previewInvitation(
+        token: String?,
+        invitationId: String? = null,
+    ): Result<InvitationPreview> =
+        apiCall {
+            client
+                .post(
+                    "api/v1/invitations/preview",
+                ) { setBody(InvitationTokenRequest(token, invitationId)) }
+                .bodyOrThrow()
+        }
 
     suspend fun acceptInvitation(
-        token: String,
+        token: String?,
         share: ShareRule? = null,
+        invitationId: String? = null,
     ): Result<GroupSummary> =
         apiCall {
-            client.post("api/v1/invitations/accept") { setBody(AcceptInvitationRequest(token, share)) }.bodyOrThrow()
+            client
+                .post("api/v1/invitations/accept") { setBody(AcceptInvitationRequest(token, share, invitationId)) }
+                .bodyOrThrow()
         }
 
     suspend fun sharePreview(
-        token: String,
+        token: String?,
         share: ShareRule,
+        invitationId: String? = null,
     ): Result<SharePreview> =
         apiCall {
-            client.post("api/v1/invitations/share-preview") { setBody(SharePreviewRequest(token, share)) }.bodyOrThrow()
+            client
+                .post("api/v1/invitations/share-preview") { setBody(SharePreviewRequest(token, share, invitationId)) }
+                .bodyOrThrow()
         }
+
+    /** Входящие адресные приглашения на мой email. */
+    suspend fun incomingInvitations(): Result<List<IncomingInvitation>> =
+        apiCall { client.get("api/v1/me/invitations").bodyOrThrow() }
 }

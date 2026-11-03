@@ -3,6 +3,7 @@ package app.podgon.mobile.feature.groups
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import app.podgon.contract.GroupSummary
+import app.podgon.contract.IncomingInvitation
 import app.podgon.mobile.core.error.AppError
 import app.podgon.mobile.core.error.appError
 import app.podgon.mobile.core.network.GroupsApi
@@ -16,6 +17,8 @@ data class GroupsState(
     val loading: Boolean = true,
     val groups: List<GroupSummary> = emptyList(),
     val error: AppError? = null,
+    /** Входящие адресные приглашения на мой email (этап 8.3.5). */
+    val incoming: List<IncomingInvitation> = emptyList(),
 )
 
 /**
@@ -35,11 +38,13 @@ class GroupsViewModel(
         viewModelScope.launch {
             val result = api.list()
             result.getOrNull()?.let { groups -> onLoaded(groups.map { it.id }.toSet()) }
+            val incoming = api.incomingInvitations().getOrNull()
             _state.update {
                 it.copy(
                     loading = false,
                     groups = result.getOrNull() ?: it.groups,
                     error = result.appError(),
+                    incoming = incoming ?: it.incoming,
                 )
             }
         }

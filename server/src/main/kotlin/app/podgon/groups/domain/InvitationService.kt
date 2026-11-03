@@ -8,9 +8,11 @@ import app.podgon.contract.CreateInvitationRequest
 import app.podgon.contract.ErrorCode
 import app.podgon.contract.FieldError
 import app.podgon.contract.GroupSummary
+import app.podgon.contract.IncomingInvitation
 import app.podgon.contract.InvitationCreated
 import app.podgon.contract.InvitationInfo
 import app.podgon.contract.InvitationPreview
+import app.podgon.contract.InvitationTokenRequest
 import app.podgon.contract.Validation
 import app.podgon.groups.GroupsProperties
 import app.podgon.groups.InvitationGroups
@@ -22,6 +24,7 @@ import app.podgon.identity.UserDirectory
 import app.podgon.identity.UserSummary
 import app.podgon.mail.MailQueue
 import app.podgon.mail.MailTemplate
+import app.podgon.notifications.Notifier
 import org.springframework.context.ApplicationEventPublisher
 import org.springframework.http.HttpStatus
 import org.springframework.stereotype.Service
@@ -44,6 +47,7 @@ class InvitationService(
     private val events: ApplicationEventPublisher,
     private val clock: Clock,
     private val tx: TransactionTemplate,
+    private val notifier: Notifier,
 ) : InvitationGroups {
     private val random = SecureRandom()
 
@@ -86,6 +90,11 @@ class InvitationService(
 
             if (email != null) {
                 val inviter = users.find(adminId)
+                val inviterName = inviter?.displayName?.ifBlank { inviter.username } ?: ""
+                // зарегистрированный адресат увидит приглашение и в приложении
+                users.findByEmail(email)?.takeIf { groups.member(groupId, it.id) == null }?.let { invitee ->
+                    notifier.invitation(invitee.id, id, mine.group.name, inviterName)
+                }
                 // письмо на языке получателя, если он уже зарегистрирован, иначе на языке пригласившего
                 val locale = users.findByEmail(email)?.locale ?: inviter?.locale ?: "ru"
                 mail.enqueue(
@@ -139,13 +148,31 @@ class InvitationService(
         invitations.revoke(invitation.id, clock.instant())
     }
 
+    /** Входящие адресные приглашения на мой email (этап 8.3.5): вступить можно без кода. */
+    fun incoming(userId: UUID): List<IncomingInvitation> {
+        val user = users.find(userId) ?: throw ApiException(ErrorCode.UNAUTHORIZED, HttpStatus.UNAUTHORIZED)
+        val rows = invitations.incoming(user.email.lowercase(), userId, clock.instant())
+        val inviters = users.findAll(rows.map { it.createdBy }.toSet())
+        return rows.mapNotNull { row ->
+            val group = groups.groupInfo(row.groupId) ?: return@mapNotNull null
+            IncomingInvitation(
+                id = row.id.toString(),
+                groupName = group.name,
+                groupDescription = group.description,
+                memberCount = group.memberCount,
+                invitedBy = inviters[row.createdBy]?.let { it.displayName.ifBlank { it.username } } ?: "",
+                expiresAt = row.expiresAt.toString(),
+            )
+        }
+    }
+
     /** Показывает приглашённому, куда его зовут. Любая причина отказа даёт один и тот же ответ. */
     fun preview(
         userId: UUID,
-        token: String,
+        request: InvitationTokenRequest,
     ): InvitationPreview {
         val user = users.find(userId) ?: throw ApiException(ErrorCode.UNAUTHORIZED, HttpStatus.UNAUTHORIZED)
-        val invitation = usable(invitations.findByHash(hash(token)), user)
+        val invitation = usable(lookup(request.token, request.invitationId, forUpdate = false), user)
         val group = groupInfo(invitation)
         val inviter = users.find(invitation.createdBy)
         return InvitationPreview(
@@ -159,10 +186,28 @@ class InvitationService(
     /** Группа, куда ведёт действующее приглашение, для предпросмотра переноса рекомендаций. */
     override fun resolve(
         userId: UUID,
-        token: String,
+        token: String?,
+        invitationId: String?,
     ): UUID {
         val user = users.find(userId) ?: throw ApiException(ErrorCode.UNAUTHORIZED, HttpStatus.UNAUTHORIZED)
-        return usable(invitations.findByHash(hash(token)), user).groupId
+        return usable(lookup(token, invitationId, forUpdate = false), user).groupId
+    }
+
+    /**
+     * Приглашение по коду или по идентификатору. По идентификатору — только адресное (входящее): код приглашения
+     * для всех нужно знать; проверка адресата — в [addressedTo]. Нужно ровно одно из двух.
+     */
+    private fun lookup(
+        token: String?,
+        invitationId: String?,
+        forUpdate: Boolean,
+    ): InvitationRow? {
+        if ((token == null) == (invitationId == null)) throw invalidInvitation()
+        if (token != null) {
+            return if (forUpdate) invitations.findByHashForUpdate(hash(token)) else invitations.findByHash(hash(token))
+        }
+        val id = runCatching { UUID.fromString(invitationId) }.getOrNull() ?: throw invalidInvitation()
+        return invitations.findById(id, forUpdate)?.takeIf { it.email != null }
     }
 
     /**
@@ -173,12 +218,11 @@ class InvitationService(
         userId: UUID,
         request: AcceptInvitationRequest,
     ): GroupSummary {
-        val token = request.token
         val user = users.find(userId) ?: throw ApiException(ErrorCode.UNAUTHORIZED, HttpStatus.UNAUTHORIZED)
         if (user.blocked) throw ApiException(ErrorCode.USER_BLOCKED, HttpStatus.FORBIDDEN)
         val groupId =
             tx.execute {
-                val invitation = addressedTo(invitations.findByHashForUpdate(hash(token)), user)
+                val invitation = addressedTo(lookup(request.token, request.invitationId, forUpdate = true), user)
                 if (!groups.lock(invitation.groupId)) throw invalidInvitation()
                 // уже состоящему в группе важнее сказать об этом, даже если приглашение исчерпано его же вступлением
                 if (groups.member(invitation.groupId, userId) != null) {

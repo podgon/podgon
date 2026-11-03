@@ -49,6 +49,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.podgon.contract.GroupSummary
+import app.podgon.contract.IncomingInvitation
 import app.podgon.mobile.designsystem.BottomBarSpace
 import app.podgon.mobile.designsystem.Divider
 import app.podgon.mobile.designsystem.EmptyAction
@@ -67,11 +68,13 @@ import app.podgon.mobile.resources.groups_code_hint
 import app.podgon.mobile.resources.groups_counts
 import app.podgon.mobile.resources.groups_create
 import app.podgon.mobile.resources.groups_empty
+import app.podgon.mobile.resources.groups_incoming
 import app.podgon.mobile.resources.groups_join
 import app.podgon.mobile.resources.groups_name_hint
 import app.podgon.mobile.resources.groups_next
 import app.podgon.mobile.resources.groups_search
 import app.podgon.mobile.resources.groups_title
+import app.podgon.mobile.resources.notifications_invited_by
 import kotlinx.coroutines.flow.Flow
 import org.jetbrains.compose.resources.stringResource
 
@@ -88,6 +91,7 @@ fun GroupsScreen(
     onOpen: (groupId: String) -> Unit,
     onJoin: (token: String) -> Unit,
     onBack: () -> Unit,
+    onIncoming: (invitationId: String) -> Unit = {},
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val c = podgonColors
@@ -139,6 +143,7 @@ fun GroupsScreen(
             }
         }
         state.error?.let { RetryError(it, viewModel::load) }
+        if (state.incoming.isNotEmpty()) IncomingInvitations(state.incoming, onIncoming)
         if (state.loading && state.groups.isEmpty()) CircularProgressIndicator(Modifier.padding(20.dp))
         if (!state.loading && state.groups.isEmpty() && state.error == null) {
             EmptyState(
@@ -181,6 +186,51 @@ fun GroupsScreen(
                 sheet = false
                 onJoin(it)
             })
+        }
+    }
+}
+
+/** Входящие приглашения: группа, кто пригласил; нажатие — экран вступления без ввода кода. */
+@Composable
+private fun IncomingInvitations(
+    incoming: List<IncomingInvitation>,
+    onOpen: (String) -> Unit,
+) {
+    val c = podgonColors
+    Text(
+        stringResource(Res.string.groups_incoming),
+        fontSize = 13.sp,
+        color = c.muted,
+        modifier = Modifier.padding(start = 20.dp, top = 6.dp, bottom = 6.dp),
+    )
+    Column(
+        Modifier
+            .padding(start = 16.dp, end = 16.dp, bottom = 10.dp)
+            .fillMaxWidth()
+            .podgonElevation(PodgonShapes.card, 4.dp),
+    ) {
+        incoming.forEachIndexed { index, invitation ->
+            if (index > 0) Divider()
+            Row(
+                Modifier
+                    .fillMaxWidth()
+                    .heightIn(min = 60.dp)
+                    .combinedClickable(role = Role.Button) { onOpen(invitation.id) }
+                    .padding(horizontal = 14.dp, vertical = 8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                Icon(PodgonIcons.Invite, null, tint = c.accent, modifier = Modifier.size(22.dp))
+                Column(Modifier.weight(1f)) {
+                    Text(invitation.groupName, style = MaterialTheme.typography.titleSmall, color = c.ink)
+                    Text(
+                        stringResource(Res.string.notifications_invited_by, invitation.invitedBy),
+                        fontSize = 13.sp,
+                        color = c.muted,
+                    )
+                }
+                Icon(PodgonIcons.ChevronRight, null, tint = c.muted, modifier = Modifier.size(18.dp))
+            }
         }
     }
 }

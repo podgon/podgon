@@ -37,8 +37,9 @@ data class ShareRule(
 
 @Serializable
 data class SharePreviewRequest(
-    val token: String,
+    val token: String? = null,
     val share: ShareRule,
+    val invitationId: String? = null,
 )
 
 /** Рекомендация, которая будет опубликована в новой группе. */
@@ -59,8 +60,9 @@ data class SharePreview(
 
 @Serializable
 data class AcceptInvitationRequest(
-    val token: String,
+    val token: String? = null,
     val share: ShareRule? = null,
+    val invitationId: String? = null,
 )
 
 /** Судьба рекомендаций, опубликованных только в удаляемой группе. */

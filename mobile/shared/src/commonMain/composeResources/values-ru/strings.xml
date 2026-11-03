@@ -334,4 +334,18 @@
     <string name="profile_avatar_change">Фото профиля</string>
     <string name="profile_avatar_pick">Выбрать фото</string>
     <string name="profile_avatar_remove">Убрать фото</string>
+    <string name="notifications_title">Уведомления</string>
+    <string name="notifications_settings">О чём уведомлять</string>
+    <string name="notifications_empty_title">Уведомлений пока нет</string>
+    <string name="notifications_empty_text">Здесь появятся приглашения в группы и новые рекомендации по фильтрам с подпиской (колокольчик в сохранённых фильтрах).</string>
+    <string name="notifications_invitation">Приглашение в «%1$s»</string>
+    <string name="notifications_invited_by">Приглашает %1$s</string>
+    <string name="notifications_filter_match">Новое по фильтру «%1$s»</string>
+    <string name="notifications_settings_invitations">Приглашения в группы</string>
+    <string name="notifications_settings_invitations_hint">Когда вас приглашают по вашему email</string>
+    <string name="notifications_settings_filters">Новые рекомендации по подпискам</string>
+    <string name="notifications_settings_filters_hint">По сохранённым фильтрам с колокольчиком</string>
+    <string name="filters_subscribe">Подписаться: уведомлять о новых</string>
+    <string name="filters_unsubscribe">Отписаться</string>
+    <string name="groups_incoming">Вас приглашают</string>
 </resources>

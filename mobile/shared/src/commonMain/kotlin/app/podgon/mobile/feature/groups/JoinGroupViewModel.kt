@@ -25,6 +25,8 @@ import kotlinx.coroutines.launch
 
 data class JoinGroupState(
     val token: String = "",
+    /** Входящее адресное приглашение (этап 8.3.5): вступление без кода. */
+    val invitationId: String? = null,
     /** Сведения о группе после проверки кода: пользователь подтверждает вступление. */
     val preview: InvitationPreview? = null,
     val loading: Boolean = false,
@@ -85,12 +87,20 @@ class JoinGroupViewModel(
         _state.update { JoinGroupState(token = value.trim()) }
     }
 
+    /** Входящее приглашение: код не нужен, сразу предпросмотр группы. */
+    fun openIncoming(invitationId: String) {
+        if (_state.value.invitationId == invitationId) return
+        previewJob?.cancel()
+        _state.update { JoinGroupState(invitationId = invitationId) }
+        check()
+    }
+
     fun check() {
         val current = _state.value
-        if (current.loading || current.token.isEmpty()) return
+        if (current.loading || (current.token.isEmpty() && current.invitationId == null)) return
         _state.update { it.copy(loading = true, error = null) }
         viewModelScope.launch {
-            val result = api.previewInvitation(current.token)
+            val result = api.previewInvitation(current.token.ifEmpty { null }, current.invitationId)
             _state.update { it.copy(loading = false, preview = result.getOrNull(), error = result.appError()) }
         }
     }
@@ -132,7 +142,8 @@ class JoinGroupViewModel(
         _state.update { it.copy(sharePreviewLoading = true, error = null) }
         previewJob =
             viewModelScope.launch {
-                val result = api.sharePreview(_state.value.token, rule)
+                val s = _state.value
+                val result = api.sharePreview(s.token.ifEmpty { null }, rule, s.invitationId)
                 _state.update {
                     it.copy(
                         sharePreviewLoading = false,
@@ -148,7 +159,12 @@ class JoinGroupViewModel(
         if (current.loading || current.preview == null) return
         _state.update { it.copy(loading = true, error = null) }
         viewModelScope.launch {
-            val result = api.acceptInvitation(current.token, current.rule.takeIf { current.sharePreview != null })
+            val result =
+                api.acceptInvitation(
+                    current.token.ifEmpty { null },
+                    current.rule.takeIf { current.sharePreview != null },
+                    current.invitationId,
+                )
             _state.update { it.copy(loading = false, error = result.appError()) }
             result.getOrNull()?.let { _joined.send(it.id) }
         }

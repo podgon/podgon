@@ -82,12 +82,14 @@ import app.podgon.mobile.resources.filters_rename
 import app.podgon.mobile.resources.filters_reset
 import app.podgon.mobile.resources.filters_save
 import app.podgon.mobile.resources.filters_saved
+import app.podgon.mobile.resources.filters_subscribe
 import app.podgon.mobile.resources.filters_tag_all
 import app.podgon.mobile.resources.filters_tag_any
 import app.podgon.mobile.resources.filters_tags
 import app.podgon.mobile.resources.filters_title
 import app.podgon.mobile.resources.filters_title_only
 import app.podgon.mobile.resources.filters_title_only_hint
+import app.podgon.mobile.resources.filters_unsubscribe
 import org.jetbrains.compose.resources.stringResource
 
 /** Где действует фильтр — подпись в шапке («в группе „Друзья“», «во всех группах», «в Личном»). */
@@ -333,6 +335,15 @@ private fun SavedList(
                     Text(f.name.orEmpty(), style = MaterialTheme.typography.titleSmall, color = c.ink)
                     Text(summary(f), fontSize = 12.sp, color = c.muted, maxLines = 1)
                 }
+                // колокольчик — подписка: уведомлять о новых подходящих рекомендациях
+                PodgonIconButton(
+                    PodgonIcons.Bell,
+                    stringResource(if (f.subscribed) Res.string.filters_unsubscribe else Res.string.filters_subscribe),
+                    { viewModel.setSubscribed(f, !f.subscribed) },
+                    size = 40.dp,
+                    iconSize = 18.dp,
+                    tint = if (f.subscribed) c.accent else c.muted,
+                )
                 Icon(PodgonIcons.Pin, null, tint = if (f.inFeed) c.accent else c.muted, modifier = Modifier.size(16.dp))
                 Switch(
                     checked = f.inFeed,

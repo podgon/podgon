@@ -334,4 +334,18 @@
     <string name="profile_avatar_change">Profile photo</string>
     <string name="profile_avatar_pick">Choose photo</string>
     <string name="profile_avatar_remove">Remove photo</string>
+    <string name="notifications_title">Notifications</string>
+    <string name="notifications_settings">Notify me about</string>
+    <string name="notifications_empty_title">No notifications yet</string>
+    <string name="notifications_empty_text">Group invitations and new reviews for subscribed filters (the bell in saved filters) will show up here.</string>
+    <string name="notifications_invitation">Invitation to “%1$s”</string>
+    <string name="notifications_invited_by">Invited by %1$s</string>
+    <string name="notifications_filter_match">New for filter “%1$s”</string>
+    <string name="notifications_settings_invitations">Group invitations</string>
+    <string name="notifications_settings_invitations_hint">When someone invites your email</string>
+    <string name="notifications_settings_filters">New reviews for subscriptions</string>
+    <string name="notifications_settings_filters_hint">For saved filters with the bell on</string>
+    <string name="filters_subscribe">Subscribe: notify about new reviews</string>
+    <string name="filters_unsubscribe">Unsubscribe</string>
+    <string name="groups_incoming">You are invited</string>
 </resources>

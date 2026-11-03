@@ -43,6 +43,8 @@ data class SavedFilter(
     val categoryId: String? = null,
     val definition: FilterDefinition? = null,
     val position: Int? = null,
+    /** Подписка: уведомлять о новых подходящих рекомендациях (этап 8.3.5). */
+    val subscribed: Boolean = false,
 )
 
 /** Новый фильтр (`kind = FILTER`: [name] и [definition]) или закрепление категории (`CATEGORY`: [categoryId]). */
@@ -53,6 +55,7 @@ data class CreateSavedFilterRequest(
     val definition: FilterDefinition? = null,
     val inFeed: Boolean = false,
     val categoryId: String? = null,
+    val subscribed: Boolean = false,
 )
 
 /** Правка сохранённого фильтра; `null` — поле не менять. Закреплённую категорию не правят — её открепляют. */
@@ -61,6 +64,7 @@ data class UpdateSavedFilterRequest(
     val name: String? = null,
     val definition: FilterDefinition? = null,
     val inFeed: Boolean? = null,
+    val subscribed: Boolean? = null,
 )
 
 /** Полный порядок закреплённых: [filterIds] — записи-фильтры, [categoryIds] — записи закреплённых категорий. */

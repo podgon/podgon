@@ -36,6 +36,7 @@ interface InvitationGroups {
     /** @throws app.podgon.common.ApiException `INVALID_INVITATION`, если приглашение недействительно */
     fun resolve(
         userId: UUID,
-        token: String,
+        token: String?,
+        invitationId: String?,
     ): UUID
 }

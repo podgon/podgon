@@ -41,7 +41,7 @@ class SharingService(
         userId: UUID,
         request: SharePreviewRequest,
     ): SharePreview {
-        val groupId = invitations.resolve(userId, request.token)
+        val groupId = invitations.resolve(userId, request.token, request.invitationId)
         val candidates = candidates(userId, groupId, request.share)
         return SharePreview(
             total = candidates.size,

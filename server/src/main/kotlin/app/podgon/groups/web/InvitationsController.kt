@@ -3,6 +3,7 @@ package app.podgon.groups.web
 import app.podgon.contract.AcceptInvitationRequest
 import app.podgon.contract.CreateInvitationRequest
 import app.podgon.contract.GroupSummary
+import app.podgon.contract.IncomingInvitation
 import app.podgon.contract.InvitationCreated
 import app.podgon.contract.InvitationInfo
 import app.podgon.contract.InvitationPreview
@@ -51,7 +52,12 @@ class InvitationsController(
     fun preview(
         @AuthenticationPrincipal user: AuthenticatedUser,
         @RequestBody body: InvitationTokenRequest,
-    ): InvitationPreview = invitations.preview(user.userId, body.token)
+    ): InvitationPreview = invitations.preview(user.userId, body)
+
+    @GetMapping("/me/invitations")
+    fun incoming(
+        @AuthenticationPrincipal user: AuthenticatedUser,
+    ): List<IncomingInvitation> = invitations.incoming(user.userId)
 
     @PostMapping("/invitations/accept")
     fun accept(

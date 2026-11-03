@@ -46,6 +46,7 @@ import app.podgon.mobile.designsystem.podgonElevation
 import app.podgon.mobile.resources.Res
 import app.podgon.mobile.resources.language_system
 import app.podgon.mobile.resources.language_system_full
+import app.podgon.mobile.resources.notifications_settings
 import app.podgon.mobile.resources.settings_groups
 import app.podgon.mobile.resources.settings_groups_count
 import app.podgon.mobile.resources.settings_language
@@ -65,6 +66,7 @@ fun SettingsScreen(
     version: String,
     onGroups: () -> Unit,
     onSections: () -> Unit,
+    onNotifications: () -> Unit,
     header: @Composable () -> Unit,
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
@@ -90,6 +92,8 @@ fun SettingsScreen(
             )
             Divider()
             SettingsRow(stringResource(Res.string.settings_sections), state.pinned?.toString(), onSections)
+            Divider()
+            SettingsRow(stringResource(Res.string.notifications_settings), null, onNotifications)
             Divider()
             Row(
                 Modifier.fillMaxWidth().heightIn(min = 56.dp).padding(start = 18.dp, end = 10.dp),

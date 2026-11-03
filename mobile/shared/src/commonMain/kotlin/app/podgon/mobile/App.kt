@@ -29,8 +29,6 @@ import app.podgon.mobile.core.auth.AuthState
 import app.podgon.mobile.core.auth.SessionManager
 import app.podgon.mobile.core.media.LocalMediaUrls
 import app.podgon.mobile.core.media.MediaUrls
-import app.podgon.mobile.core.media.MyProfile
-import app.podgon.mobile.core.media.avatarUrl
 import app.podgon.mobile.core.network.ApiConfig
 import app.podgon.mobile.core.network.UpdateGate
 import app.podgon.mobile.core.network.UpdateRequiredScreen
@@ -40,7 +38,6 @@ import app.podgon.mobile.core.settings.ThemeSettings
 import app.podgon.mobile.designsystem.MainTab
 import app.podgon.mobile.designsystem.PodgonBottomBar
 import app.podgon.mobile.designsystem.PodgonTheme
-import app.podgon.mobile.designsystem.PodgonTopBar
 import app.podgon.mobile.di.AUTHORIZED_CLIENT
 import app.podgon.mobile.feature.auth.ui.CodeScreen
 import app.podgon.mobile.feature.auth.ui.EmailScreen
@@ -55,6 +52,10 @@ import app.podgon.mobile.feature.home.HomeScreen
 import app.podgon.mobile.feature.home.SectionsScreen
 import app.podgon.mobile.feature.main.MainNavState
 import app.podgon.mobile.feature.main.MainNavigationViewModel
+import app.podgon.mobile.feature.notifications.AppTopBar
+import app.podgon.mobile.feature.notifications.NotificationSettingsScreen
+import app.podgon.mobile.feature.notifications.NotificationsScreen
+import app.podgon.mobile.feature.notifications.PollUnread
 import app.podgon.mobile.feature.profile.ProfileScreen
 import app.podgon.mobile.feature.reviews.FeedScope
 import app.podgon.mobile.feature.reviews.MyReviewsScreen
@@ -97,7 +98,15 @@ private data object CreateGroupRoute
 @Serializable
 private data class JoinGroupRoute(
     val token: String? = null,
+    /** Входящее адресное приглашение (из уведомления или списка в «Группах»). */
+    val invitationId: String? = null,
 )
+
+@Serializable
+private data object NotificationsRoute
+
+@Serializable
+private data object NotificationSettingsRoute
 
 /** Страница группы; [invite] — сразу открыть лист приглашения (меню вкладки ленты). */
 @Serializable
@@ -213,6 +222,7 @@ private fun SignedInNavigation() {
     val mainOwner = checkNotNull(LocalViewModelStoreOwner.current)
     val main = koinViewModel<MainNavigationViewModel>(viewModelStoreOwner = mainOwner)
     val state by main.state.collectAsStateWithLifecycle()
+    PollUnread()
     LaunchedEffect(main) {
         main.reselected.collect { tab ->
             tabs.getValue(tab).let { it.popBackStack(it.graph.startDestinationId, inclusive = false) }
@@ -268,12 +278,10 @@ private fun TabHost(
     openForm: (String?, String?) -> Unit,
 ) {
     val header: @Composable () -> Unit = {
-        val me by koinInject<MyProfile>().profile.collectAsStateWithLifecycle()
-        PodgonTopBar(
+        AppTopBar(
             offline = false,
-            onNotifications = {},
+            onNotifications = { nav.navigate(NotificationsRoute) },
             onProfile = { nav.navigate(ProfileRoute) },
-            avatarUrl = me?.let { avatarUrl(it.id, it.avatarId) },
         )
     }
     val start: Any =
@@ -306,6 +314,7 @@ private fun TabHost(
                             HomeActions(
                                 openReview = { nav.navigate(ReviewRoute(it)) },
                                 openProfile = { nav.navigate(ProfileRoute) },
+                                openNotifications = { nav.navigate(NotificationsRoute) },
                                 openGroup = { nav.navigate(GroupRoute(it)) },
                                 invite = { nav.navigate(GroupRoute(it, invite = true)) },
                                 openSections = { nav.navigate(SectionsRoute) },
@@ -334,6 +343,7 @@ private fun TabHost(
                     version = koinInject<ApiConfig>().appVersion.toString(),
                     onGroups = { nav.navigate(GroupsRoute) },
                     onSections = { nav.navigate(SectionsRoute) },
+                    onNotifications = { nav.navigate(NotificationSettingsRoute) },
                     header = header,
                 )
             }
@@ -362,6 +372,7 @@ private fun NavGraphBuilder.commonDestinations(
             onOpen = { nav.navigate(GroupRoute(it)) },
             onJoin = { nav.navigate(JoinGroupRoute(it)) },
             onBack = { nav.popBackStack() },
+            onIncoming = { nav.navigate(JoinGroupRoute(invitationId = it)) },
         )
     }
     composable<ProfileRoute> {
@@ -385,10 +396,22 @@ private fun NavGraphBuilder.commonDestinations(
             main.setBarHidden(true)
             onDispose { main.setBarHidden(false) }
         }
-        val token = entry.toRoute<JoinGroupRoute>().token
-        JoinGroupScreen(koinViewModel(), token = token, onJoined = {
+        val route = entry.toRoute<JoinGroupRoute>()
+        JoinGroupScreen(koinViewModel(), token = route.token, invitationId = route.invitationId, onJoined = {
             nav.openGroup(it, replacing = entry.toRoute<JoinGroupRoute>())
         })
+    }
+    composable<NotificationsRoute> {
+        NotificationsScreen(
+            koinViewModel(),
+            onBack = { nav.popBackStack() },
+            onSettings = { nav.navigate(NotificationSettingsRoute) },
+            onInvitation = { nav.navigate(JoinGroupRoute(invitationId = it)) },
+            onReview = { nav.navigate(ReviewRoute(it)) },
+        )
+    }
+    composable<NotificationSettingsRoute> {
+        NotificationSettingsScreen(koinViewModel(), onBack = { nav.popBackStack() })
     }
     composable<GroupRoute> { entry ->
         val route = entry.toRoute<GroupRoute>()
@@ -419,6 +442,7 @@ private fun NavGraphBuilder.commonDestinations(
                 HomeActions(
                     openReview = { nav.navigate(ReviewRoute(it)) },
                     openProfile = { nav.navigate(ProfileRoute) },
+                    openNotifications = { nav.navigate(NotificationsRoute) },
                     openGroup = { nav.navigate(GroupRoute(it)) },
                     invite = { nav.navigate(GroupRoute(it, invite = true)) },
                     openSections = {},

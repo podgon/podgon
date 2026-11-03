@@ -90,6 +90,37 @@ class InvitationRepository(
             .optional()
             .orElse(null)
 
+    fun findById(
+        id: UUID,
+        forUpdate: Boolean = false,
+    ): InvitationRow? =
+        jdbc
+            .sql("select $columns from invitations where id = :id" + if (forUpdate) " for update" else "")
+            .param("id", id)
+            .query(::map)
+            .optional()
+            .orElse(null)
+
+    /** Действующие адресные приглашения на [email] в группы, где пользователь [userId] ещё не состоит. */
+    fun incoming(
+        email: String,
+        userId: UUID,
+        now: Instant,
+    ): List<InvitationRow> =
+        jdbc
+            .sql(
+                """
+                select $columns from invitations i
+                where i.email = :email and i.revoked_at is null and i.expires_at > :now and i.used_count < i.max_uses
+                  and not exists (select 1 from memberships m where m.group_id = i.group_id and m.user_id = :user)
+                order by i.created_at desc, i.id
+                """.trimIndent(),
+            ).param("email", email)
+            .param("user", userId)
+            .param("now", now.toSql())
+            .query(::map)
+            .list()
+
     fun find(
         groupId: UUID,
         id: UUID,

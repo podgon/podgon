@@ -162,10 +162,12 @@ fun JoinGroupScreen(
     viewModel: JoinGroupViewModel,
     token: String?,
     onJoined: (groupId: String) -> Unit,
+    invitationId: String? = null,
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val c = podgonColors
     LaunchedEffect(viewModel) { viewModel.joined.collect(onJoined) }
+    LaunchedEffect(invitationId) { invitationId?.let(viewModel::openIncoming) }
     LaunchedEffect(token) {
         if (!token.isNullOrBlank() && state.preview == null) {
             viewModel.onTokenChange(token)
@@ -184,7 +186,7 @@ fun JoinGroupScreen(
         ) {
             Text(stringResource(Res.string.join_title), style = MaterialTheme.typography.headlineSmall, color = c.ink)
             val preview = state.preview
-            if (preview == null) {
+            if (preview == null && state.invitationId == null) {
                 Text(stringResource(Res.string.join_hint), style = MaterialTheme.typography.bodyMedium, color = c.muted)
                 OutlinedTextField(
                     value = state.token,
@@ -193,7 +195,7 @@ fun JoinGroupScreen(
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
                 )
-            } else {
+            } else if (preview != null) {
                 Column(
                     Modifier.fillMaxWidth().podgonElevation(PodgonShapes.card, 4.dp).padding(16.dp),
                     verticalArrangement = Arrangement.spacedBy(6.dp),
@@ -233,7 +235,7 @@ fun JoinGroupScreen(
         val preview = state.preview
         Button(
             onClick = if (preview == null) viewModel::check else viewModel::confirm,
-            enabled = !state.loading && (preview != null || state.token.isNotEmpty()),
+            enabled = !state.loading && (preview != null || state.token.isNotEmpty() || state.invitationId != null),
             modifier =
                 Modifier
                     .align(Alignment.BottomCenter)

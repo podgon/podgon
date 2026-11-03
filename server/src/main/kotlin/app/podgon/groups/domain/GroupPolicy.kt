@@ -62,6 +62,9 @@ class GroupPolicy(
     ): Map<UUID, RoleInfo> =
         if (groupIds.isEmpty()) emptyMap() else groups.rolesOf(userId, groupIds).mapValues { it.value.toDto() }
 
+    override fun members(groupIds: Collection<UUID>): Map<UUID, Set<UUID>> =
+        if (groupIds.isEmpty()) emptyMap() else groups.memberIdsOf(groupIds)
+
     override fun soleAdminGroups(userId: UUID): List<GroupRef> =
         groups.soleAdminGroups(userId).map { GroupRef(it.first.toString(), it.second) }
 

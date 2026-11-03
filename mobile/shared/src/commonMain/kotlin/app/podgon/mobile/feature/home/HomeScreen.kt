@@ -43,8 +43,6 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.podgon.contract.FeedSectionKind
 import app.podgon.contract.GroupSummary
 import app.podgon.contract.ReviewCard
-import app.podgon.mobile.core.media.MyProfile
-import app.podgon.mobile.core.media.avatarUrl
 import app.podgon.mobile.designsystem.Avatar
 import app.podgon.mobile.designsystem.BottomBarSpace
 import app.podgon.mobile.designsystem.EmptyAction
@@ -56,7 +54,6 @@ import app.podgon.mobile.designsystem.PillTabs
 import app.podgon.mobile.designsystem.PodgonBottomSheet
 import app.podgon.mobile.designsystem.PodgonIconButton
 import app.podgon.mobile.designsystem.PodgonIcons
-import app.podgon.mobile.designsystem.PodgonTopBar
 import app.podgon.mobile.designsystem.ReviewRow
 import app.podgon.mobile.designsystem.SearchRow
 import app.podgon.mobile.designsystem.SectionHeader
@@ -65,6 +62,7 @@ import app.podgon.mobile.designsystem.SheetAction
 import app.podgon.mobile.designsystem.podgonColors
 import app.podgon.mobile.designsystem.podgonElevation
 import app.podgon.mobile.feature.groups.RetryError
+import app.podgon.mobile.feature.notifications.AppTopBar
 import app.podgon.mobile.feature.reviews.ReviewFilter
 import app.podgon.mobile.resources.Res
 import app.podgon.mobile.resources.a11y_close
@@ -113,7 +111,6 @@ import app.podgon.mobile.resources.personal_empty_text
 import app.podgon.mobile.resources.personal_empty_title
 import app.podgon.mobile.resources.tab_all
 import org.jetbrains.compose.resources.stringResource
-import org.koin.compose.koinInject
 import org.koin.compose.viewmodel.koinViewModel
 import org.koin.core.parameter.parametersOf
 
@@ -121,6 +118,7 @@ import org.koin.core.parameter.parametersOf
 class HomeActions(
     val openReview: (String) -> Unit,
     val openProfile: () -> Unit,
+    val openNotifications: () -> Unit,
     val openGroup: (String) -> Unit,
     val invite: (String) -> Unit,
     val openSections: () -> Unit,
@@ -150,13 +148,7 @@ fun HomeScreen(
     LaunchedEffect(state.tab) { actions.onTabChanged(state.tab) }
 
     Column(Modifier.fillMaxSize().background(c.background)) {
-        val me by koinInject<MyProfile>().profile.collectAsStateWithLifecycle()
-        PodgonTopBar(
-            offline = state.offline,
-            onNotifications = {},
-            onProfile = actions.openProfile,
-            avatarUrl = me?.let { avatarUrl(it.id, it.avatarId) },
-        )
+        AppTopBar(offline = state.offline, onNotifications = actions.openNotifications, onProfile = actions.openProfile)
         SearchRow(
             query = query,
             onQueryChange = {

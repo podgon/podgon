@@ -236,6 +236,7 @@ fun PodgonTopBar(
     onNotifications: () -> Unit,
     onProfile: () -> Unit,
     avatarUrl: String? = null,
+    unread: Int = 0,
     modifier: Modifier = Modifier,
 ) {
     val c = podgonColors
@@ -263,7 +264,12 @@ fun PodgonTopBar(
             }
         }
         Spacer(Modifier.weight(1f))
-        PodgonIconButton(PodgonIcons.Bell, stringResource(Res.string.a11y_notifications), onNotifications)
+        PodgonIconButton(
+            PodgonIcons.Bell,
+            stringResource(Res.string.a11y_notifications),
+            onNotifications,
+            badge = unread,
+        )
         val profile = stringResource(Res.string.a11y_profile)
         Box(
             Modifier

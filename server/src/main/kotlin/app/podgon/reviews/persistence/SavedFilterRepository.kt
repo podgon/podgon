@@ -17,13 +17,15 @@ data class SavedFilterRow(
     val definition: String?,
     val inFeed: Boolean,
     val position: Int?,
+    val subscribed: Boolean = false,
 )
 
 @Repository
 class SavedFilterRepository(
     private val jdbc: JdbcClient,
 ) {
-    private val columns = "id, user_id, kind, name, category_id, definition::text as definition, in_feed, position"
+    private val columns =
+        "id, user_id, kind, name, category_id, definition::text as definition, in_feed, position, subscribed"
 
     fun list(userId: UUID): List<SavedFilterRow> =
         jdbc
@@ -82,8 +84,9 @@ class SavedFilterRepository(
             .sql(
                 """
                 insert into saved_filters (id, user_id, kind, name, category_id, definition, in_feed, position,
-                                           created_at, updated_at)
-                values (:id, :user, :kind, :name, :category, cast(:definition as jsonb), :inFeed, :position, :now, :now)
+                                           subscribed, created_at, updated_at)
+                values (:id, :user, :kind, :name, :category, cast(:definition as jsonb), :inFeed, :position,
+                        :subscribed, :now, :now)
                 """.trimIndent(),
             ).params(params(row))
             .param("now", now.toSql())
@@ -98,7 +101,7 @@ class SavedFilterRepository(
             .sql(
                 """
                 update saved_filters set name = :name, definition = cast(:definition as jsonb), in_feed = :inFeed,
-                                         position = :position, updated_at = :now
+                                         position = :position, subscribed = :subscribed, updated_at = :now
                 where id = :id and user_id = :user
                 """.trimIndent(),
             ).params(params(row))
@@ -127,6 +130,18 @@ class SavedFilterRepository(
             .param("id", id)
             .update() > 0
 
+    /** Фильтры с подпиской у пользователей [userIds] (этап 8.3.5). */
+    fun subscribed(userIds: Collection<UUID>): List<SavedFilterRow> =
+        if (userIds.isEmpty()) {
+            emptyList()
+        } else {
+            jdbc
+                .sql("select $columns from saved_filters where subscribed and user_id in (:users)")
+                .param("users", userIds)
+                .query { rs, _ -> row(rs) }
+                .list()
+        }
+
     fun deleteAll(userId: UUID) {
         jdbc.sql("delete from saved_filters where user_id = :user").param("user", userId).update()
     }
@@ -141,6 +156,7 @@ class SavedFilterRepository(
             "definition" to row.definition,
             "inFeed" to row.inFeed,
             "position" to row.position,
+            "subscribed" to row.subscribed,
         )
 
     private fun row(rs: ResultSet) =
@@ -153,5 +169,6 @@ class SavedFilterRepository(
             definition = rs.getString("definition"),
             inFeed = rs.getBoolean("in_feed"),
             position = rs.getObject("position") as Int?,
+            subscribed = rs.getBoolean("subscribed"),
         )
 }
